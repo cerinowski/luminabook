@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const maxDuration = 60; // Força limite máximo da Vercel Hobby (60s) para não derrubar o fetch da imagem 8k
+
 export async function POST(req: Request) {
     try {
         const { url } = await req.json();
