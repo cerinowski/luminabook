@@ -100,21 +100,39 @@ export default function Home() {
             const seed = Math.floor(Math.random() * 1000000);
             const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(coverPrompt)}?width=840&height=1188&nologo=true&seed=${seed}`;
 
-            // Bypass direto por proxy (Backend -> Pollinations) para evitar bloqueadores de rede (Adblock/Brave) no navegador do usuário
-            const proxyRes = await fetch('/api/proxy-image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: imgUrl })
-            });
-            const proxyData = await proxyRes.json();
+            // Executa o download da foto no próprio navegador do usuário (IP Residencial de Borda) ao invés da Vercel (IP Banido pelo Cloudflare 403 Forbidden).
+            let res = await fetch(imgUrl).catch(() => null);
 
-            if (proxyData && proxyData.base64) {
-                setCoverImageData(proxyData.base64);
+            // Se o navegador barrar o fetch do Pollinations por causa de CORS local ou AdBlock Ninja, ativamos o AllOrigins (Proxy CORS universal blindado).
+            if (!res || !res.ok) {
+                console.log('Pollinations bloqueou fetch no cliente. Rebotando para AllOrigins CORS Tunnel...');
+                const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(imgUrl);
+                res = await fetch(proxyUrl).catch(() => null);
+            }
+
+            if (res && res.ok) {
+                // Transforma os pixels brutos num pacote Base64 nativo via memória de Blobs do navegador (livre do perigo de crossOrigin no Canvas!).
+                const blob = await res.blob();
+                const base64 = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+                setCoverImageData(base64);
             } else {
-                console.error("Proxy falhou ao empacotar a arte em Base64.");
+                console.error("Falha dupla de rede client-side. Impossível carregar a rede da capa livre de CORS.");
+                // Caso milagroso queira dar erro em tudo (Vercel Node Proxy plano D)
+                const proxyRes = await fetch('/api/proxy-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: imgUrl })
+                });
+                const proxyData = await proxyRes.json();
+                if (proxyData && proxyData.base64) setCoverImageData(proxyData.base64);
             }
         } catch (err) {
-            console.error('Falha na ponte backend:', err);
+            console.error('Falha monstruosa de Rede/CORS:', err);
         } finally {
             setIsGeneratingCover(false);
         }
