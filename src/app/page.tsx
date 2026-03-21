@@ -95,44 +95,18 @@ export default function Home() {
             const primary = theme.primary_color || '#1a1830';
             const secondary = theme.secondary_color || '#E93DE5';
 
-            // O Gemini atua como diretor de arte escrevendo todo o roteiro da capa:
             const coverPrompt = theme.image_generation_prompt || `A premium, professionally designed minimalist book cover. The title text is EXACTLY "${ebookData.title}". Beautiful elegant typography, high-end editorial graphic design. Visuals: abstract luxury elements, colors: ${primary} and ${secondary}. Masterpiece, 8k, award-winning book cover.`;
             const seed = Math.floor(Math.random() * 1000000);
             const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(coverPrompt)}?width=840&height=1188&nologo=true&seed=${seed}`;
 
-            // Executa o download da foto no próprio navegador do usuário (IP Residencial de Borda) ao invés da Vercel (IP Banido pelo Cloudflare 403 Forbidden).
-            let res = await fetch(imgUrl).catch(() => null);
+            console.log("Definindo Capa Gráfica em Modo Nativo...");
 
-            // Se o navegador barrar o fetch do Pollinations por causa de CORS local ou AdBlock Ninja, ativamos o AllOrigins (Proxy CORS universal blindado).
-            if (!res || !res.ok) {
-                console.log('Pollinations bloqueou fetch no cliente. Rebotando para AllOrigins CORS Tunnel...');
-                const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(imgUrl);
-                res = await fetch(proxyUrl).catch(() => null);
-            }
+            // Renderização ABSOLUTA E DIRETA pro Visual: Sem Blobs, sem Vercel, sem Base64.
+            // O próprio `<img src>` da linha 420 vai lidar com o download em Background.
+            setCoverImageData(imgUrl);
 
-            if (res && res.ok) {
-                // Transforma os pixels brutos num pacote Base64 nativo via memória de Blobs do navegador (livre do perigo de crossOrigin no Canvas!).
-                const blob = await res.blob();
-                const base64 = await new Promise<string>((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result as string);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(blob);
-                });
-                setCoverImageData(base64);
-            } else {
-                console.error("Falha dupla de rede client-side. Impossível carregar a rede da capa livre de CORS.");
-                // Caso milagroso queira dar erro em tudo (Vercel Node Proxy plano D)
-                const proxyRes = await fetch('/api/proxy-image', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: imgUrl })
-                });
-                const proxyData = await proxyRes.json();
-                if (proxyData && proxyData.base64) setCoverImageData(proxyData.base64);
-            }
         } catch (err) {
-            console.error('Falha monstruosa de Rede/CORS:', err);
+            console.error('Falha geral na geração Visual da Capa:', err);
         } finally {
             setIsGeneratingCover(false);
         }
@@ -174,33 +148,60 @@ export default function Home() {
 
             try {
                 if (coverImageData) {
-                    // Eliminado new Image() e chamadas locais na rede, pois coverImageData já é nativa em Base64 bruta do nosso Node JS.
-                    // Nós sabemos categoricamente que imagens do Pollinations chegam em proporção 840x1188.
-                    const imgRatio = 840 / 1188;
-                    const pageRatio = pageWidth / pageHeight;
+                    // O PDF requere um Base64 estrito injetado nas entranhas ou buga na Vercel. 
+                    // Vamos faturar ele na hora H do download usando a rede pública do usuário passando pelo proxy aberto "AllOrigins":
+                    console.log("Criptografando Capa para o Motor PDF via AllOrigins...");
 
-                    let drawWidth = pageWidth;
-                    let drawHeight = pageHeight;
-                    let dx = 0;
-                    let dy = 0;
+                    let pdfSafeBase64 = null;
 
-                    if (imgRatio > pageRatio) {
-                        drawHeight = pageHeight;
-                        drawWidth = pageHeight * imgRatio;
-                        dx = (pageWidth - drawWidth) / 2;
+                    if (coverImageData.startsWith('data:image')) {
+                        pdfSafeBase64 = coverImageData; // Caso por algum milagre tenha vindo Base64 já formatado
                     } else {
-                        drawWidth = pageWidth;
-                        drawHeight = pageWidth / imgRatio;
-                        dy = (pageHeight - drawHeight) / 2;
+                        try {
+                            const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(coverImageData);
+                            const res = await fetch(proxyUrl);
+                            if (res.ok) {
+                                const blob = await res.blob();
+                                pdfSafeBase64 = await new Promise<string>((resolve, reject) => {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => resolve(reader.result as string);
+                                    reader.onerror = reject;
+                                    reader.readAsDataURL(blob);
+                                });
+                            }
+                        } catch (e) { console.error("Falha ao tunelizar imagem PDF:", e); }
                     }
 
-                    doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
-                    const imgFormat = coverImageData.toLowerCase().includes('image/png') ? 'PNG' : 'JPEG';
-                    doc.addImage(coverImageData, imgFormat, dx, dy, drawWidth, drawHeight, undefined, 'FAST');
-                    doc.setGState(new (doc as any).GState({ opacity: 1 }));
+                    if (pdfSafeBase64) {
+                        const imgRatio = 840 / 1188;
+                        const pageRatio = pageWidth / pageHeight;
+
+                        let drawWidth = pageWidth;
+                        let drawHeight = pageHeight;
+                        let dx = 0;
+                        let dy = 0;
+
+                        if (imgRatio > pageRatio) {
+                            drawHeight = pageHeight;
+                            drawWidth = pageHeight * imgRatio;
+                            dx = (pageWidth - drawWidth) / 2;
+                        } else {
+                            drawWidth = pageWidth;
+                            drawHeight = pageWidth / imgRatio;
+                            dy = (pageHeight - drawHeight) / 2;
+                        }
+
+                        doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
+                        const imgFormat = pdfSafeBase64.toLowerCase().includes('image/png') ? 'PNG' : 'JPEG';
+                        doc.addImage(pdfSafeBase64, imgFormat, dx, dy, drawWidth, drawHeight, undefined, 'FAST');
+                        doc.setGState(new (doc as any).GState({ opacity: 1 }));
+                        console.log("Capa Ancorada no PDF com Sucesso Extremo.");
+                    } else {
+                        console.warn("A ancoragem da imagem da Capa Falhou. Emitindo PDF cego (apenas com cores).");
+                    }
                 }
             } catch (e) {
-                console.error('jsPDF image draw failed:', e);
+                console.error('Motor jsPDF destruído subitamente:', e);
             }
 
             generatedEbook.chapters?.forEach((chapter: any, idx: number) => {
