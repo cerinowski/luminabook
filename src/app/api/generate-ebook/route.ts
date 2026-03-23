@@ -95,10 +95,11 @@ export async function POST(req: Request) {
           Rules:
           1. Keep all core content and organize gracefully into chapters.
           2. CRITICAL: For 'image_generation_prompt', you are a Master Book Layout Designer. You must write a 70-80 word prompt in English for FLUX.1.
-          - THEME: Analyze the exact core subject of the text. The imagery MUST perfectly match the book's concept.
-          - IF IT IS A MEDICAL/SENSITIVE TOPIC: Do NOT use unrelated nature metaphors (like trees or skies). Instead, use elegant scientific abstractions, glowing neural networks, premium healthcare aesthetic, abstract anatomical shapes, sleek clinical diagrams, or microscopic tech visuals.
-          - VIBE: "Award-winning masterpiece, hyper-detailed, trending on ArtStation, 8k resolution."
-          3. SUPER CRITICAL SAFETY RULE: Never use explicit NSFW or harsh violent terms. Keep the medical visualization elegant and professional.
+          - THEME: Analyze the exact core subject. Imagery MUST perfectly match the concept.
+          - IF IT IS A MEDICAL/SENSITIVE TOPIC: Use scientific abstractions, tech visuals, or clinical diagrams.
+          - TYPOGRAPHY: NEVER include chapter numbers or subtitles here. Simply specify high-end editorial typography for the main title.
+          - VIBE: "Award-winning masterpiece, hyper-detailed, 8k resolution."
+          3. SUPER CRITICAL SAFETY RULE: Never use explicit NSFW terms. Keep it professional.
           
           JSON Format: { "title": "...", "chapters": [{ "title": "...", "content": "..." }], "visual_theme": { "primary_color": "#HEX", "secondary_color": "#HEX", "layout_type": "...", "image_generation_prompt": "... [the full midjourney cover prompt here]", "design_mood": "..." } }
           

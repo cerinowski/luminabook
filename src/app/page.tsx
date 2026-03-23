@@ -95,11 +95,13 @@ export default function Home() {
             const primary = theme.primary_color || '#1a1830';
             const secondary = theme.secondary_color || '#E93DE5';
 
-            // Garantia absoluta de que a capa seja um DESIGN GRÁFICO DIAGRAMADO pela própria IA (FLUX.1-dev)
-            const cleanTitle = ebookData.title.replace(/[:"']/g, ''); // Limpa caracteres complexos
+            // Garantia absoluta de que a capa seja um DESIGN GRÁFICO DIAGRAMADO pela própria IA (FLUX.1)
+            // Limpamos o título de qualquer ruído de 'Capítulo' ou subtítulos longos que o Gemini possa ter gerado
+            let cleanTitle = ebookData.title.split(':')[0].trim(); // Pega só o título principal
+            cleanTitle = cleanTitle.replace(/Capítulo \d+/gi, '').replace(/[:"']/g, '').trim();
             const basePrompt = theme.image_generation_prompt || `A premium minimalist book cover context`;
 
-            const coverPrompt = `The book title "${cleanTitle}" written in massive, bold, cinematic typography, perfectly centered and integrated into a MASTERPIECE BOOK COVER DESIGN. Background art style: ${basePrompt}. Color palette: ${primary} and ${secondary}. Editorial graphic design layout, Award-winning masterpiece, hyper-detailed, trending on ArtStation, 8k resolution. No people, only high-end abstract design.`;
+            const coverPrompt = `BOOK COVER DESIGN. The title "${cleanTitle}" written in massive, bold, cinematic editorial typography, perfectly centered and integrated. No other text. Background art style: ${basePrompt}. Color palette: ${primary} and ${secondary}. Editorial graphic design layout, 8k resolution.`;
 
             console.log("Definindo Capa AI via HuggingFace (com texto forçado)... Prompt:", coverPrompt);
 
