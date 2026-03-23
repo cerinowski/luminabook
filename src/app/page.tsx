@@ -95,12 +95,13 @@ export default function Home() {
             const primary = theme.primary_color || '#1a1830';
             const secondary = theme.secondary_color || '#E93DE5';
 
-            // Garantia de que a arte seja limpa para a nossa Tipografia Vetorial Premium
+            // Garantia absoluta de que a capa seja um DESIGN GRÁFICO DIAGRAMADO pela própria IA (FLUX.1-dev)
+            const cleanTitle = ebookData.title.replace(/[:"']/g, ''); // Limpa caracteres complexos
             const basePrompt = theme.image_generation_prompt || `A premium minimalist book cover context`;
 
-            const coverPrompt = `MASTERPIECE BACKGROUND ART FOR BOOK COVER. Graphic design environment, abstract luxury styling. Background art style: ${basePrompt}. Color palette: ${primary} and ${secondary}. The image must have elegant negative space in the center or top for text placement. EXTREMELY IMPORTANT: NO TEXT, NO WORDS, NO LETTERS, NO FONTS ANYWHERE in the image. Pure background art only.`;
+            const coverPrompt = `The book title "${cleanTitle}" written in massive, bold, cinematic typography, perfectly centered and integrated into a MASTERPIECE BOOK COVER DESIGN. Background art style: ${basePrompt}. Color palette: ${primary} and ${secondary}. Editorial graphic design layout, Award-winning masterpiece, hyper-detailed, trending on ArtStation, 8k resolution. No people, only high-end abstract design.`;
 
-            console.log("Definindo Capa AI via HuggingFace (sem texto)... Prompt:", coverPrompt);
+            console.log("Definindo Capa AI via HuggingFace (com texto forçado)... Prompt:", coverPrompt);
 
             // Usamos nosso próprio backend para buscar a imagem usando a Chave do HF (bypass CORS/WAF)
             const hfResponse = await fetch('/api/generate-cover', {
@@ -271,40 +272,7 @@ export default function Home() {
                         const imgFormat = pdfSafeBase64.toLowerCase().includes('image/png') ? 'PNG' : 'JPEG';
                         doc.addImage(pdfSafeBase64, imgFormat, dx, dy, drawWidth, drawHeight, undefined, 'FAST');
 
-                        // Overlay Gradiente Elegante para Leitura Perfeita do Título no PDF
-                        doc.setGState(new (doc as any).GState({ opacity: 0.6 }));
-                        doc.setFillColor(0, 0, 0);
-                        doc.rect(0, pageHeight * 0.4, pageWidth, pageHeight * 0.6, 'F');
-
-                        // Desenho do Título Ultra-Premium em Vetor no PDF
-                        doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
-                        doc.setTextColor(255, 255, 255); // Branco absoluto
-                        doc.setFont('times', 'bold');
-
-                        const titleParts = generatedEbook.title.toUpperCase().split(':');
-                        const mainTitle = titleParts[0].trim();
-                        const subTitle = titleParts.length > 1 ? titleParts.slice(1).join(':').trim() : '';
-
-                        doc.setFontSize(40);
-                        const mainTitleLines = doc.splitTextToSize(mainTitle, pageWidth - 40);
-                        let titleY = pageHeight * 0.65;
-                        doc.text(mainTitleLines, pageWidth / 2, titleY, { align: 'center' });
-                        titleY += (mainTitleLines.length * 15);
-
-                        if (subTitle) {
-                            doc.setFont('helvetica', 'normal');
-                            doc.setTextColor(220, 220, 220); // Cinza claro
-                            doc.setFontSize(18);
-                            const subTitleLines = doc.splitTextToSize(subTitle, pageWidth - 60);
-                            doc.text(subTitleLines, pageWidth / 2, titleY + 10, { align: 'center' });
-                        }
-
-                        // Logo/Badge Luminabook Vector PDF overlay
-                        doc.setFontSize(10);
-                        doc.setTextColor(sr, sg, sb);
-                        doc.text("LUMINABOOK STUDIO", pageWidth / 2, pageHeight - 20, { align: 'center' });
-
-                        console.log("Capa AI Pura + Tipografia Vetorial Ancorada no PDF.");
+                        console.log("Capa AI (FLUX) 100% Pura Ancorada no PDF (Sem overlapp vetorial).");
                     } else {
                         console.warn("A ancoragem da imagem da Capa AI Falhou. Emitindo PDF cego (apenas com cores).");
                     }
@@ -457,12 +425,14 @@ export default function Home() {
                             <div className="flex items-center justify-between border-b border-white/5 pb-8">
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-2">
-                                        <h2 className="text-4xl font-black text-white tracking-tighter">{generatedEbook.title}</h2>
+                                        <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full">
+                                            <Zap className="w-3 h-3 text-primary animate-pulse" />
+                                            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Estúdio de Design Ativo</span>
+                                        </div>
                                         {generatedEbook.is_fallback && (
                                             <span className="px-2 py-1 bg-amber-500/20 text-amber-500 text-[10px] font-black rounded border border-amber-500/30 animate-pulse">MODO DE SEGURANÇA</span>
                                         )}
                                     </div>
-                                    <p className="text-white/40 text-sm font-medium">Layout único gerado especialmente para este conteúdo.</p>
                                 </div>
                                 <button onClick={() => { setGeneratedEbook(null); setCoverImageData(null); }} className="h-12 px-6 rounded-xl flex items-center gap-2 text-white/60 hover:text-white transition-all bg-white/5 hover:bg-white/10">
                                     <ChevronLeft className="w-4 h-4" /> Novo Projeto
