@@ -131,12 +131,14 @@ export default function Home() {
                     alert('⚠️ AVISO: A inteligência artificial do HuggingFace está aquecendo no momento. Tente novamente em 20 segundos.');
                 }
 
-                // Fallback fotográfico cego caso a HuggingFace falhe / exceda limites
-                setCoverImageData(`https://picsum.photos/seed/${Math.floor(Math.random() * 1000)}/840/1188`);
+                // Fallback temático via Pollinations.ai (É gratuito e entende prompts, ao contrário do Picsum)
+                const safePrompt = encodeURIComponent(coverPrompt.slice(0, 100));
+                setCoverImageData(`https://pollinations.ai/p/${safePrompt}?width=800&height=1100&seed=${Math.floor(Math.random() * 1000)}&model=flux`);
             }
 
         } catch (err) {
             console.error('Falha geral na geração Visual da Capa:', err);
+            setCoverImageData(`https://pollinations.ai/p/book%20cover%20minimalist%20abstract?width=800&height=1100&seed=42`);
         } finally {
             setIsGeneratingCover(false);
         }

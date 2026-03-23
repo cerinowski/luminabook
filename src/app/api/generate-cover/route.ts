@@ -17,10 +17,9 @@ export async function POST(req: Request) {
 
         console.log('Solicitando capa pro HuggingFace via FLUX.1-schnell...');
 
-        // Usando o modelo FLUX.1-schnell que tem extrema habilidade com escrita de textos
-        // Mudando do FLUX.1-schnell para o FLUX.1-dev. O modelo Dev é mais pesado mas tem uma precisão de texto 100x superior, essencial para soletrar português.
+        // Usando o modelo FLUX.1-schnell. O modelo Dev é muito lento para o limite de 10s da Vercel Hobby.
         const response = await fetch(
-            "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-dev",
+            "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell",
             {
                 headers: {
                     Authorization: `Bearer ${apiKey}`,
