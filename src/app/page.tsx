@@ -96,14 +96,40 @@ export default function Home() {
             const secondary = theme.secondary_color || '#E93DE5';
 
             const coverPrompt = theme.image_generation_prompt || `A premium, professionally designed minimalist book cover. The title text is EXACTLY "${ebookData.title}". Beautiful elegant typography, high-end editorial graphic design. Visuals: abstract luxury elements, colors: ${primary} and ${secondary}. Masterpiece, 8k, award-winning book cover.`;
-            const seed = Math.floor(Math.random() * 1000000);
-            const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(coverPrompt)}?width=840&height=1188&nologo=true&seed=${seed}`;
 
-            console.log("Definindo Capa Gráfica em Modo Nativo...");
+            console.log("Definindo Capa AI via HuggingFace (FLUX.1-schnell)...");
 
-            // Renderização ABSOLUTA E DIRETA pro Visual: Sem Blobs, sem Vercel, sem Base64.
-            // O próprio `<img src>` da linha 420 vai lidar com o download em Background.
-            setCoverImageData(imgUrl);
+            // Usamos nosso próprio backend para buscar a imagem usando a Chave do HF (bypass CORS/WAF)
+            const hfResponse = await fetch('/api/generate-cover', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: coverPrompt })
+            });
+
+            if (hfResponse.ok) {
+                const data = await hfResponse.json();
+                if (data.base64) {
+                    setCoverImageData(data.base64); // Sucesso garantido: Base64 nativa direto na img tag!
+                } else {
+                    console.error("HF Proxy não retornou o Base64.");
+                    setCoverImageData(`https://picsum.photos/seed/${Math.floor(Math.random() * 1000)}/840/1188`);
+                }
+            } else {
+                console.error("HF Proxy Falhou:", hfResponse.status);
+                const errorData = await hfResponse.json().catch(() => ({}));
+                console.error("Detalhes:", errorData);
+
+                if (hfResponse.status === 403 || hfResponse.status === 401) {
+                    alert('⚠️ AVISO: Seu Token do HuggingFace não tem permissão para usar as APIs de Inferência Gratuita! Por favor, crie um novo Access Token em huggingface.co/settings/tokens e marque a opção "Make calls to the Serverless Inference API".');
+                } else if (hfResponse.status === 500 && JSON.stringify(errorData).includes('missing')) {
+                    alert('⚠️ AVISO: A chave do HuggingFace não foi detectada. Se você acabou de salvar no .env.local, você precisa REINICIAR O SERVIDOR (derrubar o terminal e rodar npm run dev de novo).');
+                } else if (hfResponse.status === 503) {
+                    alert('⚠️ AVISO: A inteligência artificial do HuggingFace está aquecendo no momento. Tente novamente em 20 segundos.');
+                }
+
+                // Fallback fotográfico cego caso a HuggingFace falhe / exceda limites
+                setCoverImageData(`https://picsum.photos/seed/${Math.floor(Math.random() * 1000)}/840/1188`);
+            }
 
         } catch (err) {
             console.error('Falha geral na geração Visual da Capa:', err);
@@ -154,25 +180,72 @@ export default function Home() {
 
                     let pdfSafeBase64 = null;
 
-                    if (coverImageData.startsWith('data:image')) {
-                        pdfSafeBase64 = coverImageData; // Caso por algum milagre tenha vindo Base64 já formatado
-                    } else {
+                    // 1. Primeira tentativa: Extrair imagem JÁ CARREGADA da tela (Canvas) - 0 delay
+                    const imgEl = document.getElementById('cover-img-element') as HTMLImageElement;
+                    if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
                         try {
-                            const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(coverImageData);
-                            const res = await fetch(proxyUrl);
-                            if (res.ok) {
-                                const blob = await res.blob();
-                                pdfSafeBase64 = await new Promise<string>((resolve, reject) => {
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => resolve(reader.result as string);
-                                    reader.onerror = reject;
-                                    reader.readAsDataURL(blob);
-                                });
+                            const canvas = document.createElement('canvas');
+                            canvas.width = imgEl.naturalWidth;
+                            canvas.height = imgEl.naturalHeight;
+                            const ctx = canvas.getContext('2d');
+                            if (ctx) {
+                                ctx.drawImage(imgEl, 0, 0);
+                                const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+                                if (dataUrl && dataUrl.length > 100) {
+                                    pdfSafeBase64 = dataUrl;
+                                    console.log("Capa extraída do Canvas da UI perfeitamente!");
+                                }
                             }
-                        } catch (e) { console.error("Falha ao tunelizar imagem PDF:", e); }
+                        } catch (e) {
+                            console.warn("Canvas cross-origin taint, caindo para fetch...");
+                        }
                     }
 
-                    if (pdfSafeBase64) {
+                    // 2. Segunda tentativa: Se o Canvas falhar, tenta buscar os dados
+                    if (!pdfSafeBase64) {
+                        if (coverImageData.startsWith('data:image')) {
+                            pdfSafeBase64 = coverImageData;
+                        } else {
+                            const urlsToTry = [
+                                coverImageData,
+                                'https://corsproxy.io/?' + encodeURIComponent(coverImageData),
+                                'https://api.allorigins.win/raw?url=' + encodeURIComponent(coverImageData)
+                            ];
+
+                            for (const fetchUrl of urlsToTry) {
+                                try {
+                                    console.log("Buscando imagem para PDF nativo via:", fetchUrl);
+                                    const res = await fetch(fetchUrl);
+                                    if (res.ok) {
+                                        const blob = await res.blob();
+                                        const bufferBase64 = await new Promise<string>((resolve, reject) => {
+                                            const reader = new FileReader();
+                                            reader.onloadend = () => resolve(reader.result as string);
+                                            reader.onerror = reject;
+                                            reader.readAsDataURL(blob);
+                                        });
+
+                                        // Forçar que seja interpretado como imagem
+                                        if (bufferBase64) {
+                                            if (bufferBase64.startsWith('data:image')) {
+                                                pdfSafeBase64 = bufferBase64;
+                                            } else if (bufferBase64.startsWith('data:application/octet-stream')) {
+                                                pdfSafeBase64 = bufferBase64.replace('data:application/octet-stream', 'data:image/jpeg');
+                                            }
+                                        }
+
+                                        if (pdfSafeBase64 && pdfSafeBase64.startsWith('data:image')) {
+                                            break; // Sucesso real!
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.warn("Falha na rota da imagem:", fetchUrl);
+                                }
+                            }
+                        }
+                    }
+
+                    if (pdfSafeBase64 && pdfSafeBase64.startsWith('data:image')) {
                         const imgRatio = 840 / 1188;
                         const pageRatio = pageWidth / pageHeight;
 
@@ -194,10 +267,30 @@ export default function Home() {
                         doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
                         const imgFormat = pdfSafeBase64.toLowerCase().includes('image/png') ? 'PNG' : 'JPEG';
                         doc.addImage(pdfSafeBase64, imgFormat, dx, dy, drawWidth, drawHeight, undefined, 'FAST');
-                        doc.setGState(new (doc as any).GState({ opacity: 1 }));
-                        console.log("Capa Ancorada no PDF com Sucesso Extremo.");
+
+                        // Overlay preto para destaque da tipografia (igual na UI)
+                        doc.setGState(new (doc as any).GState({ opacity: 0.45 }));
+                        doc.setFillColor(0, 0, 0);
+                        doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+                        // Tipografia Super Nítida em Vetor na Capa do PDF
+                        doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
+                        doc.setTextColor(sr, sg, sb);
+                        doc.setFont('helvetica', 'bold');
+
+                        const coverTitleSize = generatedEbook.title.length > 40 ? 30 : 45;
+                        doc.setFontSize(coverTitleSize);
+
+                        const upperTitle = generatedEbook.title.toUpperCase();
+                        const titleVectorLines = doc.splitTextToSize(upperTitle, pageWidth - 30);
+
+                        // Renderiza do bottom para o top (igual justify-end no flex)
+                        let titleY = pageHeight - 30 - ((titleVectorLines.length - 1) * (coverTitleSize * 0.45));
+                        doc.text(titleVectorLines, 15, titleY);
+
+                        console.log("Capa AI (Z-Image Turbo) Ancorada no PDF com Sucesso Extremo.");
                     } else {
-                        console.warn("A ancoragem da imagem da Capa Falhou. Emitindo PDF cego (apenas com cores).");
+                        console.warn("A ancoragem da imagem da Capa AI Falhou. Emitindo PDF cego (apenas com cores).");
                     }
                 }
             } catch (e) {
@@ -365,7 +458,15 @@ export default function Home() {
                                     <motion.div initial={{ rotateY: 30 }} animate={{ rotateY: -10 }} whileHover={{ rotateY: -20, rotateX: 5 }} className="relative group transition-all duration-700 ease-out" style={{ transformStyle: 'preserve-3d' }}>
                                         <div className="w-[300px] md:w-[380px] aspect-[1/1.4] rounded-r-lg shadow-[25px_25px_50px_rgba(0,0,0,0.6)] relative overflow-hidden border border-white/10" style={{ backgroundColor: generatedEbook.visual_theme?.primary_color || '#1a1830' }}>
                                             {coverImageData ? (
-                                                <img src={coverImageData} className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 opacity-100" alt="Book Cover" />
+                                                <img
+                                                    id="cover-img-element"
+                                                    src={coverImageData}
+                                                    className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 opacity-100"
+                                                    alt="Book Cover"
+                                                    onError={(e) => {
+                                                        console.warn("Imagem original falhou na UI.");
+                                                    }}
+                                                />
                                             ) : isGeneratingCover ? (
                                                 <div className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-black/40 backdrop-blur-sm z-20">
                                                     <Loader2 className="w-8 h-8 text-white/50 animate-spin mb-4" />
