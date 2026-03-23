@@ -95,9 +95,14 @@ export default function Home() {
             const primary = theme.primary_color || '#1a1830';
             const secondary = theme.secondary_color || '#E93DE5';
 
-            const coverPrompt = theme.image_generation_prompt || `A premium, professionally designed minimalist book cover. The title text is EXACTLY "${ebookData.title}". Beautiful elegant typography, high-end editorial graphic design. Visuals: abstract luxury elements, colors: ${primary} and ${secondary}. Masterpiece, 8k, award-winning book cover.`;
+            // Clean prompt ideal para o FLUX.1 + INJEÇÃO FORÇADA DE TIPOGRAFIA
+            let coverPrompt = theme.image_generation_prompt || `A premium, professionally designed minimalist book cover. Visuals: abstract luxury elements, colors: ${primary} and ${secondary}. Masterpiece, 8k, award-winning book cover.`;
 
-            console.log("Definindo Capa AI via HuggingFace (FLUX.1-schnell)...");
+            // Garantia absoluta de que o título será desenhado pelo FLUX.1
+            const cleanTitle = ebookData.title.replace(/[:"']/g, ''); // Limpa caracteres que confundem a IA
+            coverPrompt += ` The massive, bold, cinematic, elegant 3D text "${cleanTitle}" is written prominently and flawlessly integrated into the composition. Professional graphic design layout, typography poster.`;
+
+            console.log("Definindo Capa AI via HuggingFace (FLUX.1-schnell)... Prompt:", coverPrompt);
 
             // Usamos nosso próprio backend para buscar a imagem usando a Chave do HF (bypass CORS/WAF)
             const hfResponse = await fetch('/api/generate-cover', {
