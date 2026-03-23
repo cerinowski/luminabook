@@ -268,27 +268,7 @@ export default function Home() {
                         const imgFormat = pdfSafeBase64.toLowerCase().includes('image/png') ? 'PNG' : 'JPEG';
                         doc.addImage(pdfSafeBase64, imgFormat, dx, dy, drawWidth, drawHeight, undefined, 'FAST');
 
-                        // Overlay preto para destaque da tipografia (igual na UI)
-                        doc.setGState(new (doc as any).GState({ opacity: 0.45 }));
-                        doc.setFillColor(0, 0, 0);
-                        doc.rect(0, 0, pageWidth, pageHeight, 'F');
-
-                        // Tipografia Super Nítida em Vetor na Capa do PDF
-                        doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
-                        doc.setTextColor(sr, sg, sb);
-                        doc.setFont('helvetica', 'bold');
-
-                        const coverTitleSize = generatedEbook.title.length > 40 ? 30 : 45;
-                        doc.setFontSize(coverTitleSize);
-
-                        const upperTitle = generatedEbook.title.toUpperCase();
-                        const titleVectorLines = doc.splitTextToSize(upperTitle, pageWidth - 30);
-
-                        // Renderiza do bottom para o top (igual justify-end no flex)
-                        let titleY = pageHeight - 30 - ((titleVectorLines.length - 1) * (coverTitleSize * 0.45));
-                        doc.text(titleVectorLines, 15, titleY);
-
-                        console.log("Capa AI (Z-Image Turbo) Ancorada no PDF com Sucesso Extremo.");
+                        console.log("Capa AI (FLUX) 100% Pura Ancorada no PDF (Sem overlapp vetorial).");
                     } else {
                         console.warn("A ancoragem da imagem da Capa AI Falhou. Emitindo PDF cego (apenas com cores).");
                     }

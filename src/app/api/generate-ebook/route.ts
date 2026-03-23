@@ -93,14 +93,14 @@ export async function POST(req: Request) {
           // Compressed Prompt with advanced Creative Direction
           const prompt = `Convert the text into a professional eBook JSON file for a premium publishing studio. 
           Rules:
-          1. Keep all core content.
-          2. Organize gracefully into chapters.
-          3. CRITICAL: For 'image_generation_prompt', act as a master Book Graphic Designer. Analyze the deep theme/mood of the text. Write a 60-70 word highly-detailed prompt (in English) for an AI Image Generator (like Midjourney/Flux) to create the COMPLETELY FINISHED BOOK COVER.
-          You MUST include the instruction to render the exact book title typography (e.g., "The title text is EXACTLY 'Your Book Title Here' in elegant typography"). Describe the background, abstract/thematic elements, cinematic lighting, and ensure it uses the chosen 'primary_color' and 'secondary_color'. Focus heavily on editorial, masterpiece, award-winning design aesthetics.
-          4. SUPER CRITICAL SAFETY RULE: The 'image_generation_prompt' MUST NEVER contain medical terms (e.g., erectile dysfunction, anatomy), NSFW, violent, or sensitive words. If the book is about a sensitive/medical topic, use ONLY safe, conceptual, metaphorical, and highly elegant abstract descriptions (like "a glowing pillar of light", "restored balance and harmony", "luxury sleek lines"). If you include forbidden words, the image engine will fail.
-          5. NO mentions of LumiaBook or Lumia Studio anywhere.
-
-          JSON Format: { "title": "...", "chapters": [{ "title": "...", "content": "..." }], "visual_theme": { "primary_color": "#HEX", "secondary_color": "#HEX", "layout_type": "...", "image_generation_prompt": "... [the full safe midjourney cover prompt here]", "design_mood": "..." } }
+          1. Keep all core content and organize gracefully into chapters.
+          2. CRITICAL: For 'image_generation_prompt', you are a Master Book Layout Designer. You must write a 70-80 word prompt in English for FLUX.1 AI to generate the ENTIRE BOOK COVER.
+          - THEME: Analyze the exact core subject of the text (e.g., if it's about Nerd Identity, DO NOT generate a romantic couple. Generate sci-fi elements, retro gaming, cyberpunk aesthetics, etc). The imagery MUST perfectly match the book's concept.
+          - TYPOGRAPHY: You MUST instruct the AI to integrate the text flawlessly. Use phrases like: "The title text EXACTLY '<Insert Book Title Here>' is written in massive, bold, cinematic typography, perfectly integrated into the composition, professional graphic design layout, 3d rendered text."
+          - VIBE: "Award-winning masterpiece, hyper-detailed, trending on ArtStation, 8k resolution, Unreal Engine 5 render, highly stylized."
+          3. SUPER CRITICAL SAFETY RULE: Never use medical, biological, NSFW, or violent terms. Use abstract safe metaphors if needed.
+          
+          JSON Format: { "title": "...", "chapters": [{ "title": "...", "content": "..." }], "visual_theme": { "primary_color": "#HEX", "secondary_color": "#HEX", "layout_type": "...", "image_generation_prompt": "... [the full midjourney cover prompt here]", "design_mood": "..." } }
           
           Text: ${content}`;
 
