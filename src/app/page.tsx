@@ -95,13 +95,12 @@ export default function Home() {
             const primary = theme.primary_color || '#1a1830';
             const secondary = theme.secondary_color || '#E93DE5';
 
-            // Garantia absoluta de que a capa seja um DESIGN GRÁFICO DIAGRAMADO e não só uma foto com texto solto
-            const cleanTitle = ebookData.title.replace(/[:"']/g, ''); // Limpa caracteres que confundem a IA
-            const basePrompt = theme.image_generation_prompt || `A premium minimalist book cover. Visuals: abstract luxury elements.`;
+            // Garantia de que a arte seja limpa para a nossa Tipografia Vetorial Premium
+            const basePrompt = theme.image_generation_prompt || `A premium minimalist book cover context`;
 
-            const coverPrompt = `MASTERPIECE BOOK COVER DESIGN. Graphic design layout, Award-winning editorial typography. The title text EXACTLY "${cleanTitle}" is beautifully diagrammed, massive, elegant, and flawlessly integrated into the art. Background art style: ${basePrompt}. Color palette: ${primary} and ${secondary}. The entire image must look like a professionally published, highly designed book cover, not just a plain photograph.`;
+            const coverPrompt = `MASTERPIECE BACKGROUND ART FOR BOOK COVER. Graphic design environment, abstract luxury styling. Background art style: ${basePrompt}. Color palette: ${primary} and ${secondary}. The image must have elegant negative space in the center or top for text placement. EXTREMELY IMPORTANT: NO TEXT, NO WORDS, NO LETTERS, NO FONTS ANYWHERE in the image. Pure background art only.`;
 
-            console.log("Definindo Capa AI via HuggingFace (FLUX.1-schnell)... Prompt:", coverPrompt);
+            console.log("Definindo Capa AI via HuggingFace (sem texto)... Prompt:", coverPrompt);
 
             // Usamos nosso próprio backend para buscar a imagem usando a Chave do HF (bypass CORS/WAF)
             const hfResponse = await fetch('/api/generate-cover', {
@@ -272,7 +271,40 @@ export default function Home() {
                         const imgFormat = pdfSafeBase64.toLowerCase().includes('image/png') ? 'PNG' : 'JPEG';
                         doc.addImage(pdfSafeBase64, imgFormat, dx, dy, drawWidth, drawHeight, undefined, 'FAST');
 
-                        console.log("Capa AI (FLUX) 100% Pura Ancorada no PDF (Sem overlapp vetorial).");
+                        // Overlay Gradiente Elegante para Leitura Perfeita do Título no PDF
+                        doc.setGState(new (doc as any).GState({ opacity: 0.6 }));
+                        doc.setFillColor(0, 0, 0);
+                        doc.rect(0, pageHeight * 0.4, pageWidth, pageHeight * 0.6, 'F');
+
+                        // Desenho do Título Ultra-Premium em Vetor no PDF
+                        doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
+                        doc.setTextColor(255, 255, 255); // Branco absoluto
+                        doc.setFont('times', 'bold');
+
+                        const titleParts = generatedEbook.title.toUpperCase().split(':');
+                        const mainTitle = titleParts[0].trim();
+                        const subTitle = titleParts.length > 1 ? titleParts.slice(1).join(':').trim() : '';
+
+                        doc.setFontSize(40);
+                        const mainTitleLines = doc.splitTextToSize(mainTitle, pageWidth - 40);
+                        let titleY = pageHeight * 0.65;
+                        doc.text(mainTitleLines, pageWidth / 2, titleY, { align: 'center' });
+                        titleY += (mainTitleLines.length * 15);
+
+                        if (subTitle) {
+                            doc.setFont('helvetica', 'normal');
+                            doc.setTextColor(220, 220, 220); // Cinza claro
+                            doc.setFontSize(18);
+                            const subTitleLines = doc.splitTextToSize(subTitle, pageWidth - 60);
+                            doc.text(subTitleLines, pageWidth / 2, titleY + 10, { align: 'center' });
+                        }
+
+                        // Logo/Badge Luminabook Vector PDF overlay
+                        doc.setFontSize(10);
+                        doc.setTextColor(sr, sg, sb);
+                        doc.text("LUMINABOOK STUDIO", pageWidth / 2, pageHeight - 20, { align: 'center' });
+
+                        console.log("Capa AI Pura + Tipografia Vetorial Ancorada no PDF.");
                     } else {
                         console.warn("A ancoragem da imagem da Capa AI Falhou. Emitindo PDF cego (apenas com cores).");
                     }
@@ -442,15 +474,27 @@ export default function Home() {
                                     <motion.div initial={{ rotateY: 30 }} animate={{ rotateY: -10 }} whileHover={{ rotateY: -20, rotateX: 5 }} className="relative group transition-all duration-700 ease-out" style={{ transformStyle: 'preserve-3d' }}>
                                         <div className="w-[300px] md:w-[380px] aspect-[1/1.4] rounded-r-lg shadow-[25px_25px_50px_rgba(0,0,0,0.6)] relative overflow-hidden border border-white/10" style={{ backgroundColor: generatedEbook.visual_theme?.primary_color || '#1a1830' }}>
                                             {coverImageData ? (
-                                                <img
-                                                    id="cover-img-element"
-                                                    src={coverImageData}
-                                                    className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 opacity-100"
-                                                    alt="Book Cover"
-                                                    onError={(e) => {
-                                                        console.warn("Imagem original falhou na UI.");
-                                                    }}
-                                                />
+                                                <>
+                                                    <img
+                                                        id="cover-img-element"
+                                                        src={coverImageData}
+                                                        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 opacity-100"
+                                                        alt="Book Cover"
+                                                        onError={(e) => {
+                                                            console.warn("Imagem original falhou na UI.");
+                                                        }}
+                                                    />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent flex flex-col justify-end p-8 text-center" style={{ fontFamily: 'Times New Roman, serif' }}>
+                                                        <h2 className="text-3xl md:text-4xl font-bold text-white uppercase tracking-wider shadow-sm drop-shadow-lg leading-tight">
+                                                            {generatedEbook.title.split(':')[0]}
+                                                        </h2>
+                                                        {generatedEbook.title.includes(':') && (
+                                                            <p className="mt-4 text-white/80 text-sm tracking-widest font-sans font-medium uppercase drop-shadow-md">
+                                                                {generatedEbook.title.split(':').slice(1).join(':').trim()}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </>
                                             ) : isGeneratingCover ? (
                                                 <div className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-black/40 backdrop-blur-sm z-20">
                                                     <Loader2 className="w-8 h-8 text-white/50 animate-spin mb-4" />
