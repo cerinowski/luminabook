@@ -94,11 +94,11 @@ export async function POST(req: Request) {
           const prompt = `Convert the text into a professional eBook JSON file for a premium publishing studio. 
           Rules:
           1. Keep all core content and organize gracefully into chapters.
-          2. CRITICAL: For 'image_generation_prompt', you are a Master Book Layout Designer. You must write a 70-80 word prompt in English for FLUX.1 AI to generate the ENTIRE BOOK COVER.
-          - THEME: Analyze the exact core subject of the text (e.g., if it's about Nerd Identity, DO NOT generate a romantic couple. Generate sci-fi elements, retro gaming, cyberpunk aesthetics, etc). The imagery MUST perfectly match the book's concept.
-          - TYPOGRAPHY: You MUST instruct the AI to integrate the text flawlessly. Use phrases like: "The title text EXACTLY '<Insert Book Title Here>' is written in massive, bold, cinematic typography, perfectly integrated into the composition, professional graphic design layout, 3d rendered text."
-          - VIBE: "Award-winning masterpiece, hyper-detailed, trending on ArtStation, 8k resolution, Unreal Engine 5 render, highly stylized."
-          3. SUPER CRITICAL SAFETY RULE: Never use medical, biological, NSFW, or violent terms. Use abstract safe metaphors if needed.
+          2. CRITICAL: For 'image_generation_prompt', you are a Master Book Layout Designer. You must write a 70-80 word prompt in English for FLUX.1.
+          - THEME: Analyze the exact core subject of the text. The imagery MUST perfectly match the book's concept.
+          - IF IT IS A MEDICAL/SENSITIVE TOPIC: Do NOT use unrelated nature metaphors (like trees or skies). Instead, use elegant scientific abstractions, glowing neural networks, premium healthcare aesthetic, abstract anatomical shapes, sleek clinical diagrams, or microscopic tech visuals.
+          - VIBE: "Award-winning masterpiece, hyper-detailed, trending on ArtStation, 8k resolution."
+          3. SUPER CRITICAL SAFETY RULE: Never use explicit NSFW or harsh violent terms. Keep the medical visualization elegant and professional.
           
           JSON Format: { "title": "...", "chapters": [{ "title": "...", "content": "..." }], "visual_theme": { "primary_color": "#HEX", "secondary_color": "#HEX", "layout_type": "...", "image_generation_prompt": "... [the full midjourney cover prompt here]", "design_mood": "..." } }
           
