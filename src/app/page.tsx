@@ -474,27 +474,15 @@ export default function Home() {
                                     <motion.div initial={{ rotateY: 30 }} animate={{ rotateY: -10 }} whileHover={{ rotateY: -20, rotateX: 5 }} className="relative group transition-all duration-700 ease-out" style={{ transformStyle: 'preserve-3d' }}>
                                         <div className="w-[300px] md:w-[380px] aspect-[1/1.4] rounded-r-lg shadow-[25px_25px_50px_rgba(0,0,0,0.6)] relative overflow-hidden border border-white/10" style={{ backgroundColor: generatedEbook.visual_theme?.primary_color || '#1a1830' }}>
                                             {coverImageData ? (
-                                                <>
-                                                    <img
-                                                        id="cover-img-element"
-                                                        src={coverImageData}
-                                                        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 opacity-100"
-                                                        alt="Book Cover"
-                                                        onError={(e) => {
-                                                            console.warn("Imagem original falhou na UI.");
-                                                        }}
-                                                    />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent flex flex-col justify-end p-8 text-center" style={{ fontFamily: 'Times New Roman, serif' }}>
-                                                        <h2 className="text-3xl md:text-4xl font-bold text-white uppercase tracking-wider shadow-sm drop-shadow-lg leading-tight">
-                                                            {generatedEbook.title.split(':')[0]}
-                                                        </h2>
-                                                        {generatedEbook.title.includes(':') && (
-                                                            <p className="mt-4 text-white/80 text-sm tracking-widest font-sans font-medium uppercase drop-shadow-md">
-                                                                {generatedEbook.title.split(':').slice(1).join(':').trim()}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </>
+                                                <img
+                                                    id="cover-img-element"
+                                                    src={coverImageData}
+                                                    className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 opacity-100"
+                                                    alt="Book Cover"
+                                                    onError={(e) => {
+                                                        console.warn("Imagem original falhou na UI.");
+                                                    }}
+                                                />
                                             ) : isGeneratingCover ? (
                                                 <div className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-black/40 backdrop-blur-sm z-20">
                                                     <Loader2 className="w-8 h-8 text-white/50 animate-spin mb-4" />
