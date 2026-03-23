@@ -95,12 +95,11 @@ export default function Home() {
             const primary = theme.primary_color || '#1a1830';
             const secondary = theme.secondary_color || '#E93DE5';
 
-            // Clean prompt ideal para o FLUX.1 + INJEÇÃO FORÇADA DE TIPOGRAFIA
-            let coverPrompt = theme.image_generation_prompt || `A premium, professionally designed minimalist book cover. Visuals: abstract luxury elements, colors: ${primary} and ${secondary}. Masterpiece, 8k, award-winning book cover.`;
-
-            // Garantia absoluta de que o título será desenhado pelo FLUX.1
+            // Garantia absoluta de que a capa seja um DESIGN GRÁFICO DIAGRAMADO e não só uma foto com texto solto
             const cleanTitle = ebookData.title.replace(/[:"']/g, ''); // Limpa caracteres que confundem a IA
-            coverPrompt += ` The massive, bold, cinematic, elegant 3D text "${cleanTitle}" is written prominently and flawlessly integrated into the composition. Professional graphic design layout, typography poster.`;
+            const basePrompt = theme.image_generation_prompt || `A premium minimalist book cover. Visuals: abstract luxury elements.`;
+
+            const coverPrompt = `MASTERPIECE BOOK COVER DESIGN. Graphic design layout, Award-winning editorial typography. The title text EXACTLY "${cleanTitle}" is beautifully diagrammed, massive, elegant, and flawlessly integrated into the art. Background art style: ${basePrompt}. Color palette: ${primary} and ${secondary}. The entire image must look like a professionally published, highly designed book cover, not just a plain photograph.`;
 
             console.log("Definindo Capa AI via HuggingFace (FLUX.1-schnell)... Prompt:", coverPrompt);
 
