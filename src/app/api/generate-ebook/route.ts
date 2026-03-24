@@ -98,8 +98,9 @@ export async function POST(req: Request) {
           2. CRITICAL: For each chapter, you must include a 'chapter_image_prompt' (a 40-word visual description in English for AI generation).
           3. CRITICAL: For 'image_generation_prompt' (the cover), you are a Master Book Layout Designer for a luxury publisher.
           - THEME: Analyze the core subject. Use HIGH-END VISUAL METAPHORS (e.g., architectural fragments, fluid glass, organic textures, cinematic light).
-          - IF IT IS A MEDICAL/SENSITIVE TOPIC: Use futuristic scientific abstractions, tech-organic overlays, or clinical high-contrast diagrams.
-          - TYPOGRAPHY: Include the ENTIRE book title. Specify "Cinematic Editorial Sans-Serif Typography" or "Premium Serif".
+          - TYPOGRAPHY: Include ONLY the book title. NO other text, NO author, NO blurbs.
+          - VIEW: ALWAYS specify "Flat 2D Front-View Offset Print Cover". NO 3D mockups. NO background surfaces.
+          - STYLE: "Cinematic Editorial Sans-Serif Typography" or "Premium Serif". "Award-winning masterpiece, 8k resolution."
           4. COLORS: You MUST choose a SOPHISTICATED, HIGH-CONTRAST pair from this Luxury Menu (or similar):
           - [Nordic Sage & Deep Slate], [Electric Violet & obsidian], [Champagne Gold & Midnight Navy], [Clinical White & Cyber Cobalt], [Terracotta & Ash Grey].
           5. SUPER CRITICAL SAFETY RULE: Never use explicit NSFW terms. Keep it professional.

@@ -112,7 +112,7 @@ export default function Home() {
             const cleanTitle = finalTitle.replace(/[:"']/g, ''); // Limpa apenas caracteres proibidos
             const basePrompt = theme.image_generation_prompt || `A premium minimalist book cover context`;
 
-            const coverPrompt = `BOOK COVER DESIGN. The full title "${cleanTitle}" written in massive, bold, cinematic editorial typography, perfectly centered and integrated. Background art style: ${basePrompt}. Color palette: ${primary} and ${secondary}. Editorial graphic design layout, award-winning masterpiece, 8k resolution.`;
+            const coverPrompt = `FLAT 2D FRONT-VIEW COVER DESIGN. ONLY the title text "${cleanTitle}" allowed. NO other words, NO author name, NO subtitles, NO fake blurbs. NO 3D mockups, NO perspective, NO wooden tables, NO background objects. High-end editorial style. Background art style: ${basePrompt}. Color palette: ${primary} and ${secondary}. Award-winning masterpiece, 8k resolution.`;
 
             console.log("Definindo Capa AI via Pollinations (Alta Performance / No Timeout)...");
 
