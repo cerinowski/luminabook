@@ -15,41 +15,55 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'HUGGINGFACE_API_KEY is missing' }, { status: 500 });
         }
 
-        console.log('Solicitando capa pro HuggingFace via FLUX.1-dev (Alta Precisão)...');
+        console.log('Solicitando capa pro HuggingFace (Tiered Strategy)...');
 
-        const response = await fetch(
-            "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-dev",
-            {
-                headers: {
-                    Authorization: `Bearer ${apiKey}`,
-                    "Content-Type": "application/json",
-                },
-                method: "POST",
-                body: JSON.stringify({
-                    inputs: prompt,
-                    parameters: {
-                        guidance_scale: 3.5,
-                        num_inference_steps: 28
+        const models = [
+            "black-forest-labs/FLUX.1-dev",
+            "black-forest-labs/FLUX.1-schnell"
+        ];
+
+        let lastResponse = null;
+        for (const model of models) {
+            try {
+                console.log(`Tentando modelo: ${model}...`);
+                const response = await fetch(
+                    `https://router.huggingface.co/hf-inference/models/${model}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${apiKey}`,
+                            "Content-Type": "application/json",
+                        },
+                        method: "POST",
+                        body: JSON.stringify({
+                            inputs: prompt,
+                            parameters: model.includes('dev') ? { guidance_scale: 3.5, num_inference_steps: 28 } : {}
+                        }),
+                        cache: 'no-store',
+                        signal: AbortSignal.timeout(25000) // 25s por tentativa
                     }
-                }),
-                cache: 'no-store'
-            }
-        );
+                );
 
-        if (!response.ok) {
-            console.error('HF API Failed:', response.status);
-            const errorText = await response.text();
-            console.error('Detalhes do erro HF:', errorText);
-            return NextResponse.json({ error: 'Failed to generate image on HuggingFace API' }, { status: response.status });
+                if (response.ok) {
+                    lastResponse = response;
+                    break;
+                }
+                console.warn(`Modelo ${model} falhou: ${response.status}`);
+            } catch (e) {
+                console.error(`Erro ao tentar ${model}:`, e);
+            }
         }
 
-        const arrayBuffer = await response.arrayBuffer();
+        if (!lastResponse || !lastResponse.ok) {
+            console.error('All models failed or timed out.');
+            return NextResponse.json({ error: 'Failed to generate image on all available models' }, { status: 504 });
+        }
+
+        const arrayBuffer = await lastResponse.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
         const base64 = buffer.toString('base64');
-        const contentType = response.headers.get('content-type') || 'image/jpeg';
+        const contentType = lastResponse.headers.get('content-type') || 'image/jpeg';
 
-        console.log('Capa da HuggingFace recebida com sucesso! Tamanho:', base64.length);
-
+        console.log('Capa recebida via Tiered Logic! Tamanho:', base64.length);
         return NextResponse.json({ base64: `data:${contentType};base64,${base64}` });
     } catch (error: any) {
         console.error('HF Proxy Catch:', error);

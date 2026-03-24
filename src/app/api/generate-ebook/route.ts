@@ -96,15 +96,15 @@ export async function POST(req: Request) {
           Rules:
           1. Keep all core content and organize gracefully into chapters.
           2. CRITICAL: For each chapter, you must include a 'chapter_image_prompt' (a 40-word visual description in English for AI generation).
-          3. CRITICAL: For 'image_generation_prompt' (the cover), you are a Master Book Layout Designer. You must write a 70-80 word prompt in English for FLUX.1.
-          - THEME: Analyze the exact core subject. Imagery MUST perfectly match the concept.
-          - IF IT IS A MEDICAL/SENSITIVE TOPIC: Use scientific abstractions, tech visuals, or clinical diagrams.
-          - TYPOGRAPHY: Include the ENTIRE book title. Specify high-end editorial typography.
-          - VIBE: "Award-winning masterpiece, hyper-detailed, 8k resolution."
-          4. COLORS: Choose a sophisticated pair of HEX colors (primary and secondary) that reflect the book's mood (e.g., deep charcoal and gold, clinical blue and white, etc).
+          3. CRITICAL: For 'image_generation_prompt' (the cover), you are a Master Book Layout Designer for a luxury publisher.
+          - THEME: Analyze the core subject. Use HIGH-END VISUAL METAPHORS (e.g., architectural fragments, fluid glass, organic textures, cinematic light).
+          - IF IT IS A MEDICAL/SENSITIVE TOPIC: Use futuristic scientific abstractions, tech-organic overlays, or clinical high-contrast diagrams.
+          - TYPOGRAPHY: Include the ENTIRE book title. Specify "Cinematic Editorial Sans-Serif Typography" or "Premium Serif".
+          4. COLORS: You MUST choose a SOPHISTICATED, HIGH-CONTRAST pair from this Luxury Menu (or similar):
+          - [Nordic Sage & Deep Slate], [Electric Violet & obsidian], [Champagne Gold & Midnight Navy], [Clinical White & Cyber Cobalt], [Terracotta & Ash Grey].
           5. SUPER CRITICAL SAFETY RULE: Never use explicit NSFW terms. Keep it professional.
           
-          JSON Format: { "title": "...", "chapters": [{ "title": "...", "content": "...", "chapter_image_prompt": "..." }], "visual_theme": { "primary_color": "#HEX", "secondary_color": "#HEX", "layout_type": "editorial_premium", "image_generation_prompt": "...", "design_mood": "..." } }
+          JSON Format: { "title": "...", "chapters": [{ "title": "...", "content": "...", "chapter_image_prompt": "..." }], "visual_theme": { "primary_color": "#HEX", "secondary_color": "#HEX", "layout_type": "luxury_editorial", "image_generation_prompt": "...", "design_mood": "..." } }
           
           Text: ${content}`;
 

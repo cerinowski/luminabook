@@ -359,22 +359,66 @@ export default function Home() {
                     }
                 }
 
-                // PÁGINA DE CONTEÚDO DO CAPÍTULO
+                // PÁGINA DE CONTEÚDO DO CAPÍTULO - Adicionando Design Geométrico
                 doc.addPage();
+
+                // Elemento Geométrico de Fundo (Sutil)
+                doc.setGState(new (doc as any).GState({ opacity: 0.05 }));
+                doc.setFillColor(sr, sg, sb);
+                doc.rect(0, 0, 40, 297, 'F'); // Faixa lateral esquerda sutil
+                doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
+
                 doc.setDrawColor(sr, sg, sb);
+                doc.setLineWidth(0.5);
                 doc.line(margin, 20, pageWidth - margin, 20); // Divider top
 
                 doc.setTextColor(sr, sg, sb);
                 doc.setFontSize(8);
-                doc.setFont('helvetica', 'normal');
+                doc.setFont('helvetica', 'bold');
                 doc.text(generatedEbook.title.toUpperCase(), margin, 15);
                 doc.text(`CAPÍTULO ${idx + 1}`, pageWidth - margin, 15, { align: 'right' });
 
-                curY = 40;
+                curY = 45;
                 doc.setTextColor(40, 40, 40);
                 doc.setFontSize(11);
 
                 const paragraphs = (chapter.content || '').split('\n').filter((p: string) => p.trim());
+
+                // IMPLEMENTAÇÃO DE CAPITULAR (DROP CAP) - ESTÉTICA PREMIUM
+                if (paragraphs.length > 0) {
+                    const firstPara = paragraphs[0];
+                    const firstChar = firstPara.charAt(0).toUpperCase();
+                    const restOfPara = firstPara.slice(1);
+
+                    doc.setFontSize(42);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(sr, sg, sb);
+                    doc.text(firstChar, margin, curY + 8);
+
+                    const charWidth = doc.getTextWidth(firstChar) + 4;
+                    doc.setFontSize(11);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(40, 40, 40);
+
+                    // Primeira linha ao lado da capitular
+                    const firstLineMaxWidth = contentWidth - charWidth;
+                    const firstLineText = doc.splitTextToSize(restOfPara, firstLineMaxWidth)[0];
+                    doc.text(firstLineText, margin + charWidth, curY);
+
+                    curY += bodyLineHeight;
+
+                    // Restante do primeiro parágrafo
+                    const remainingText = restOfPara.slice(firstLineText.length);
+                    const restLines = doc.splitTextToSize(remainingText, contentWidth);
+                    restLines.forEach((line: string) => {
+                        doc.text(line, margin, curY);
+                        curY += bodyLineHeight;
+                    });
+                    curY += paragraphSpacing;
+
+                    // Removemos o primeiro parágrafo da lista para processar o resto normalmente
+                    paragraphs.shift();
+                }
 
                 paragraphs.forEach((para: string) => {
                     const lines = doc.splitTextToSize(para, contentWidth);
@@ -396,11 +440,15 @@ export default function Home() {
                     curY += paragraphSpacing;
                 });
 
-                // Footer / Page Number
+                // Footer / Page Number / Geom Accents
                 const pTotal = (doc as any).internal.getNumberOfPages();
                 doc.setFontSize(9);
                 doc.setTextColor(sr, sg, sb);
                 doc.text(`${pTotal}`, pageWidth / 2, 288, { align: 'center' });
+
+                // Detalhe Geométrico Rodapé
+                doc.setFillColor(sr, sg, sb);
+                doc.rect(pageWidth / 2 - 10, 290, 20, 1, 'F');
             }
 
             const safeFileName = (generatedEbook.title || 'ebook').replace(/[^a-z0-9]/gi, '_').toLowerCase();
