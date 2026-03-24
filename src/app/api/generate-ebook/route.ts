@@ -94,14 +94,16 @@ export async function POST(req: Request) {
           const prompt = `Convert the text into a professional eBook JSON file for a premium publishing studio. 
           Rules:
           1. Keep all core content and organize gracefully into chapters.
-          2. CRITICAL: For 'image_generation_prompt', you are a Master Book Layout Designer. You must write a 70-80 word prompt in English for FLUX.1.
+          2. CRITICAL: For each chapter, you must include a 'chapter_image_prompt' (a 40-word visual description in English for AI generation).
+          3. CRITICAL: For 'image_generation_prompt' (the cover), you are a Master Book Layout Designer. You must write a 70-80 word prompt in English for FLUX.1.
           - THEME: Analyze the exact core subject. Imagery MUST perfectly match the concept.
           - IF IT IS A MEDICAL/SENSITIVE TOPIC: Use scientific abstractions, tech visuals, or clinical diagrams.
-          - TYPOGRAPHY: NEVER include chapter numbers or subtitles here. Simply specify high-end editorial typography for the main title.
+          - TYPOGRAPHY: Include the ENTIRE book title. Specify high-end editorial typography.
           - VIBE: "Award-winning masterpiece, hyper-detailed, 8k resolution."
-          3. SUPER CRITICAL SAFETY RULE: Never use explicit NSFW terms. Keep it professional.
+          4. COLORS: Choose a sophisticated pair of HEX colors (primary and secondary) that reflect the book's mood (e.g., deep charcoal and gold, clinical blue and white, etc).
+          5. SUPER CRITICAL SAFETY RULE: Never use explicit NSFW terms. Keep it professional.
           
-          JSON Format: { "title": "...", "chapters": [{ "title": "...", "content": "..." }], "visual_theme": { "primary_color": "#HEX", "secondary_color": "#HEX", "layout_type": "...", "image_generation_prompt": "... [the full midjourney cover prompt here]", "design_mood": "..." } }
+          JSON Format: { "title": "...", "chapters": [{ "title": "...", "content": "...", "chapter_image_prompt": "..." }], "visual_theme": { "primary_color": "#HEX", "secondary_color": "#HEX", "layout_type": "editorial_premium", "image_generation_prompt": "...", "design_mood": "..." } }
           
           Text: ${content}`;
 

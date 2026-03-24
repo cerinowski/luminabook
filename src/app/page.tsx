@@ -13,6 +13,8 @@ export default function Home() {
     const [generatedEbook, setGeneratedEbook] = useState<any>(null);
     const [coverImageData, setCoverImageData] = useState<string | null>(null);
     const [isGeneratingCover, setIsGeneratingCover] = useState(false);
+    const [chapterImages, setChapterImages] = useState<string[]>([]);
+    const [isGeneratingChapters, setIsGeneratingChapters] = useState(false);
     const [isAiTextCover, setIsAiTextCover] = useState(false);
     const [debugLogs, setDebugLogs] = useState<string[]>([]);
     const [showDebug, setShowDebug] = useState(false);
@@ -97,51 +99,58 @@ export default function Home() {
 
             // Garantia absoluta de que a capa seja um DESIGN GRÁFICO DIAGRAMADO pela própria IA (FLUX.1)
             // Limpamos o título de qualquer ruído de 'Capítulo' ou subtítulos longos que o Gemini possa ter gerado
-            let cleanTitle = ebookData.title.split(':')[0].trim(); // Pega só o título principal
-            cleanTitle = cleanTitle.replace(/Capítulo \d+/gi, '').replace(/[:"']/g, '').trim();
+            // Garantia absoluta de que a capa tenha o TÍTULO COMPLETO e DIAGRAMAÇÃO DE IA
+            const cleanTitle = ebookData.title.replace(/[:"']/g, ''); // Limpa apenas caracteres proibidos
             const basePrompt = theme.image_generation_prompt || `A premium minimalist book cover context`;
 
-            const coverPrompt = `BOOK COVER DESIGN. The title "${cleanTitle}" written in massive, bold, cinematic editorial typography, perfectly centered and integrated. No other text. Background art style: ${basePrompt}. Color palette: ${primary} and ${secondary}. Editorial graphic design layout, 8k resolution.`;
+            const coverPrompt = `BOOK COVER DESIGN. The full title "${cleanTitle}" written in massive, bold, cinematic editorial typography, perfectly centered and integrated. Background art style: ${basePrompt}. Color palette: ${primary} and ${secondary}. Editorial graphic design layout, award-winning masterpiece, 8k resolution.`;
 
-            console.log("Definindo Capa AI via HuggingFace (com texto forçado)... Prompt:", coverPrompt);
+            console.log("Definindo Capa AI via Pollinations (Alta Performance / No Timeout)...");
 
-            // Usamos nosso próprio backend para buscar a imagem usando a Chave do HF (bypass CORS/WAF)
-            const hfResponse = await fetch('/api/generate-cover', {
+            // Usamos Pollinations direto no frontend para ignorar o limite de 10s da Vercel
+            const safeCmpPrompt = encodeURIComponent(coverPrompt.slice(0, 200));
+            const pollinationUrl = `https://pollinations.ai/p/${safeCmpPrompt}?width=800&height=1100&seed=${Math.floor(Math.random() * 1000)}&model=flux&nologo=true`;
+
+            setCoverImageData(pollinationUrl);
+            setIsGeneratingCover(false);
+
+            // Tenta o backend em paralelo para fallback de alta qualidade (HF Dev) se der tempo
+            fetch('/api/generate-cover', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt: coverPrompt })
-            });
-
-            if (hfResponse.ok) {
-                const data = await hfResponse.json();
-                if (data.base64) {
-                    setCoverImageData(data.base64); // Sucesso garantido: Base64 nativa direto na img tag!
-                } else {
-                    console.error("HF Proxy não retornou o Base64.");
-                    setCoverImageData(`https://picsum.photos/seed/${Math.floor(Math.random() * 1000)}/840/1188`);
+            }).then(async (res) => {
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.base64) setCoverImageData(data.base64);
                 }
-            } else {
-                console.error("HF Proxy Falhou:", hfResponse.status);
-                const errorData = await hfResponse.json().catch(() => ({}));
-                console.error("Detalhes:", errorData);
+            }).catch(() => console.log("Mantendo Pollinations como fonte primária."));
 
-                if (hfResponse.status === 403 || hfResponse.status === 401) {
-                    alert('⚠️ AVISO: Seu Token do HuggingFace não tem permissão para usar as APIs de Inferência Gratuita! Por favor, crie um novo Access Token em huggingface.co/settings/tokens e marque a opção "Make calls to the Serverless Inference API".');
-                } else if (hfResponse.status === 500 && JSON.stringify(errorData).includes('missing')) {
-                    alert('⚠️ AVISO: A chave do HuggingFace não foi detectada. Se você acabou de salvar no .env.local, você precisa REINICIAR O SERVIDOR (derrubar o terminal e rodar npm run dev de novo).');
-                } else if (hfResponse.status === 503) {
-                    alert('⚠️ AVISO: A inteligência artificial do HuggingFace está aquecendo no momento. Tente novamente em 20 segundos.');
+            // 5. Geração de Imagens Internas para Capítulos (Opcional mas premium)
+            if (ebookData.chapters && ebookData.chapters.length > 0) {
+                console.log("Iniciando geração de ilustrações internas...");
+                setIsGeneratingChapters(true);
+                const images: string[] = [];
+
+                for (let i = 0; i < ebookData.chapters.length; i++) {
+                    const chapter = ebookData.chapters[i];
+                    const chapterPrompt = chapter.chapter_image_prompt || `Abstract editorial illustration about ${chapter.title}`;
+
+                    try {
+                        const safeCmpPrompt = encodeURIComponent(chapterPrompt.slice(0, 150));
+                        const imgUrl = `https://pollinations.ai/p/${safeCmpPrompt}?width=800&height=600&seed=${Math.floor(Math.random() * 1000)}&model=flux&nologo=true`;
+                        images.push(imgUrl);
+                        console.log(`Ilustração do Capítulo ${i + 1} agendada.`);
+                    } catch (e) {
+                        console.warn(`Falha ao agendar imagem do capítulo ${i + 1}`);
+                        images.push("");
+                    }
                 }
-
-                // Fallback temático via Pollinations.ai (É gratuito e entende prompts, ao contrário do Picsum)
-                const safePrompt = encodeURIComponent(coverPrompt.slice(0, 100));
-                setCoverImageData(`https://pollinations.ai/p/${safePrompt}?width=800&height=1100&seed=${Math.floor(Math.random() * 1000)}&model=flux`);
+                setChapterImages(images);
+                setIsGeneratingChapters(false);
             }
 
         } catch (err) {
-            console.error('Falha geral na geração Visual da Capa:', err);
-            setCoverImageData(`https://pollinations.ai/p/book%20cover%20minimalist%20abstract?width=800&height=1100&seed=42`);
-        } finally {
             setIsGeneratingCover(false);
         }
     };
@@ -285,36 +294,76 @@ export default function Home() {
                 console.error('Motor jsPDF destruído subitamente:', e);
             }
 
-            generatedEbook.chapters?.forEach((chapter: any, idx: number) => {
+            // 3. Processamento de Capítulos Editoriais
+            const chapters = generatedEbook.chapters || [];
+
+            for (let idx = 0; idx < chapters.length; idx++) {
+                const chapter = chapters[idx];
+
+                // PÁGINA DE ROSTO DO CAPÍTULO (FULL PAGE VIBE)
                 doc.addPage();
-                let curY = 50;
 
-                doc.setDrawColor(sr, sg, sb); // Sync divider with secondary color
-                doc.line(margin, 25, pageWidth - margin, 25);
+                // Background sutil do capítulo
+                doc.setDrawColor(sr, sg, sb);
+                doc.setLineWidth(0.5);
+                doc.rect(10, 10, pageWidth - 20, pageHeight - 20); // Border
 
-                doc.setTextColor(sr, sg, sb); // Sync header text with secondary color
-                doc.setFontSize(8);
-                doc.text(generatedEbook.title.toUpperCase(), margin, 20);
-                doc.text(`CAPÍTULO ${idx + 1}`, pageWidth - margin, 20, { align: 'right' });
+                let curY = 60;
 
-                doc.setTextColor(pr, pg, pb); // Header color using primary
+                // Título do Capítulo em destaque
+                doc.setGState(new (doc as any).GState({ opacity: 0.1 }));
+                doc.setTextColor(sr, sg, sb);
+                doc.setFontSize(140);
+                doc.text(`${idx + 1}`, pageWidth / 2, 120, { align: 'center' });
+                doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
+
+                doc.setFontSize(28);
                 doc.setFont('helvetica', 'bold');
+                doc.setTextColor(pr, pg, pb);
+                const chapterTitle = chapter.title.toUpperCase();
+                const splitTitle = doc.splitTextToSize(chapterTitle, contentWidth);
+                doc.text(splitTitle, pageWidth / 2, 140, { align: 'center' });
 
-                const cleanTitle = chapter.title.replace(/^[:\-\s]+/, '').trim();
-                let chapterTitleSize = 32;
-                if (cleanTitle.length > 30) chapterTitleSize = 24;
-                if (cleanTitle.length > 60) chapterTitleSize = 18;
-                doc.setFontSize(chapterTitleSize);
+                // INSERÇÃO DA IMAGEM DO CAPÍTULO (Se existir)
+                const chapterImgUrl = chapterImages[idx];
+                if (chapterImgUrl) {
+                    try {
+                        console.log(`Buscando imagem do capítulo ${idx + 1} para o PDF...`);
+                        const imgRes = await fetch(chapterImgUrl);
+                        if (imgRes.ok) {
+                            const blob = await imgRes.blob();
+                            const base64 = await new Promise<string>((res) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => res(reader.result as string);
+                                reader.readAsDataURL(blob);
+                            });
 
-                const cTitleLines = doc.splitTextToSize(cleanTitle, contentWidth);
+                            const imgW = 150;
+                            const imgH = 112; // 4:3 ratio
+                            doc.addImage(base64, 'JPEG', (pageWidth - imgW) / 2, 160, imgW, imgH, undefined, 'FAST');
+                            curY = 280;
+                        }
+                    } catch (e) {
+                        console.warn("Falha ao incluir imagem do capítulo no PDF");
+                    }
+                }
 
-                doc.text(cTitleLines, margin, curY);
-                curY += (cTitleLines.length * (chapterTitleSize * 0.45)) + 15;
+                // PÁGINA DE CONTEÚDO DO CAPÍTULO
+                doc.addPage();
+                doc.setDrawColor(sr, sg, sb);
+                doc.line(margin, 20, pageWidth - margin, 20); // Divider top
+
+                doc.setTextColor(sr, sg, sb);
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'normal');
+                doc.text(generatedEbook.title.toUpperCase(), margin, 15);
+                doc.text(`CAPÍTULO ${idx + 1}`, pageWidth - margin, 15, { align: 'right' });
+
+                curY = 40;
+                doc.setTextColor(40, 40, 40);
+                doc.setFontSize(11);
 
                 const paragraphs = (chapter.content || '').split('\n').filter((p: string) => p.trim());
-                doc.setFontSize(11);
-                doc.setTextColor(40, 40, 40); // Darker text for readability
-                doc.setFont('helvetica', 'normal');
 
                 paragraphs.forEach((para: string) => {
                     const lines = doc.splitTextToSize(para, contentWidth);
@@ -322,13 +371,13 @@ export default function Home() {
                         if (curY > 275) {
                             doc.addPage();
                             doc.setDrawColor(sr, sg, sb);
-                            doc.line(margin, 25, pageWidth - margin, 25);
+                            doc.line(margin, 20, pageWidth - margin, 20);
                             doc.setTextColor(sr, sg, sb);
                             doc.setFontSize(7);
-                            doc.text(`... ${chapter.title.toUpperCase()}`, margin, 20);
+                            doc.text(`... CONTINUAÇÃO: ${chapter.title.toUpperCase()}`, margin, 15);
                             curY = 35;
                             doc.setFontSize(11);
-                            doc.setTextColor(40, 40, 40); // Reset body text color
+                            doc.setTextColor(40, 40, 40);
                         }
                         doc.text(line, margin, curY);
                         curY += bodyLineHeight;
@@ -336,15 +385,16 @@ export default function Home() {
                     curY += paragraphSpacing;
                 });
 
-                const pNum = (doc as any).internal.getNumberOfPages();
-                doc.setFontSize(8);
-                doc.setTextColor(sr, sg, sb); // Sync page number with secondary color
-                doc.text(`— ${pNum} —`, pageWidth / 2, 288, { align: 'center' });
-            });
+                // Footer / Page Number
+                const pTotal = (doc as any).internal.getNumberOfPages();
+                doc.setFontSize(9);
+                doc.setTextColor(sr, sg, sb);
+                doc.text(`${pTotal}`, pageWidth / 2, 288, { align: 'center' });
+            }
 
             const safeFileName = (generatedEbook.title || 'ebook').replace(/[^a-z0-9]/gi, '_').toLowerCase();
             doc.save(`${safeFileName}.pdf`);
-            console.log('Premium PDF Studio Success.');
+            console.log('Premium Editorial Studio Success.');
         } catch (error: any) {
             console.error('Critical Layout Error:', error);
             alert('Erro de diagramação. O conteúdo pode ser complexo demais.');
@@ -475,10 +525,20 @@ export default function Home() {
                                             <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">Estilo Sugerido</p>
                                             <p className="text-lg font-bold text-white uppercase">{generatedEbook.visual_theme?.design_mood || 'Professional'}</p>
                                         </div>
-                                        <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-1">
-                                            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">Design Status</p>
-                                            <div className="flex items-center gap-2 text-primary font-bold text-sm">
-                                                <Zap className="w-3 h-3" /> 100% IA GENERATIVA
+                                        <div className={`p-6 rounded-2xl border transition-all ${isGeneratingChapters ? 'bg-primary/10 border-primary/30 animate-pulse' : 'bg-white/5 border-white/5'} space-y-1`}>
+                                            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">Ilustrações do eBook</p>
+                                            <div className="flex items-center gap-2 text-white font-bold text-sm">
+                                                {isGeneratingChapters ? (
+                                                    <>
+                                                        <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                                                        <span>GERANDO ARTES INTERNAS...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <BookOpen className="w-3 h-3 text-primary" />
+                                                        <span>{chapterImages.length} ILUSTRAÇÕES PRONTAS</span>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
