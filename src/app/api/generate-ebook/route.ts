@@ -17,21 +17,22 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 function generateFallbackEbook(content: string) {
   console.log("Fallback Mode Activated: Manually structuring content...");
 
-  // Basic Title Extraction
+  // Basic Title Extraction - Take the full first line
   const lines = content.split('\n').filter(l => l.trim());
-  const title = lines[0]?.slice(0, 80) || "Seu Novo eBook";
+  const title = lines[0]?.replace(/[#*]/g, '').trim().slice(0, 150) || "Seu Novo eBook";
 
   // Rule-based Chapter Splitting
-  // Look for "Capítulo", "Módulo", "Parte" or just large blocks
   const chapterMarkers = /(?:Capítulo|Módulo|Parte|#)\s*\d+|(?:\n\n(?=[A-Z][^a-z]{5,}))/g;
   const rawChapters = content.split(chapterMarkers).filter(c => c.length > 50);
 
   const chapters = rawChapters.length > 0 ? rawChapters.map((text, i) => ({
     title: text.split('\n')[0].trim().slice(0, 50) || `Capítulo ${i + 1}`,
-    content: text.trim()
+    content: text.trim(),
+    chapter_image_prompt: `Abstract editorial illustration about ${text.split('\n')[0].trim().slice(0, 30)}`
   })) : [{
     title: "Introdução e Conteúdo Principal",
-    content: content
+    content: content,
+    chapter_image_prompt: "Abstract editorial illustration of knowledge and growth"
   }];
 
   // Keyword extraction for image (naive but effective)

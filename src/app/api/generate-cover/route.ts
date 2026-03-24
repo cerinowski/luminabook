@@ -15,18 +15,23 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'HUGGINGFACE_API_KEY is missing' }, { status: 500 });
         }
 
-        console.log('Solicitando capa pro HuggingFace via FLUX.1-schnell...');
+        console.log('Solicitando capa pro HuggingFace via FLUX.1-dev (Alta Precisão)...');
 
-        // Usando o modelo FLUX.1-schnell. O modelo Dev é muito lento para o limite de 10s da Vercel Hobby.
         const response = await fetch(
-            "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell",
+            "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-dev",
             {
                 headers: {
                     Authorization: `Bearer ${apiKey}`,
                     "Content-Type": "application/json",
                 },
                 method: "POST",
-                body: JSON.stringify({ inputs: prompt }),
+                body: JSON.stringify({
+                    inputs: prompt,
+                    parameters: {
+                        guidance_scale: 3.5,
+                        num_inference_steps: 28
+                    }
+                }),
                 cache: 'no-store'
             }
         );

@@ -100,7 +100,16 @@ export default function Home() {
             // Garantia absoluta de que a capa seja um DESIGN GRÁFICO DIAGRAMADO pela própria IA (FLUX.1)
             // Limpamos o título de qualquer ruído de 'Capítulo' ou subtítulos longos que o Gemini possa ter gerado
             // Garantia absoluta de que a capa tenha o TÍTULO COMPLETO e DIAGRAMAÇÃO DE IA
-            const cleanTitle = ebookData.title.replace(/[:"']/g, ''); // Limpa apenas caracteres proibidos
+            // EXTRAÇÃO DE TÍTULO ORIGINAL (Garantia de não-resumo)
+            const lines = content.split('\n').filter(l => l.trim());
+            const firstLine = lines[0]?.replace(/[#*]/g, '').trim() || "eBook";
+
+            // Se o título da IA for muito curto (<15) ou contiver reticências, usamos o original do usuário
+            const finalTitle = (ebookData.title && ebookData.title.length > 15 && !ebookData.title.includes('...'))
+                ? ebookData.title
+                : firstLine;
+
+            const cleanTitle = finalTitle.replace(/[:"']/g, ''); // Limpa apenas caracteres proibidos
             const basePrompt = theme.image_generation_prompt || `A premium minimalist book cover context`;
 
             const coverPrompt = `BOOK COVER DESIGN. The full title "${cleanTitle}" written in massive, bold, cinematic editorial typography, perfectly centered and integrated. Background art style: ${basePrompt}. Color palette: ${primary} and ${secondary}. Editorial graphic design layout, award-winning masterpiece, 8k resolution.`;
@@ -324,12 +333,14 @@ export default function Home() {
                 const splitTitle = doc.splitTextToSize(chapterTitle, contentWidth);
                 doc.text(splitTitle, pageWidth / 2, 140, { align: 'center' });
 
-                // INSERÇÃO DA IMAGEM DO CAPÍTULO (Se existir)
+                // INSERÇÃO DA IMAGEM DO CAPÍTULO (Se existir) - USANDO PROXY PARA EVITAR CORS NO PDF
                 const chapterImgUrl = chapterImages[idx];
                 if (chapterImgUrl) {
                     try {
                         console.log(`Buscando imagem do capítulo ${idx + 1} para o PDF...`);
-                        const imgRes = await fetch(chapterImgUrl);
+                        // Usamos proxy para garantir que o jsPDF consiga ler os bytes da imagem (Cross-Origin)
+                        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(chapterImgUrl)}`;
+                        const imgRes = await fetch(proxyUrl);
                         if (imgRes.ok) {
                             const blob = await imgRes.blob();
                             const base64 = await new Promise<string>((res) => {
