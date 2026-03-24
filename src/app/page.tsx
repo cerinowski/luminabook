@@ -1,9 +1,119 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Zap, Upload, Loader2, FileDown, BookOpen, ChevronLeft, CreditCard } from 'lucide-react';
 import jsPDF from 'jspdf';
+
+// Fontes de Luxo para o motor de tipografia
+const GOOGLE_FONTS_URL = "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Montserrat:wght@400;700;900&display=swap";
+
+// --- MOTOR DE TIPOGRAFIA LUMINA v4.0 ---
+async function generateTypographyLayer(bgUrl: string, config: any): Promise<string> {
+    return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 1200;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(bgUrl);
+
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = bgUrl;
+
+        img.onload = () => {
+            // 1. Desenha o Fundo AI
+            ctx.drawImage(img, 0, 0, 800, 1200);
+
+            // 2. Overlay Sutil para garantir legibilidade (Gradiente)
+            const gradient = ctx.createLinearGradient(0, 0, 0, 1200);
+            gradient.addColorStop(0, 'rgba(0,0,0,0.4)');
+            gradient.addColorStop(0.3, 'rgba(0,0,0,0)');
+            gradient.addColorStop(0.7, 'rgba(0,0,0,0)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0.6)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 800, 1200);
+
+            // 3. Título Principal (Massivo e Elegante)
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Sombra do texto
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 15;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 5;
+
+            const title = (config.title || 'EBOOK').toUpperCase();
+            ctx.fillStyle = '#FFFFFF';
+
+            // Ajuste dinâmico de tamanho de fonte para o título
+            let fontSize = 80;
+            if (title.length > 20) fontSize = 60;
+            if (title.length > 40) fontSize = 45;
+
+            ctx.font = `900 ${fontSize}px 'Montserrat', sans-serif`;
+
+            // Desenha o título com quebra de linha inteligente
+            const words = title.split(' ');
+            let line = '';
+            let y = 450;
+            const maxWidth = 700;
+            const lineHeight = fontSize * 1.2;
+
+            for (let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                const metrics = ctx.measureText(testLine);
+                const testWidth = metrics.width;
+                if (testWidth > maxWidth && n > 0) {
+                    ctx.fillText(line, 400, y);
+                    line = words[n] + ' ';
+                    y += lineHeight;
+                } else {
+                    line = testLine;
+                }
+            }
+            ctx.fillText(line, 400, y);
+
+            // 4. Subtítulo (Refinado)
+            ctx.shadowBlur = 5;
+            ctx.font = `400 24px 'Montserrat', sans-serif`;
+            const subtitle = (config.subtitle || '').toUpperCase();
+            const subWords = subtitle.split(' ');
+            let subLine = '';
+            let subY = y + 80;
+
+            for (let n = 0; n < subWords.length; n++) {
+                const testLine = subLine + subWords[n] + ' ';
+                if (ctx.measureText(testLine).width > 600 && n > 0) {
+                    ctx.fillText(subLine, 400, subY);
+                    subLine = subWords[n] + ' ';
+                    subY += 30;
+                } else {
+                    subLine = testLine;
+                }
+            }
+            ctx.fillText(subLine, 400, subY);
+
+            // 5. Nome do Autor (Rodapé High-End)
+            ctx.font = `700 20px 'Montserrat', sans-serif`;
+            ctx.letterSpacing = "4px";
+            ctx.fillText(config.author || 'LUMINA EDITORIAL', 400, 1100);
+
+            // 6. Detalhe Minimalista (Linha de acento)
+            ctx.strokeStyle = config.secondary || '#E93DE5';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(350, subY + 40);
+            ctx.lineTo(450, subY + 40);
+            ctx.stroke();
+
+            resolve(canvas.toDataURL('image/jpeg', 0.9));
+        };
+
+        img.onerror = () => resolve(bgUrl);
+    });
+}
 
 export default function Home() {
     const [content, setContent] = useState('');
@@ -97,63 +207,59 @@ export default function Home() {
             const primary = theme.primary_color || '#1a1830';
             const secondary = theme.secondary_color || '#E93DE5';
 
-            // Garantia absoluta de que a capa seja um DESIGN GRÁFICO DIAGRAMADO pela própria IA (FLUX.1)
-            // Limpamos o título de qualquer ruído de 'Capítulo' ou subtítulos longos que o Gemini possa ter gerado
-            // Garantia absoluta de que a capa tenha o TÍTULO COMPLETO e DIAGRAMAÇÃO DE IA
-            // EXTRAÇÃO DE TÍTULO ORIGINAL (Garantia de não-resumo)
             const lines = content.split('\n').filter(l => l.trim());
             const firstLine = lines[0]?.replace(/[#*]/g, '').trim() || "eBook";
-
-            // Se o título da IA for muito curto (<15) ou contiver reticências, usamos o original do usuário
             const finalTitle = (ebookData.title && ebookData.title.length > 15 && !ebookData.title.includes('...'))
                 ? ebookData.title
                 : firstLine;
 
-            const cleanTitle = finalTitle.replace(/[:"']/g, ''); // Limpa apenas caracteres proibidos
             const basePrompt = theme.image_generation_prompt || `A premium minimalist book cover context`;
 
-            const coverPrompt = `Ultra-realistic, high-end book cover design, visually striking and professionally typeset. Theme: ${basePrompt}. The cover must follow premium publishing standards, with strong visual hierarchy, perfect typography alignment, and balanced composition. Title: '${cleanTitle}' displayed prominently in a bold, modern, elegant font. Subtitle: '${ebookData.subtitle || 'Um guia essencial para transformação'}' smaller but clearly readable. Author name: '${ebookData.author_name || 'Premium Editorial Series'}' positioned tastefully. Design style: cinematic, editorial, high contrast lighting, deep shadows, premium color grading. Clean layout with intentional whitespace and grid-based alignment. Visual elements: include symbolic imagery that represents the theme in a sophisticated and metaphorical way (avoid literal or amateur visuals). Color palette: ${primary} and ${secondary}. Typography: sharp, legible, no distortion, no overlapping issues. Output: ultra high resolution (8K), FLAT 2D FRONT VIEW, NO 3D MOCKUP, NO PERSPECTIVE, NO OVERLAPPING TEXT.`;
+            addLog("Gerando Arte Base via Pollinations...");
+            const safeArtPrompt = encodeURIComponent(`${basePrompt}. Premium editorial background, atmospheric, minimalist, cinematic lighting, ultra high resolution. NO TEXT. NO CHARACTERS. NO BOOKS.`);
+            const artUrl = `https://pollinations.ai/p/${safeArtPrompt}?width=800&height=1200&seed=${Math.floor(Math.random() * 1000)}&model=flux&nologo=true`;
 
-            console.log("Definindo Capa AI via Pollinations (Alta Performance / No Timeout)...");
-
-            // Usamos Pollinations direto no frontend para ignorar o limite de 10s da Vercel
-            const safeCmpPrompt = encodeURIComponent(coverPrompt.slice(0, 200));
-            const pollinationUrl = `https://pollinations.ai/p/${safeCmpPrompt}?width=800&height=1100&seed=${Math.floor(Math.random() * 1000)}&model=flux&nologo=true`;
-
-            setCoverImageData(pollinationUrl);
+            const initialMerged = await generateTypographyLayer(artUrl, {
+                title: finalTitle,
+                subtitle: ebookData.subtitle || "O guia prático para transformação",
+                author: ebookData.author_name || "Premium Editorial Studio",
+                primary: primary,
+                secondary: secondary
+            });
+            setCoverImageData(initialMerged);
             setIsGeneratingCover(false);
 
-            // Tenta o backend em paralelo para fallback de alta qualidade (HF Dev) se der tempo
+            addLog("Refinando Arte com Motor HuggingFace Dev...");
             fetch('/api/generate-cover', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: coverPrompt })
+                body: JSON.stringify({ prompt: `FLAT FRONT VIEW. ${basePrompt}. Atmospheric background art. NO TEXT. NO LETTERS.` })
             }).then(async (res) => {
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.base64) setCoverImageData(data.base64);
+                    if (data.base64) {
+                        const finalMerged = await generateTypographyLayer(data.base64, {
+                            title: finalTitle,
+                            subtitle: ebookData.subtitle || "O guia prático para transformação",
+                            author: ebookData.author_name || "Premium Editorial Studio",
+                            primary: primary,
+                            secondary: secondary
+                        });
+                        setCoverImageData(finalMerged);
+                        addLog("Capa Finalizada com Tipografia de Alta Precisão.");
+                    }
                 }
-            }).catch(() => console.log("Mantendo Pollinations como fonte primária."));
+            }).catch(() => addLog("Usando Pollinations como arte final."));
 
-            // 5. Geração de Imagens Internas para Capítulos (Opcional mas premium)
             if (ebookData.chapters && ebookData.chapters.length > 0) {
-                console.log("Iniciando geração de ilustrações internas...");
                 setIsGeneratingChapters(true);
                 const images: string[] = [];
-
                 for (let i = 0; i < ebookData.chapters.length; i++) {
                     const chapter = ebookData.chapters[i];
                     const chapterPrompt = chapter.chapter_image_prompt || `Abstract editorial illustration about ${chapter.title}`;
-
-                    try {
-                        const safeCmpPrompt = encodeURIComponent(chapterPrompt.slice(0, 150));
-                        const imgUrl = `https://pollinations.ai/p/${safeCmpPrompt}?width=800&height=600&seed=${Math.floor(Math.random() * 1000)}&model=flux&nologo=true`;
-                        images.push(imgUrl);
-                        console.log(`Ilustração do Capítulo ${i + 1} agendada.`);
-                    } catch (e) {
-                        console.warn(`Falha ao agendar imagem do capítulo ${i + 1}`);
-                        images.push("");
-                    }
+                    const safeCmpPrompt = encodeURIComponent(chapterPrompt.slice(0, 150));
+                    const imgUrl = `https://pollinations.ai/p/${safeCmpPrompt}?width=800&height=600&seed=${Math.floor(Math.random() * 1000)}&model=flux&nologo=true`;
+                    images.push(imgUrl);
                 }
                 setChapterImages(images);
                 setIsGeneratingChapters(false);
@@ -464,6 +570,13 @@ export default function Home() {
 
     return (
         <main className="min-h-screen flex flex-col pt-20 pb-40 relative overflow-hidden">
+            <style jsx global>{`
+                @import url('${GOOGLE_FONTS_URL}');
+                body {
+                    font-family: 'Montserrat', sans-serif;
+                }
+            `}</style>
+
             <nav className="fixed top-0 left-0 right-0 h-16 flex items-center justify-center px-6 studio-toolbar z-50">
                 <div className="absolute left-6 flex items-center gap-2 text-sm font-medium text-white/50">
                     <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
