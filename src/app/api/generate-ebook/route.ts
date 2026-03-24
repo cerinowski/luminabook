@@ -55,6 +55,8 @@ function generateFallbackEbook(content: string) {
 
   return {
     title: title,
+    subtitle: "O guia prático para transformação e conhecimento",
+    author_name: "Premium Editorial Series",
     chapters: chapters,
     visual_theme: {
       primary_color: palette.primary,
@@ -95,17 +97,24 @@ export async function POST(req: Request) {
           const prompt = `Convert the text into a professional eBook JSON file for a premium publishing studio. 
           Rules:
           1. Keep all core content and organize gracefully into chapters.
-          2. CRITICAL: For each chapter, you must include a 'chapter_image_prompt' (a 40-word visual description in English for AI generation).
-          3. CRITICAL: For 'image_generation_prompt' (the cover), you are a Master Book Layout Designer for a luxury publisher.
-          - THEME: Analyze the core subject. Use HIGH-END VISUAL METAPHORS (e.g., architectural fragments, fluid glass, organic textures, cinematic light).
-          - TYPOGRAPHY: Include ONLY the book title. NO other text, NO author, NO blurbs.
-          - VIEW: ALWAYS specify "Flat 2D Front-View Offset Print Cover". NO 3D mockups. NO background surfaces.
-          - STYLE: "Cinematic Editorial Sans-Serif Typography" or "Premium Serif". "Award-winning masterpiece, 8k resolution."
-          4. COLORS: You MUST choose a SOPHISTICATED, HIGH-CONTRAST pair from this Luxury Menu (or similar):
-          - [Nordic Sage & Deep Slate], [Electric Violet & obsidian], [Champagne Gold & Midnight Navy], [Clinical White & Cyber Cobalt], [Terracotta & Ash Grey].
-          5. SUPER CRITICAL SAFETY RULE: Never use explicit NSFW terms. Keep it professional.
+          2. CRITICAL: For each chapter, you must include a 'chapter_image_prompt'.
+          3. DESIGN SPEC: You are a Master Book Layout Designer for a luxury publisher.
+          4. COLORS: Choose a SOPHISTICATED, HIGH-CONTRAST pair (e.g., [Nordic Sage & Slate], [Electric Violet & Obsidian]).
+          5. METADATA: Derive a catchy 'subtitle' (5-7 words) and a professional 'author_name' (or use a pseudonym).
           
-          JSON Format: { "title": "...", "chapters": [{ "title": "...", "content": "...", "chapter_image_prompt": "..." }], "visual_theme": { "primary_color": "#HEX", "secondary_color": "#HEX", "layout_type": "luxury_editorial", "image_generation_prompt": "...", "design_mood": "..." } }
+          JSON Format: { 
+            "title": "...", 
+            "subtitle": "...", 
+            "author_name": "...",
+            "chapters": [{ "title": "...", "content": "...", "chapter_image_prompt": "..." }], 
+            "visual_theme": { 
+              "primary_color": "#HEX", 
+              "secondary_color": "#HEX", 
+              "layout_type": "luxury_editorial", 
+              "image_generation_prompt": "DEEP VISUAL METAPHOR DESCRIPTION (No text here)", 
+              "design_mood": "..." 
+            } 
+          }
           
           Text: ${content}`;
 
