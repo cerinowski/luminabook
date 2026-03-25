@@ -73,7 +73,7 @@ async function generateTypographyLayer(bgUrl: string, config: any): Promise<stri
 
         const img = new Image(); img.crossOrigin = "anonymous"; img.src = bgUrl;
         img.onload = () => renderText(img); img.onerror = () => renderText(null);
-        setTimeout(() => { if (canvas.toDataURL('image/jpeg').length < 1000) renderText(null); }, 6000);
+        setTimeout(() => { if (canvas.toDataURL('image/jpeg').length < 1000) renderText(null); }, 15000);
     });
 }
 
@@ -117,18 +117,18 @@ export default function Home() {
             setApprovedTheme(theme);
 
             addLog("Pintando 4 variações exclusivas (FLUX)...");
-            const newVariations: string[] = [];
-            for (let i = 0; i < 4; i++) {
+            addLog("Pintando 4 variações exclusivas (FLUX)...");
+            const variationPromises = Array(4).fill(0).map((_, i) => {
                 const seed = Math.floor(Math.random() * 2000);
                 const artUrl = `https://pollinations.ai/p/${encodeURIComponent(theme.image_generation_prompt + ". atmospheric, professional, NO TEXT")}?width=800&height=1200&seed=${seed}&model=flux&nologo=true`;
-                const merged = await generateTypographyLayer(artUrl, {
+                return generateTypographyLayer(artUrl, {
                     title: theme.title || title,
                     author: author || "Lumina Studio",
                     primary: theme.primary_color,
                     secondary: theme.secondary_color
                 });
-                newVariations.push(merged);
-            }
+            });
+            const newVariations = await Promise.all(variationPromises);
             setVariations(newVariations);
         } catch (e) { addLog("Erro no motor de arte."); }
         finally { setIsLoading(false); }
@@ -288,6 +288,47 @@ export default function Home() {
                                             {selectedCover && <img src={selectedCover} className="w-full h-full object-cover" />}
                                         </div>
                                         <button onClick={() => setActiveTab('gallery')} className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10">Trocar Capa</button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {activeTab === 'style' && (
+                            <motion.div key="style" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
+                                <div><h3 className="text-3xl font-black tracking-tighter">Identidade Visual</h3><p className="text-white/40 text-sm mt-2 font-medium">Personalize as cores e a tipografia do seu eBook para alinhar com sua marca.</p></div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                    <div className="space-y-6">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Paletas de Cores</label>
+                                        <div className="grid grid-cols-1 gap-3">
+                                            {PALETTE_PRESETS.map((p, i) => (
+                                                <button key={i} onClick={() => {
+                                                    setApprovedTheme({ ...approvedTheme, primary_color: p.primary, secondary_color: p.secondary });
+                                                    addLog(`Estilo "${p.name}" aplicado.`);
+                                                }} className={`p-4 rounded-2xl border transition-all flex items-center justify-between group ${approvedTheme?.primary_color === p.primary ? 'border-purple-500 bg-purple-500/10' : 'border-white/5 bg-white/5 hover:border-white/20'}`}>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex gap-1">
+                                                            <div className="w-4 h-4 rounded-full" style={{ backgroundColor: p.primary }} />
+                                                            <div className="w-4 h-4 rounded-full" style={{ backgroundColor: p.secondary }} />
+                                                        </div>
+                                                        <span className="text-sm font-bold">{p.label}</span>
+                                                    </div>
+                                                    <span className="text-[9px] font-black uppercase opacity-0 group-hover:opacity-100 transition-opacity">Aplicar</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-6">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Tipografia Principal</label>
+                                        <div className="flex flex-col gap-3">
+                                            <button className="p-6 rounded-2xl bg-white/5 border border-purple-500 flex items-center justify-between">
+                                                <div className="text-left"><p className="font-serif text-lg">Playfair Display</p><p className="text-[9px] text-white/30 uppercase font-black">Serifado Elegante</p></div>
+                                                <CheckCircle2 className="w-5 h-5 text-purple-500" />
+                                            </button>
+                                            <button className="p-6 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
+                                                <div className="text-left"><p className="font-sans text-lg">Montserrat</p><p className="text-[9px] text-white/30 uppercase font-black">Moderno & Clean</p></div>
+                                                <div className="w-5 h-5 rounded-full border border-white/20" />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </motion.div>
