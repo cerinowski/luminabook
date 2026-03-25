@@ -19,7 +19,9 @@ export async function POST(req: Request) {
 
         const models = [
             "black-forest-labs/FLUX.1-dev",
-            "black-forest-labs/FLUX.1-schnell"
+            "black-forest-labs/FLUX.1-schnell",
+            "stabilityai/stable-diffusion-xl-base-1.0",
+            "runwayml/stable-diffusion-v1-5"
         ];
 
         let lastResponse = null;
