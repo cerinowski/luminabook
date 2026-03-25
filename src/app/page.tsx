@@ -122,7 +122,8 @@ export default function Home() {
         if (!title) return alert("Título é obrigatório!");
         setIsLoading(true);
         setActiveTab('gallery');
-        addLog("Solicitando design estratégico à IA...");
+        addLog(`Solicitando design: "${title}" | Conceito: "${description || 'Automático'}"`);
+        console.log("SENDING TO API:", { title, description });
 
         try {
             const res = await fetch('/api/generate-cover-theme', {
@@ -206,7 +207,7 @@ export default function Home() {
             const res = await fetch('/api/generate-ebook', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content, approvedTitle: title, approvedTheme, approvedAuthor: author }),
+                body: JSON.stringify({ content, approvedTitle: title, approvedTheme, approvedAuthor: author, description }),
             });
             const data = await res.json();
             setGeneratedEbook(data);

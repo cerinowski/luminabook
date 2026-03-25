@@ -51,12 +51,13 @@ export async function POST(req: Request) {
         const theme = JSON.parse(jsonMatch[0]);
         theme.title = title || theme.title;
 
-        // FORÇA O PROMPT DO USUÁRIO SE ELE EXISTIR (BYPASS GEMINI)
+        // --- BYPASS LITERAL E INCONTESTÁVEL ---
         if (description && description.trim().length > 0) {
+            console.log("BYPASSING AI PROMPT WITH USER INPUT:", description);
             theme.image_generation_prompt = description.trim();
         }
 
-        console.log("SUCCESSFUL THEME GENERATED:", theme); // DEBUG
+        console.log("FINAL THEME READY:", theme);
 
         return NextResponse.json(theme);
     } catch (error: any) {
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
             title: title || "Título Luxo",
             primary_color: "#1a1830",
             secondary_color: "#E93DE5",
-            image_generation_prompt: `A professional luxury book cover background, premium abstract textures, 8k, professional photography, NO TEXT`,
+            image_generation_prompt: description || `A high-end book cover background, 8k, professional, no text`,
             design_mood: "Elegant Default"
         });
     }
