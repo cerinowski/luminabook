@@ -151,16 +151,20 @@ export async function POST(req: Request) {
       ebookData = generateFallbackEbook(content);
     }
 
-    // UNIVERSAL SANITIZATION: Clear colons and prefixes from any source (AI or Fallback)
+    // UNIVERSAL SANITIZATION: Clear specific prefixes from any source (AI or Fallback)
     if (ebookData) {
-      if (ebookData.title) {
-        ebookData.title = ebookData.title.replace(/^.*?:\s*/, '').replace(/:/g, '').trim();
-      }
+      const clean = (text: string) => {
+        if (!text) return text;
+        return text
+          .replace(/^(Título|Title|Capítulo|Chapter|Módulo|Módulo|Parte|Ebook|E-book)\s*(\d+|\w+)?:\s*/i, '') // Remove prefixes like "Title: " or "Chapter 1: "
+          .replace(/[:"']/g, '') // Remove actual colons and quotes anywhere
+          .trim();
+      };
+
+      if (ebookData.title) ebookData.title = clean(ebookData.title);
       if (ebookData.chapters) {
         ebookData.chapters.forEach((c: any) => {
-          if (c.title) {
-            c.title = c.title.replace(/^.*?:\s*/, '').replace(/:/g, '').trim();
-          }
+          if (c.title) c.title = clean(c.title);
         });
       }
     }

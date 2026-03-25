@@ -452,13 +452,18 @@ export default function Home() {
                 doc.text(`${idx + 1}`, pageWidth / 2, 120, { align: 'center' });
                 doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
 
-                doc.setFontSize(28);
+                const chapterTitle = chapter.title.toUpperCase();
+
+                // Dynamic font size for chapter cover titles
+                let chapterFontSize = 28;
+                if (chapterTitle.length > 40) chapterFontSize = 22;
+                if (chapterTitle.length > 80) chapterFontSize = 18;
+
+                doc.setFontSize(chapterFontSize);
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(pr, pg, pb);
-                const chapterTitle = chapter.title.toUpperCase();
-                const splitTitleRaw = doc.splitTextToSize(chapterTitle, contentWidth);
-                // Limit title to 2 lines on chapter covers to avoid overlap with illustration
-                const splitTitle = splitTitleRaw.length > 2 ? [...splitTitleRaw.slice(0, 1), splitTitleRaw.slice(1).join(' ').slice(0, 40) + '...'] : splitTitleRaw;
+
+                const splitTitle = doc.splitTextToSize(chapterTitle, contentWidth);
                 doc.text(splitTitle, pageWidth / 2, 140, { align: 'center' });
 
                 // INSERÇÃO DA IMAGEM DO CAPÍTULO (Se existir) - USANDO PROXY PARA EVITAR CORS NO PDF
@@ -515,42 +520,6 @@ export default function Home() {
                 doc.setFontSize(11);
 
                 const paragraphs = (chapter.content || '').split('\n').filter((p: string) => p.trim());
-
-                // IMPLEMENTAÇÃO DE CAPITULAR (DROP CAP) - ESTÉTICA PREMIUM
-                if (paragraphs.length > 0) {
-                    const firstPara = paragraphs[0];
-                    const firstChar = firstPara.charAt(0).toUpperCase();
-                    const restOfPara = firstPara.slice(1);
-
-                    doc.setFontSize(42);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setTextColor(sr, sg, sb);
-                    doc.text(firstChar, margin, curY + 8);
-
-                    const charWidth = doc.getTextWidth(firstChar) + 4;
-                    doc.setFontSize(11);
-                    doc.setFont('helvetica', 'normal');
-                    doc.setTextColor(40, 40, 40);
-
-                    // Primeira linha ao lado da capitular
-                    const firstLineMaxWidth = contentWidth - charWidth;
-                    const firstLineText = doc.splitTextToSize(restOfPara, firstLineMaxWidth)[0];
-                    doc.text(firstLineText, margin + charWidth, curY);
-
-                    curY += bodyLineHeight;
-
-                    // Restante do primeiro parágrafo
-                    const remainingText = restOfPara.slice(firstLineText.length);
-                    const restLines = doc.splitTextToSize(remainingText, contentWidth);
-                    restLines.forEach((line: string) => {
-                        doc.text(line, margin, curY);
-                        curY += bodyLineHeight;
-                    });
-                    curY += paragraphSpacing;
-
-                    // Removemos o primeiro parágrafo da lista para processar o resto normalmente
-                    paragraphs.shift();
-                }
 
                 paragraphs.forEach((para: string) => {
                     const lines = doc.splitTextToSize(para, contentWidth);
