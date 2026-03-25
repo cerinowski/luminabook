@@ -96,12 +96,13 @@ export async function POST(req: Request) {
           // Compressed Prompt with advanced Creative Direction
           const prompt = `Convert the text into a professional eBook JSON file for a premium publishing studio. 
           Rules:
-          1. Keep all core content and organize gracefully into chapters.
-          2. CRITICAL: For each chapter, you must include a 'chapter_image_prompt'.
+          1. Keep all core content and organize gracefully into chapters. Do not uppercase entire sentences, do not use weird formatting or drop caps, keep text natural and readable.
+          2. CRITICAL: For each chapter, you must include a 'chapter_image_prompt'. This prompt MUST BE for HIGHLY REALISTIC PHOTOGRAPHY. Do NOT use cartoons, fantasy, anthropomorphic animals, or bizarre colors unless explicitly requested. Everything must look like a real, professional photograph or highly grounded, realistic editorial art.
           3. DESIGN SPEC: You are a Master Book Layout Designer for a luxury publisher.
-          4. COLORS: Choose a SOPHISTICATED, HIGH-CONTRAST pair (e.g., [Nordic Sage & Slate], [Electric Violet & Obsidian]).
+          4. COLORS: Choose a SOPHISTICATED, HIGH-CONTRAST pair that matches the cover content/theme. CRITICAL: MUST provide perfectly valid #HEX codes for both.
           5. METADATA: Derive a catchy 'subtitle' (5-7 words) and a professional 'author_name' (or use a pseudonym).
-          
+          6. TITLES: Do NOT prefix chapter titles with colons (':') or 'Chapter X:'. Write clean, direct titles.
+
           JSON Format: { 
             "title": "...", 
             "subtitle": "...", 
@@ -111,7 +112,7 @@ export async function POST(req: Request) {
               "primary_color": "#HEX", 
               "secondary_color": "#HEX", 
               "layout_type": "luxury_editorial", 
-              "image_generation_prompt": "DEEP VISUAL METAPHOR DESCRIPTION (No text here)", 
+              "image_generation_prompt": "PHOTOREALISTIC DESCRIPTION (Highly realistic photographic style, realistic colors, no text, no cartoons, no fantasy unless subject demands)", 
               "design_mood": "..." 
             } 
           }
