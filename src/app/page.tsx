@@ -452,19 +452,24 @@ export default function Home() {
                 doc.text(`${idx + 1}`, pageWidth / 2, 120, { align: 'center' });
                 doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
 
-                const chapterTitle = chapter.title.toUpperCase();
+                const chapterTitle = (chapter.title || '').toUpperCase();
 
-                // Dynamic font size for chapter cover titles
-                let chapterFontSize = 28;
-                if (chapterTitle.length > 40) chapterFontSize = 22;
-                if (chapterTitle.length > 80) chapterFontSize = 18;
+                // Dynamic font size for chapter cover titles - more aggressive scaling
+                let chapterFontSize = 26;
+                if (chapterTitle.length > 30) chapterFontSize = 20;
+                if (chapterTitle.length > 60) chapterFontSize = 16;
+                if (chapterTitle.length > 100) chapterFontSize = 14;
 
                 doc.setFontSize(chapterFontSize);
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(pr, pg, pb);
 
-                const splitTitle = doc.splitTextToSize(chapterTitle, contentWidth);
+                // Use a wider width for chapter covers to avoid unnecessary breaks
+                const chapterContentWidth = pageWidth - (margin * 1.5);
+                const splitTitle = doc.splitTextToSize(chapterTitle, chapterContentWidth);
                 doc.text(splitTitle, pageWidth / 2, 140, { align: 'center' });
+
+                doc.setFont('helvetica', 'normal'); // Reset for safety
 
                 // INSERÇÃO DA IMAGEM DO CAPÍTULO (Se existir) - USANDO PROXY PARA EVITAR CORS NO PDF
                 const chapterImgUrl = chapterImages[idx];
@@ -515,9 +520,9 @@ export default function Home() {
                 doc.text(safeHeaderTitle, margin, 15);
                 doc.text(`CAPÍTULO ${idx + 1}`, pageWidth - margin, 15, { align: 'right' });
 
-                curY = 45;
                 doc.setTextColor(40, 40, 40);
                 doc.setFontSize(11);
+                doc.setFont('helvetica', 'normal'); // Reset to normal weight for content
 
                 const paragraphs = (chapter.content || '').split('\n').filter((p: string) => p.trim());
 
