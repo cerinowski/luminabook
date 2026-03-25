@@ -1,21 +1,15 @@
 @import "tailwindcss";
-
-@theme {
-    --color-background: #0b0a15;
-    --color-foreground: #ffffff;
-    --color-primary: #E93DE5;
-    --color-secondary: #5B33F5;
-}
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Montserrat:wght@400;700;900&display=swap');
 
 :root {
-    --background: #0b0a15;
+    --background: #050510;
     --foreground: #ffffff;
 }
 
 body {
     background: var(--background);
     color: var(--foreground);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Montserrat', sans-serif;
     overflow-x: hidden;
 }
 

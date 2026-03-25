@@ -296,8 +296,6 @@ export default function Home() {
 
     return (
         <main className="min-h-screen flex flex-col pt-20 pb-40 bg-[#050510] text-white overflow-x-hidden">
-            <style jsx global>{` @import url('${GOOGLE_FONTS_URL}'); body { font-family: 'Montserrat', sans-serif; background: #050510; } `}</style>
-
             <div className="max-w-6xl mx-auto px-6 w-full relative z-10">
                 <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-16">
                     <div className="flex items-center gap-4">
