@@ -58,10 +58,27 @@ export async function POST(req: Request) {
         }
 
         if (!lastResponse || !lastResponse.ok) {
+            console.warn('HuggingFace falhou, tentando Pollinations AI (Super-Stable)...');
+            try {
+                // Pollinations.ai - 100% Free & Stable Fallback
+                const pollUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=800&height=1200&model=flux&nologo=true&seed=${Math.floor(Math.random() * 100000)}`;
+                const pollRes = await fetch(pollUrl);
+                if (pollRes.ok) {
+                    const arrayBuffer = await pollRes.ok ? await pollRes.arrayBuffer() : null;
+                    if (arrayBuffer) {
+                        const buffer = Buffer.from(arrayBuffer);
+                        const base64 = buffer.toString('base64');
+                        console.log('Capa recebida via Pollinations AI!');
+                        return NextResponse.json({ base64: `data:image/jpeg;base64,${base64}` });
+                    }
+                }
+            } catch (e) {
+                console.error('Pollinations AI falhou também:', e);
+            }
+
             const status = lastResponse?.status || 504;
-            console.error('All models failed or timed out.');
             return NextResponse.json({
-                error: `Failed on all models (Status ${status}). HuggingFace might be overloaded or rate-limiting.`,
+                error: `HuggingFace falhou (Status ${status}). Tente novamente em instantes.`,
                 status
             }, { status: 504 });
         }
