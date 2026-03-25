@@ -38,12 +38,42 @@ async function generateTypographyLayer(bgUrl: string | null, config: any): Promi
                 ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, 800, 1200);
             }
 
-            // Typography Layout Logic (Clean - The AI now bakes the title)
-            // ctx.fillStyle = '#FFFFFF'; ... (Removido para atender pedido de baked-in text)
+            // --- EDITORIAL FRAMING v7.0 (Premium Typography) ---
+            const title = (config.title || 'EBOOK').replace(/^.*?:\s*/, '').replace(/:/g, '').toUpperCase();
 
-            // Minimalist Branding (Author only, subtle)
-            ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = "700 12px 'Montserrat', sans-serif"; ctx.letterSpacing = "6px";
+            // 1. Subtle Dark Gradient for Contrast (Integrated Look)
+            const grad = ctx.createLinearGradient(0, 400, 0, 800);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(0.5, 'rgba(0,0,0,0.4)');
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grad; ctx.fillRect(0, 400, 800, 400);
+
+            // 2. Main Title Rendering
+            ctx.fillStyle = '#FFFFFF';
+            let fontSize = title.length > 20 ? 60 : 80;
+            if (title.length > 40) fontSize = 45;
+
+            const fontStack = config.font === 'sans' ? "'Montserrat', sans-serif" : "'Playfair Display', serif";
+            ctx.font = `900 ${fontSize}px ${fontStack}`;
             ctx.textAlign = 'center';
+
+            const words = title.split(' '); let line = ''; let y = 500;
+            for (let n = 0; n < words.length; n++) {
+                let testLine = line + words[n] + ' ';
+                if (ctx.measureText(testLine).width > 720 && n > 0) {
+                    ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 10;
+                    ctx.fillText(line.trim(), 400, y);
+                    line = words[n] + ' '; y += fontSize + 15;
+                } else { line = testLine; }
+            }
+            ctx.fillText(line.trim(), 400, y);
+            ctx.shadowBlur = 0;
+
+            // 3. Accent Element (Professional Detail)
+            ctx.fillStyle = config.secondary || '#E93DE5'; ctx.fillRect(360, y + 40, 80, 4);
+
+            // 4. Branding (Minimalist)
+            ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = "900 14px 'Montserrat', sans-serif"; ctx.letterSpacing = "6px";
             ctx.fillText((config.author || 'LUMINA').toUpperCase(), 400, 1150);
 
             resolve(canvas.toDataURL('image/jpeg', 0.9));
@@ -109,9 +139,7 @@ export default function Home() {
 
             const variationPromises = Array(4).fill(0).map(async (_, i) => {
                 const seed = Math.floor(Math.random() * 2000);
-                // Prompt robusto com título embutido para o FLUX
-                const artPrompt = theme.image_generation_prompt +
-                    `. The title "${title}" is written in massive, elegant, high-contrast typography in the center, 8k, professional book cover design.`;
+                const artPrompt = theme.image_generation_prompt + ", professional photography, depth of field, 8k, ultra-detailed, NO TEXT";
 
                 try {
                     const res = await fetch('/api/generate-cover', {

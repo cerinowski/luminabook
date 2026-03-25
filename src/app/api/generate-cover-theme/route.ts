@@ -26,17 +26,16 @@ export async function POST(req: Request) {
     Rules:
     1. Colors MUST be sophisticated and high-contrast.
     2. Provide perfectly valid #HEX codes.
-    3. image_generation_prompt MUST include specific instructions to write the title "${title}" in the artwork. 
-       Example: "A professional book cover with the title '${title}' clearly written in large, elegant, high-contrast typography..."
-    4. NO surrealism, NO floating organs. MUST BE PHOTOREALISTIC or high-end illustration.
-    5. Ensure the title in the prompt is spelled EXACTLY as "${title}".
+    3. image_generation_prompt must be a PURE visual description, HIGHLY REALISTIC PHOTOGRAPHY, NO TEXT. 
+    4. NO surrealism, NO floating organs. Ensure the background has a smooth area for text.
+    5. Clean the title (no colons).
 
     JSON Format:
     {
       "title": "${title}",
       "primary_color": "#HEX",
       "secondary_color": "#HEX",
-      "image_generation_prompt": "A professional book cover with the title '${title}' written in...",
+      "image_generation_prompt": "A professional book cover background featuring...",
       "design_mood": "Short mood description"
     }`;
 
@@ -56,7 +55,7 @@ export async function POST(req: Request) {
             title: title || "Título Luxo",
             primary_color: "#1a1830",
             secondary_color: "#E93DE5",
-            image_generation_prompt: `A professional luxury book cover with the title "${title || 'Premium'}" written in elegant, high-contrast typography over a premium abstract background, 8k, professional photography`,
+            image_generation_prompt: `A professional luxury book cover background, premium abstract textures, 8k, professional photography, NO TEXT`,
             design_mood: "Elegant Default"
         });
     }
