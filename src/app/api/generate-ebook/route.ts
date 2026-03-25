@@ -71,7 +71,7 @@ function generateFallbackEbook(content: string) {
 
 export async function POST(req: Request) {
   try {
-    const { content, approvedTitle, approvedTheme } = await req.json();
+    const { content, approvedTitle, approvedTheme, approvedAuthor } = await req.json();
 
     if (!content) {
       return NextResponse.json({ error: "Content is required" }, { status: 400 });
