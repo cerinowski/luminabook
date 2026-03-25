@@ -26,8 +26,13 @@ async function generateTypographyLayer(bgUrl: string, config: any): Promise<stri
         if (!ctx) return resolve(bgUrl);
 
         const renderText = (loadedImg: HTMLImageElement | null) => {
-            if (loadedImg) ctx.drawImage(loadedImg, 0, 0, 800, 1200);
-            else {
+            if (loadedImg) {
+                // Ensure image fits perfectly (Cover is 800x1200)
+                const scale = Math.max(800 / loadedImg.width, 1200 / loadedImg.height);
+                const x = (800 - loadedImg.width * scale) / 2;
+                const y = (1200 - loadedImg.height * scale) / 2;
+                ctx.drawImage(loadedImg, x, y, loadedImg.width * scale, loadedImg.height * scale);
+            } else {
                 const bgGrad = ctx.createLinearGradient(0, 0, 800, 1200);
                 bgGrad.addColorStop(0, config.primary || '#050510');
                 bgGrad.addColorStop(1, '#000000');
