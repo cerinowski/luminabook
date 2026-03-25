@@ -18,16 +18,15 @@ const PALETTE_PRESETS = [
 ];
 
 // --- MOTOR DE TIPOGRAFIA LUMINA v6.0 ---
-async function generateTypographyLayer(bgUrl: string, config: any): Promise<string> {
+async function generateTypographyLayer(bgUrl: string | null, config: any): Promise<string> {
     return new Promise((resolve) => {
         const canvas = document.createElement('canvas');
         canvas.width = 800; canvas.height = 1200;
         const ctx = canvas.getContext('2d');
-        if (!ctx) return resolve(bgUrl);
+        if (!ctx) return resolve(""); // Safe fallback
 
         const renderText = (loadedImg: HTMLImageElement | null) => {
             if (loadedImg) {
-                // Ensure image fits perfectly (Cover is 800x1200)
                 const scale = Math.max(800 / loadedImg.width, 1200 / loadedImg.height);
                 const x = (800 - loadedImg.width * scale) / 2;
                 const y = (1200 - loadedImg.height * scale) / 2;
@@ -39,16 +38,7 @@ async function generateTypographyLayer(bgUrl: string, config: any): Promise<stri
                 ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, 800, 1200);
             }
 
-            const gradient = ctx.createLinearGradient(0, 0, 0, 1200);
-            gradient.addColorStop(0, 'rgba(0,0,0,0.4)');
-            gradient.addColorStop(0.3, 'rgba(0,0,0,0)');
-            gradient.addColorStop(0.7, 'rgba(0,0,0,0)');
-            gradient.addColorStop(1, 'rgba(0,0,0,0.6)');
-            ctx.fillStyle = gradient; ctx.fillRect(0, 0, 800, 1200);
-
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 15;
-
+            // Typography Layout Logic (Fixed for Professionalism)
             const title = (config.title || 'EBOOK').replace(/^.*?:\s*/, '').replace(/:/g, '').toUpperCase();
             ctx.fillStyle = '#FFFFFF';
             let fontSize = title.length > 20 ? 60 : 80;
@@ -59,28 +49,28 @@ async function generateTypographyLayer(bgUrl: string, config: any): Promise<stri
 
             const words = title.split(' '); let line = ''; let y = 450;
             for (let n = 0; n < words.length; n++) {
-                const testLine = line + words[n] + ' ';
+                let testLine = line + words[n] + ' ';
                 if (ctx.measureText(testLine).width > 700 && n > 0) {
-                    ctx.fillText(line, 400, y); line = words[n] + ' '; y += fontSize * 1.2;
-                } else line = testLine;
+                    ctx.fillText(line, 400, y); line = words[n] + ' '; y += fontSize + 10;
+                } else { line = testLine; }
             }
-            ctx.fillText(line, 400, y);
+            ctx.textAlign = 'center'; ctx.fillText(line, 400, y);
 
-            ctx.font = `400 24px 'Montserrat', sans-serif`;
-            ctx.fillText((config.subtitle || '').toUpperCase(), 400, y + 80);
+            ctx.fillStyle = config.secondary || '#E93DE5'; ctx.fillRect(360, y + 40, 80, 4);
 
-            ctx.font = `700 22px 'Montserrat', sans-serif`;
-            ctx.letterSpacing = "6px";
-            ctx.fillText((config.author || 'LUMINA STUDIO').toUpperCase(), 400, 1100);
+            ctx.fillStyle = '#AAAAAA'; ctx.font = "900 14px 'Montserrat', sans-serif"; ctx.letterSpacing = "6px";
+            ctx.fillText((config.author || 'LUMINA').toUpperCase(), 400, 1100);
 
-            ctx.strokeStyle = config.secondary || '#E93DE5'; ctx.lineWidth = 4;
-            ctx.beginPath(); ctx.moveTo(350, y + 120); ctx.lineTo(450, y + 120); ctx.stroke();
             resolve(canvas.toDataURL('image/jpeg', 0.9));
         };
 
-        const img = new Image(); img.crossOrigin = "anonymous"; img.src = bgUrl;
-        img.onload = () => renderText(img); img.onerror = () => renderText(null);
-        setTimeout(() => { if (canvas.toDataURL('image/jpeg').length < 1000) renderText(null); }, 15000);
+        if (!bgUrl) return renderText(null);
+
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => renderText(img);
+        img.onerror = () => renderText(null);
+        img.src = bgUrl; // Can be base64 data now
     });
 }
 
@@ -107,7 +97,10 @@ export default function Home() {
     const [generatedEbook, setGeneratedEbook] = useState<any>(null);
     const [isGeneratingChapters, setIsGeneratingChapters] = useState(false);
 
-    const addLog = (msg: string) => setDebugLogs(p => [...p.slice(-5), `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    const addLog = (msg: string) => {
+        console.log(`[LUMINA DBG] ${msg}`);
+        setDebugLogs(p => [...p.slice(-12), `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    };
 
     // Variation Generation Logic
     const handleGenerateVariations = async () => {
@@ -126,23 +119,46 @@ export default function Home() {
             setApprovedTheme(theme);
 
             addLog("Pintando 4 variações exclusivas (FLUX)...");
-            const urls: string[] = [];
+            const newVariations: string[] = [];
+            const urls: string[] = []; // In this context, urls will store the base64 from HF
+
             const variationPromises = Array(4).fill(0).map(async (_, i) => {
-                await new Promise(r => setTimeout(r, i * 600));
                 const seed = Math.floor(Math.random() * 2000);
-                const artUrl = `https://pollinations.ai/p/${encodeURIComponent(theme.image_generation_prompt + ". atmospheric, professional, NO TEXT")}?width=800&height=1200&seed=${seed}&model=flux&nologo=true`;
-                urls.push(artUrl);
-                return generateTypographyLayer(artUrl, {
-                    title: theme.title || title,
-                    author: author || "Lumina Studio",
-                    primary: theme.primary_color,
-                    secondary: theme.secondary_color,
-                    font: selectedFont
-                });
+                const artPrompt = theme.image_generation_prompt + ". atmospheric, professional, highly realistic photography, no text";
+
+                try {
+                    const res = await fetch('/api/generate-cover', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt: artPrompt + ` --seed ${seed}` })
+                    });
+                    const { base64, error } = await res.json();
+                    if (error || !base64) throw new Error(error || "HF Error");
+
+                    const composed = await generateTypographyLayer(base64, {
+                        title: theme.title || title,
+                        author: author || "Lumina Studio",
+                        primary: theme.primary_color,
+                        secondary: theme.secondary_color,
+                        font: selectedFont
+                    });
+
+                    urls.push(base64);
+                    return composed;
+                } catch (e: any) {
+                    addLog(`Variação ${i + 1} falhou: ${e.message}`);
+                    return generateTypographyLayer(null, {
+                        title: theme.title || title,
+                        author: author || "Lumina Studio",
+                        primary: theme.primary_color,
+                        secondary: theme.secondary_color,
+                        font: selectedFont
+                    });
+                }
             });
-            const newVariations = await Promise.all(variationPromises);
+            const variationsRes = await Promise.all(variationPromises);
             setBaseArtUrls(urls);
-            setVariations(newVariations);
+            setVariations(variationsRes);
         } catch (e) { addLog("Erro no motor de arte."); }
         finally { setIsLoading(false); }
     };
