@@ -112,7 +112,7 @@ export async function POST(req: Request) {
               "primary_color": "#HEX", 
               "secondary_color": "#HEX", 
               "layout_type": "luxury_editorial", 
-              "image_generation_prompt": "PHOTOREALISTIC DESCRIPTION (Highly realistic photographic style, realistic colors, no text, no cartoons, no fantasy unless subject demands)", 
+              "image_generation_prompt": "Write ONLY the visual description here, eg: 'A highly realistic photograph of an elegant dining room table with fresh vegetables...'",
               "design_mood": "..." 
             } 
           }
@@ -127,7 +127,15 @@ export async function POST(req: Request) {
           if (!jsonMatch) throw new Error("JSON_NOT_FOUND");
 
           ebookData = JSON.parse(jsonMatch[0]);
-          if (ebookData) break;
+          if (ebookData) {
+            if (ebookData.title) ebookData.title = ebookData.title.replace(/^.*?:\s*/, '').replace(/:/g, '').trim();
+            if (ebookData.chapters) {
+              ebookData.chapters.forEach((c: any) => {
+                c.title = c.title.replace(/^.*?:\s*/, '').replace(/:/g, '').trim();
+              });
+            }
+            break;
+          }
         } catch (error: any) {
           const errMsg = error.message || String(error);
           if (errMsg.includes("404")) continue;

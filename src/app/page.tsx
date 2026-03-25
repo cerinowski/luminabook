@@ -8,134 +8,110 @@ import jsPDF from 'jspdf';
 // Fontes de Luxo para o motor de tipografia
 const GOOGLE_FONTS_URL = "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Montserrat:wght@400;700;900&display=swap";
 
-// --- MOTOR DE TIPOGRAFIA LUMINA v6.0 (ULTIMATE RESILIENCE & GRADIENT FALLBACK) ---
+// --- MOTOR DE TIPOGRAFIA LUMINA v4.0 ---
 async function generateTypographyLayer(bgUrl: string, config: any): Promise<string> {
-    return new Promise(async (resolve) => {
+    return new Promise((resolve) => {
         const canvas = document.createElement('canvas');
         canvas.width = 800;
         canvas.height = 1200;
         const ctx = canvas.getContext('2d');
         if (!ctx) return resolve(bgUrl);
 
-        const pr = config.primary || '#0a0a0f';
-        const sr = config.secondary || '#E93DE5';
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = bgUrl;
 
-        // Estabilizamos a URL via Proxy Interno
-        let finalUrl = bgUrl;
-        if (!bgUrl.startsWith('data:') && !bgUrl.startsWith('blob:')) {
-            finalUrl = `/api/proxy-image?url=${encodeURIComponent(bgUrl)}`;
-        }
+        img.onload = () => {
+            // 1. Desenha o Fundo AI
+            ctx.drawImage(img, 0, 0, 800, 1200);
 
-        const renderMasterpiece = (imgObj: HTMLImageElement | null) => {
-            // 1. FUNDO: Imagem ou Degradê Premium de Fallback
-            if (imgObj) {
-                ctx.drawImage(imgObj, 0, 0, 800, 1200);
-            } else {
-                const bgGrad = ctx.createLinearGradient(0, 0, 800, 1200);
-                bgGrad.addColorStop(0, pr);
-                bgGrad.addColorStop(1, '#000000');
-                ctx.fillStyle = bgGrad;
-                ctx.fillRect(0, 0, 800, 1200);
-
-                // Texture noise simples se for fallback
-                for (let i = 0; i < 5000; i++) {
-                    ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.02})`;
-                    ctx.fillRect(Math.random() * 800, Math.random() * 1200, 1, 1);
-                }
-            }
-
-            // 2. CAMADA EDITORIAL (Contraste Cinematográfico)
-            const vignette = ctx.createLinearGradient(0, 0, 0, 1200);
-            vignette.addColorStop(0, 'rgba(0,0,0,0.8)');
-            vignette.addColorStop(0.3, 'rgba(0,0,0,0.2)');
-            vignette.addColorStop(0.7, 'rgba(0,0,0,0.2)');
-            vignette.addColorStop(1, 'rgba(0,0,0,0.9)');
-            ctx.fillStyle = vignette;
+            // 2. Overlay Sutil para garantir legibilidade (Gradiente)
+            const gradient = ctx.createLinearGradient(0, 0, 0, 1200);
+            gradient.addColorStop(0, 'rgba(0,0,0,0.4)');
+            gradient.addColorStop(0.3, 'rgba(0,0,0,0)');
+            gradient.addColorStop(0.7, 'rgba(0,0,0,0)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0.6)');
+            ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, 800, 1200);
 
-            // Moldura Editorial High-Contrast v6.0
-            ctx.globalAlpha = 0.75;
-            ctx.fillStyle = '#111111';
-            ctx.fillRect(65, 300, 670, 580); // Design vertical centrado
-            ctx.globalAlpha = 1.0;
-
-            // Accent Borders (Double Cinema)
-            ctx.strokeStyle = sr;
-            ctx.lineWidth = 1;
-            ctx.strokeRect(85, 320, 630, 540);
-            ctx.strokeRect(90, 325, 620, 530);
-
-            // 3. MOTOR DE TIPOGRAFIA (Multi-Line Focus)
+            // 3. Título Principal (Massivo e Elegante)
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.shadowColor = 'rgba(0,0,0,1)';
-            ctx.shadowBlur = 35;
+
+            // Sombra do texto
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 15;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 5;
+
+            const title = (config.title || 'EBOOK').toUpperCase();
             ctx.fillStyle = '#FFFFFF';
 
-            const title = (config.title || 'LUMINA').toUpperCase();
-            let fontSize = 72;
-            if (title.length > 20) fontSize = 52;
-            if (title.length > 40) fontSize = 38;
-            if (title.length > 70) fontSize = 30;
+            // Ajuste dinâmico de tamanho de fonte para o título
+            let fontSize = 80;
+            if (title.length > 20) fontSize = 60;
+            if (title.length > 40) fontSize = 45;
 
             ctx.font = `900 ${fontSize}px 'Montserrat', sans-serif`;
 
+            // Desenha o título com quebra de linha inteligente
             const words = title.split(' ');
-            const lines = [];
-            let currentLine = '';
-            const maxWidth = 560;
+            let line = '';
+            let y = 450;
+            const maxWidth = 700;
+            const lineHeight = fontSize * 1.2;
 
             for (let n = 0; n < words.length; n++) {
-                const testLine = currentLine + words[n] + ' ';
-                if (ctx.measureText(testLine).width > maxWidth && n > 0) {
-                    lines.push(currentLine);
-                    currentLine = words[n] + ' ';
+                const testLine = line + words[n] + ' ';
+                const metrics = ctx.measureText(testLine);
+                const testWidth = metrics.width;
+                if (testWidth > maxWidth && n > 0) {
+                    ctx.fillText(line, 400, y);
+                    line = words[n] + ' ';
+                    y += lineHeight;
                 } else {
-                    currentLine = testLine;
+                    line = testLine;
                 }
             }
-            lines.push(currentLine);
+            ctx.fillText(line, 400, y);
 
-            const totalHeight = lines.length * fontSize * 1.1;
-            let startY = 560 - (totalHeight / 2) + (fontSize / 2); // Centralização precisa
-
-            lines.forEach((l, i) => {
-                ctx.fillText(l.trim(), 400, startY + (i * fontSize * 1.1));
-            });
-
-            // 4. SUBTÍTULO (Sincronizado)
-            const lastY = startY + (lines.length * fontSize * 1.1);
+            // 4. Subtítulo (Refinado)
             ctx.shadowBlur = 5;
+            ctx.font = `400 24px 'Montserrat', sans-serif`;
+            const subtitle = (config.subtitle || '').toUpperCase();
+            const subWords = subtitle.split(' ');
+            let subLine = '';
+            let subY = y + 80;
+
+            for (let n = 0; n < subWords.length; n++) {
+                const testLine = subLine + subWords[n] + ' ';
+                if (ctx.measureText(testLine).width > 600 && n > 0) {
+                    ctx.fillText(subLine, 400, subY);
+                    subLine = subWords[n] + ' ';
+                    subY += 30;
+                } else {
+                    subLine = testLine;
+                }
+            }
+            ctx.fillText(subLine, 400, subY);
+
+            // 5. Nome do Autor (Rodapé High-End)
             ctx.font = `700 20px 'Montserrat', sans-serif`;
-            const subtitle = (config.subtitle || 'MASTERPIECE EDITORIAL').toUpperCase();
-            ctx.fillText(subtitle, 400, Math.min(lastY + 30, 860));
+            ctx.letterSpacing = "4px";
+            ctx.fillText(config.author || 'LUMINA EDITORIAL', 400, 1100);
 
-            // 5. NOME DO AUTOR (Branding Sólido)
-            ctx.fillStyle = pr;
-            ctx.fillRect(0, 1100, 800, 100);
+            // 6. Detalhe Minimalista (Linha de acento)
+            ctx.strokeStyle = config.secondary || '#E93DE5';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(350, subY + 40);
+            ctx.lineTo(450, subY + 40);
+            ctx.stroke();
 
-            ctx.font = `700 16px 'Montserrat', sans-serif`;
-            ctx.fillStyle = '#FFFFFF';
-            ctx.letterSpacing = "8px";
-            ctx.fillText(config.author || 'LUMINA STUDIOS', 400, 1150);
-
-            resolve(canvas.toDataURL('image/jpeg', 0.95));
+            resolve(canvas.toDataURL('image/jpeg', 0.9));
         };
 
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = finalUrl;
-
-        img.onload = () => renderMasterpiece(img);
-        img.onerror = () => {
-            console.warn("[v6.0] Background art fail, using Gradient Fallback.");
-            renderMasterpiece(null);
-        };
-
-        // Segurança máxima de 10s para o carregamento do Canvas
-        setTimeout(() => {
-            if (canvas.toDataURL().length < 1000) renderMasterpiece(null);
-        }, 8000);
+        img.onerror = () => resolve(bgUrl);
     });
 }
 
@@ -149,157 +125,635 @@ export default function Home() {
     const [isGeneratingCover, setIsGeneratingCover] = useState(false);
     const [chapterImages, setChapterImages] = useState<string[]>([]);
     const [isGeneratingChapters, setIsGeneratingChapters] = useState(false);
+    const [isAiTextCover, setIsAiTextCover] = useState(false);
+    const [debugLogs, setDebugLogs] = useState<string[]>([]);
+    const [showDebug, setShowDebug] = useState(false);
+    const [cooldown, setCooldown] = useState(0);
 
     useEffect(() => {
-        setRequiredCredits(content.trim().length === 0 ? 0 : Math.ceil(content.length / 500));
+        if (content.trim().length === 0) {
+            setRequiredCredits(0);
+        } else {
+            const calculated = Math.ceil(content.length / 500);
+            setRequiredCredits(calculated);
+        }
     }, [content]);
 
+    useEffect(() => {
+        if (cooldown > 0) {
+            const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [cooldown]);
+
+    const addLog = (msg: string) => {
+        setDebugLogs(prev => [...prev.slice(-15), `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    };
+
     const handleCreateEbook = async () => {
-        if (!content || requiredCredits > userCredits) return;
+        if (!content || requiredCredits > userCredits || cooldown > 0) return;
+
         setIsLoading(true);
+        setDebugLogs([]);
+        addLog("Iniciando motor de criação ultra-resiliente...");
+        addLog("Camada 1: Testando modelos Flash em cascata (0s delay)");
+
         try {
-            const res = await fetch('/api/generate-ebook', {
+            const response = await fetch('/api/generate-ebook', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content }),
             });
-            const data = await res.json();
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                const errorDetail = data.details || data.error || 'Falha na geração';
+                addLog(`INFO: ${errorDetail}`);
+
+                if (errorDetail.includes("429") || errorDetail.includes("quota")) {
+                    addLog("AVISO: Cota Google excedida. Tentando modo de resiliência local...");
+                }
+
+                // If it's a hard 500 but we have a fallback object, the above might not apply
+                // But our new backend ALWAYS returns a 200 with is_fallback: true or a simplified object
+            }
+
+            if (data.is_fallback) {
+                addLog("⚠️ MODO DE SEGURANÇA ATIVO: IA do Google indisponível.");
+                addLog("Diagramação finalizada via Motor de Ressonância Local.");
+            } else {
+                addLog("Sucesso! Diagramação via IA de alta performance.");
+            }
+
             setGeneratedEbook(data);
             setUserCredits(prev => prev - requiredCredits);
+
+            // Inicia geração oficial da capa gráfica
             generateCoverPreview(data);
-        } catch (error) { console.error(error); } finally { setIsLoading(false); }
+        } catch (error: any) {
+            console.error('Error:', error);
+            addLog(`ESTADO CRÍTICO: ${error.message}`);
+            setShowDebug(true);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const generateCoverPreview = async (ebookData: any) => {
         setIsGeneratingCover(true);
         try {
             const theme = ebookData.visual_theme || {};
-            const primary = theme.primary_color || '#0a0a0f';
+            const primary = theme.primary_color || '#1a1830';
             const secondary = theme.secondary_color || '#E93DE5';
 
-            const finalTitle = ebookData.title || "OBRA PRIMA";
-            const artUrl = `https://pollinations.ai/p/${encodeURIComponent(ebookData.visual_theme?.image_generation_prompt || 'Abstract art')}. NO TEXT. 8K?width=800&height=1200&model=flux`;
+            const lines = content.split('\n').filter(l => l.trim());
+            const firstLine = lines[0]?.replace(/[#*]/g, '').trim() || "eBook";
+            const finalTitle = (ebookData.title && ebookData.title.length > 15 && !ebookData.title.includes('...'))
+                ? ebookData.title
+                : firstLine;
 
-            const firstPass = await generateTypographyLayer(artUrl, {
+            const basePrompt = theme.image_generation_prompt || `A premium minimalist book cover context`;
+
+            addLog("Gerando Arte Base via Pollinations...");
+            const safeArtPrompt = encodeURIComponent(`${basePrompt}. Premium editorial background, atmospheric, minimalist, cinematic lighting, ultra high resolution. NO TEXT. NO CHARACTERS. NO BOOKS.`);
+            const artUrl = `https://pollinations.ai/p/${safeArtPrompt}?width=800&height=1200&seed=${Math.floor(Math.random() * 1000)}&model=flux&nologo=true`;
+
+            const initialMerged = await generateTypographyLayer(artUrl, {
                 title: finalTitle,
-                subtitle: ebookData.subtitle || "Premium Editorial Studio",
-                author: ebookData.author_name || "Lumina AI",
+                subtitle: ebookData.subtitle || "O guia prático para transformação",
+                author: ebookData.author_name || "Premium Editorial Studio",
                 primary: primary,
                 secondary: secondary
             });
-            setCoverImageData(firstPass);
+            setCoverImageData(initialMerged);
             setIsGeneratingCover(false);
 
-            // Refinamento via HF se disponível
+            addLog("Refinando Arte com Motor HuggingFace Dev...");
             fetch('/api/generate-cover', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: `FLAT FRONT VIEW. ${ebookData.visual_theme?.image_generation_prompt}. NO TEXT.` })
+                body: JSON.stringify({ prompt: `FLAT FRONT VIEW. ${basePrompt}. Atmospheric background art. NO TEXT. NO LETTERS.` })
             }).then(async (res) => {
                 if (res.ok) {
                     const data = await res.json();
                     if (data.base64) {
-                        const secondPass = await generateTypographyLayer(data.base64, {
+                        const finalMerged = await generateTypographyLayer(data.base64, {
                             title: finalTitle,
-                            subtitle: ebookData.subtitle || "Premium Editorial Studio",
-                            author: ebookData.author_name || "Lumina AI",
+                            subtitle: ebookData.subtitle || "O guia prático para transformação",
+                            author: ebookData.author_name || "Premium Editorial Studio",
                             primary: primary,
                             secondary: secondary
                         });
-                        setCoverImageData(secondPass);
+                        setCoverImageData(finalMerged);
+                        addLog("Capa Finalizada com Tipografia de Alta Precisão.");
                     }
                 }
-            });
+            }).catch(() => addLog("Usando Pollinations como arte final."));
 
-            if (ebookData.chapters) {
-                setChapterImages(ebookData.chapters.slice(0, 5).map((c: any) =>
-                    `https://pollinations.ai/p/${encodeURIComponent(c.chapter_image_prompt || 'Art')}. NO TEXT. 8K?width=800&height=600&model=flux`
-                ));
+            if (ebookData.chapters && ebookData.chapters.length > 0) {
+                setIsGeneratingChapters(true);
+                const images: string[] = [];
+                for (let i = 0; i < ebookData.chapters.length; i++) {
+                    const chapter = ebookData.chapters[i];
+                    const chapterPrompt = chapter.chapter_image_prompt || `Abstract editorial illustration about ${chapter.title}`;
+                    const safeCmpPrompt = encodeURIComponent(chapterPrompt.slice(0, 150));
+                    const imgUrl = `https://pollinations.ai/p/${safeCmpPrompt}?width=800&height=600&seed=${Math.floor(Math.random() * 1000)}&model=flux&nologo=true`;
+                    images.push(imgUrl);
+                }
+                setChapterImages(images);
+                setIsGeneratingChapters(false);
             }
-        } catch (err) { setIsGeneratingCover(false); }
+
+        } catch (err) {
+            setIsGeneratingCover(false);
+        }
     };
+
+    // (Função getBase64ImageFromUrl deletada, substituída por lógica nativa do Backend NodeJS)
 
     const downloadEbookPDF = async () => {
         if (!generatedEbook) return;
+
         setIsLoading(true);
         try {
+            console.log('Initiating Masterpiece Editorial Studio...');
             const doc = new jsPDF();
-            const primary = generatedEbook.visual_theme?.primary_color || '#0a0a0f';
-            if (coverImageData) doc.addImage(coverImageData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+            const theme = generatedEbook.visual_theme || {};
+            const primary = theme.primary_color || '#1a1830';
+            const secondary = theme.color_palette?.secondary || '#E93DE5'; // Use color_palette for secondary
 
-            (generatedEbook.chapters || []).forEach((ch: any, i: number) => {
+            const margin = 28;
+            const pageWidth = 210;
+            const pageHeight = 297;
+            const contentWidth = pageWidth - (margin * 2);
+            const bodyLineHeight = 8;
+            const paragraphSpacing = 4;
+
+            const hexToRgb = (hex: string) => {
+                const h = hex.replace('#', '');
+                const r = parseInt(h.slice(0, 2), 16) || 0;
+                const g = parseInt(h.slice(2, 4), 16) || 0;
+                const b = parseInt(h.slice(4, 6), 16) || 0;
+                return [r, g, b];
+            };
+
+            const [pr, pg, pb] = hexToRgb(primary);
+            const [sr, sg, sb] = hexToRgb(secondary);
+
+            doc.setFillColor(pr, pg, pb);
+            doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+            try {
+                if (coverImageData) {
+                    // O PDF requere um Base64 estrito injetado nas entranhas ou buga na Vercel. 
+                    // Vamos faturar ele na hora H do download usando a rede pública do usuário passando pelo proxy aberto "AllOrigins":
+                    console.log("Criptografando Capa para o Motor PDF via AllOrigins...");
+
+                    let pdfSafeBase64 = null;
+
+                    // 1. Primeira tentativa: Extrair imagem JÁ CARREGADA da tela (Canvas) - 0 delay
+                    const imgEl = document.getElementById('cover-img-element') as HTMLImageElement;
+                    if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
+                        try {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = imgEl.naturalWidth;
+                            canvas.height = imgEl.naturalHeight;
+                            const ctx = canvas.getContext('2d');
+                            if (ctx) {
+                                ctx.drawImage(imgEl, 0, 0);
+                                const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+                                if (dataUrl && dataUrl.length > 100) {
+                                    pdfSafeBase64 = dataUrl;
+                                    console.log("Capa extraída do Canvas da UI perfeitamente!");
+                                }
+                            }
+                        } catch (e) {
+                            console.warn("Canvas cross-origin taint, caindo para fetch...");
+                        }
+                    }
+
+                    // 2. Segunda tentativa: Se o Canvas falhar, tenta buscar os dados
+                    if (!pdfSafeBase64) {
+                        if (coverImageData.startsWith('data:image')) {
+                            pdfSafeBase64 = coverImageData;
+                        } else {
+                            const urlsToTry = [
+                                coverImageData,
+                                'https://corsproxy.io/?' + encodeURIComponent(coverImageData),
+                                'https://api.allorigins.win/raw?url=' + encodeURIComponent(coverImageData)
+                            ];
+
+                            for (const fetchUrl of urlsToTry) {
+                                try {
+                                    console.log("Buscando imagem para PDF nativo via:", fetchUrl);
+                                    const res = await fetch(fetchUrl);
+                                    if (res.ok) {
+                                        const blob = await res.blob();
+                                        const bufferBase64 = await new Promise<string>((resolve, reject) => {
+                                            const reader = new FileReader();
+                                            reader.onloadend = () => resolve(reader.result as string);
+                                            reader.onerror = reject;
+                                            reader.readAsDataURL(blob);
+                                        });
+
+                                        // Forçar que seja interpretado como imagem
+                                        if (bufferBase64) {
+                                            if (bufferBase64.startsWith('data:image')) {
+                                                pdfSafeBase64 = bufferBase64;
+                                            } else if (bufferBase64.startsWith('data:application/octet-stream')) {
+                                                pdfSafeBase64 = bufferBase64.replace('data:application/octet-stream', 'data:image/jpeg');
+                                            }
+                                        }
+
+                                        if (pdfSafeBase64 && pdfSafeBase64.startsWith('data:image')) {
+                                            break; // Sucesso real!
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.warn("Falha na rota da imagem:", fetchUrl);
+                                }
+                            }
+                        }
+                    }
+
+                    if (pdfSafeBase64 && pdfSafeBase64.startsWith('data:image')) {
+                        const imgRatio = 840 / 1188;
+                        const pageRatio = pageWidth / pageHeight;
+
+                        let drawWidth = pageWidth;
+                        let drawHeight = pageHeight;
+                        let dx = 0;
+                        let dy = 0;
+
+                        if (imgRatio > pageRatio) {
+                            drawHeight = pageHeight;
+                            drawWidth = pageHeight * imgRatio;
+                            dx = (pageWidth - drawWidth) / 2;
+                        } else {
+                            drawWidth = pageWidth;
+                            drawHeight = pageWidth / imgRatio;
+                            dy = (pageHeight - drawHeight) / 2;
+                        }
+
+                        doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
+                        const imgFormat = pdfSafeBase64.toLowerCase().includes('image/png') ? 'PNG' : 'JPEG';
+                        doc.addImage(pdfSafeBase64, imgFormat, dx, dy, drawWidth, drawHeight, undefined, 'FAST');
+
+                        console.log("Capa AI (FLUX) 100% Pura Ancorada no PDF (Sem overlapp vetorial).");
+                    } else {
+                        console.warn("A ancoragem da imagem da Capa AI Falhou. Emitindo PDF cego (apenas com cores).");
+                    }
+                }
+            } catch (e) {
+                console.error('Motor jsPDF destruído subitamente:', e);
+            }
+
+            // 3. Processamento de Capítulos Editoriais
+            const chapters = generatedEbook.chapters || [];
+
+            for (let idx = 0; idx < chapters.length; idx++) {
+                const chapter = chapters[idx];
+
+                // PÁGINA DE ROSTO DO CAPÍTULO (FULL PAGE VIBE)
                 doc.addPage();
-                doc.setFontSize(32);
-                doc.setTextColor(primary);
-                const titleLines = doc.splitTextToSize(ch.title.toUpperCase(), 170);
-                doc.text(titleLines, 105, 100, { align: 'center' });
+
+                // Background sutil do capítulo
+                doc.setDrawColor(sr, sg, sb);
+                doc.setLineWidth(0.5);
+                doc.rect(10, 10, pageWidth - 20, pageHeight - 20); // Border
+
+                let curY = 60;
+
+                // Título do Capítulo em destaque
+                doc.setGState(new (doc as any).GState({ opacity: 0.1 }));
+                doc.setTextColor(sr, sg, sb);
+                doc.setFontSize(140);
+                doc.text(`${idx + 1}`, pageWidth / 2, 120, { align: 'center' });
+                doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
+
+                doc.setFontSize(28);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(pr, pg, pb);
+                const chapterTitle = chapter.title.toUpperCase();
+                const splitTitle = doc.splitTextToSize(chapterTitle, contentWidth);
+                doc.text(splitTitle, pageWidth / 2, 140, { align: 'center' });
+
+                // INSERÇÃO DA IMAGEM DO CAPÍTULO (Se existir) - USANDO PROXY PARA EVITAR CORS NO PDF
+                const chapterImgUrl = chapterImages[idx];
+                if (chapterImgUrl) {
+                    try {
+                        console.log(`Buscando imagem do capítulo ${idx + 1} para o PDF...`);
+                        // Usamos proxy para garantir que o jsPDF consiga ler os bytes da imagem (Cross-Origin)
+                        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(chapterImgUrl)}`;
+                        const imgRes = await fetch(proxyUrl);
+                        if (imgRes.ok) {
+                            const blob = await imgRes.blob();
+                            const base64 = await new Promise<string>((res) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => res(reader.result as string);
+                                reader.readAsDataURL(blob);
+                            });
+
+                            const imgW = 150;
+                            const imgH = 112; // 4:3 ratio
+                            doc.addImage(base64, 'JPEG', (pageWidth - imgW) / 2, 160, imgW, imgH, undefined, 'FAST');
+                            curY = 280;
+                        }
+                    } catch (e) {
+                        console.warn("Falha ao incluir imagem do capítulo no PDF");
+                    }
+                }
+
+                // PÁGINA DE CONTEÚDO DO CAPÍTULO - Adicionando Design Geométrico
                 doc.addPage();
-                doc.setFontSize(11);
+
+                // Elemento Geométrico de Fundo (Sutil)
+                doc.setGState(new (doc as any).GState({ opacity: 0.05 }));
+                doc.setFillColor(sr, sg, sb);
+                doc.rect(0, 0, 40, 297, 'F'); // Faixa lateral esquerda sutil
+                doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
+
+                doc.setDrawColor(sr, sg, sb);
+                doc.setLineWidth(0.5);
+                doc.line(margin, 20, pageWidth - margin, 20); // Divider top
+
+                doc.setTextColor(sr, sg, sb);
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'bold');
+                doc.text(generatedEbook.title.toUpperCase(), margin, 15);
+                doc.text(`CAPÍTULO ${idx + 1}`, pageWidth - margin, 15, { align: 'right' });
+
+                curY = 45;
                 doc.setTextColor(40, 40, 40);
-                const lines = doc.splitTextToSize(ch.content || '', 154);
-                doc.text(lines, 28, 40);
-            });
-            doc.save('ebook_lumina_v6.pdf');
-        } catch (e) { alert('Falha no PDF'); } finally { setIsLoading(false); }
+                doc.setFontSize(11);
+
+                const paragraphs = (chapter.content || '').split('\n').filter((p: string) => p.trim());
+
+                // IMPLEMENTAÇÃO DE CAPITULAR (DROP CAP) - ESTÉTICA PREMIUM
+                if (paragraphs.length > 0) {
+                    const firstPara = paragraphs[0];
+                    const firstChar = firstPara.charAt(0).toUpperCase();
+                    const restOfPara = firstPara.slice(1);
+
+                    doc.setFontSize(42);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(sr, sg, sb);
+                    doc.text(firstChar, margin, curY + 8);
+
+                    const charWidth = doc.getTextWidth(firstChar) + 4;
+                    doc.setFontSize(11);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(40, 40, 40);
+
+                    // Primeira linha ao lado da capitular
+                    const firstLineMaxWidth = contentWidth - charWidth;
+                    const firstLineText = doc.splitTextToSize(restOfPara, firstLineMaxWidth)[0];
+                    doc.text(firstLineText, margin + charWidth, curY);
+
+                    curY += bodyLineHeight;
+
+                    // Restante do primeiro parágrafo
+                    const remainingText = restOfPara.slice(firstLineText.length);
+                    const restLines = doc.splitTextToSize(remainingText, contentWidth);
+                    restLines.forEach((line: string) => {
+                        doc.text(line, margin, curY);
+                        curY += bodyLineHeight;
+                    });
+                    curY += paragraphSpacing;
+
+                    // Removemos o primeiro parágrafo da lista para processar o resto normalmente
+                    paragraphs.shift();
+                }
+
+                paragraphs.forEach((para: string) => {
+                    const lines = doc.splitTextToSize(para, contentWidth);
+                    lines.forEach((line: string) => {
+                        if (curY > 275) {
+                            doc.addPage();
+                            doc.setDrawColor(sr, sg, sb);
+                            doc.line(margin, 20, pageWidth - margin, 20);
+                            doc.setTextColor(sr, sg, sb);
+                            doc.setFontSize(7);
+                            doc.text(`... CONTINUAÇÃO: ${chapter.title.toUpperCase()}`, margin, 15);
+                            curY = 35;
+                            doc.setFontSize(11);
+                            doc.setTextColor(40, 40, 40);
+                        }
+                        doc.text(line, margin, curY);
+                        curY += bodyLineHeight;
+                    });
+                    curY += paragraphSpacing;
+                });
+
+                // Footer / Page Number / Geom Accents
+                const pTotal = (doc as any).internal.getNumberOfPages();
+                doc.setFontSize(9);
+                doc.setTextColor(sr, sg, sb);
+                doc.text(`${pTotal}`, pageWidth / 2, 288, { align: 'center' });
+
+                // Detalhe Geométrico Rodapé
+                doc.setFillColor(sr, sg, sb);
+                doc.rect(pageWidth / 2 - 10, 290, 20, 1, 'F');
+            }
+
+            const safeFileName = (generatedEbook.title || 'ebook').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            doc.save(`${safeFileName}.pdf`);
+            console.log('Premium Editorial Studio Success.');
+        } catch (error: any) {
+            console.error('Critical Layout Error:', error);
+            alert('Erro de diagramação. O conteúdo pode ser complexo demais.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
-        <main className="min-h-screen flex flex-col pt-12 pb-40 bg-[#050508] text-white overflow-hidden relative">
+        <main className="min-h-screen flex flex-col pt-20 pb-40 relative overflow-hidden">
             <style jsx global>{`
                 @import url('${GOOGLE_FONTS_URL}');
-                body { font-family: 'Montserrat', sans-serif; }
-                .glass-card { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(50px); border-radius: 3rem; }
-                .text-gradient { background: linear-gradient(to right, #E93DE5, #5B33F5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+                body {
+                    font-family: 'Montserrat', sans-serif;
+                }
             `}</style>
 
-            <nav className="fixed top-0 left-0 right-0 h-20 flex items-center justify-between px-12 z-50 border-b border-white/5 bg-[#050508]/80 backdrop-blur-md">
-                <span className="text-[10px] font-black tracking-[0.5em] text-white/40">LUMINABOOK MASTERPIECE v6.0</span>
-                <span className="px-4 py-2 bg-white/5 rounded-full text-sm font-bold border border-white/10 text-primary">{userCredits} ✨</span>
+            <nav className="fixed top-0 left-0 right-0 h-16 flex items-center justify-center px-6 studio-toolbar z-50">
+                <div className="absolute left-6 flex items-center gap-2 text-sm font-medium text-white/50">
+                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                    <span className="bg-white/5 px-2 py-1 rounded-md text-white/80">LumiaBook Beta</span>
+                </div>
+                <div className="flex items-center">
+                    <img src="/logo.png" alt="LumiaBook" className="h-10 transition-all hover:scale-105 cursor-pointer" />
+                </div>
+                <div className="absolute right-6 flex items-center gap-4">
+                    <div className="flex flex-col items-end hidden md:flex">
+                        <span className="text-[10px] text-white/40 uppercase font-black">Seus Créditos</span>
+                        <span className="text-sm font-bold text-primary">{userCredits} ✨</span>
+                    </div>
+                </div>
             </nav>
 
-            <AnimatePresence mode="wait">
-                {!generatedEbook ? (
-                    <motion.div key="in" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-5xl mx-auto">
-                        <h1 className="text-7xl md:text-9xl font-black tracking-tighter leading-[0.85] mb-8">
-                            ARTE. TEXTO. <br /><span className="text-gradient">PERFEIÇÃO.</span>
-                        </h1>
-                        <p className="text-white/30 text-2xl font-medium">Motor de Diagramação Editorial Ultra-Resiliente.</p>
-                    </motion.div>
-                ) : (
-                    <motion.div key="out" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} className="flex-1 p-8 max-w-6xl mx-auto w-full">
-                        <div className="glass-card p-12 grid grid-cols-1 md:grid-cols-2 gap-16">
-                            <motion.div animate={{ rotateY: -12 }} className="aspect-[1/1.4] rounded-xl overflow-hidden shadow-[40px_40px_80px_rgba(0,0,0,0.9)] border border-white/10 relative">
-                                {coverImageData ? <img src={coverImageData} className="w-full h-full object-cover" /> : <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center space-y-4"><Loader2 className="animate-spin text-primary" /><span className="text-[10px] font-bold tracking-[0.3em] uppercase opacity-30">Renderizando Masterpiece...</span></div>}
-                            </motion.div>
-                            <div className="flex flex-col justify-center space-y-12">
-                                <div className="space-y-4">
-                                    <h2 className="text-5xl font-black tracking-tight leading-tight">{generatedEbook.title}</h2>
-                                    <p className="text-white/40 font-bold text-xs tracking-[0.3em] uppercase">{generatedEbook.subtitle || 'Premium Editorial Edition'}</p>
-                                </div>
-                                <div className="space-y-4">
-                                    <button onClick={downloadEbookPDF} className="w-full bg-gradient-to-r from-[#E93DE5] to-[#5B33F5] py-8 rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-[0_30px_60px_rgba(233,61,229,0.3)] hover:scale-[1.03] transition-all">Baixar Obra Completa</button>
-                                    <button onClick={() => setGeneratedEbook(null)} className="w-full text-white/20 hover:text-white transition-all text-xs font-black uppercase tracking-widest pt-2">Novo Projeto</button>
-                                </div>
+            <AnimatePresence>
+                {showDebug && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+                        className="fixed bottom-32 left-1/2 -translate-x-1/2 w-full max-w-2xl z-[100] px-4"
+                    >
+                        <div className="bg-[#1a1830]/95 border border-primary/30 rounded-2xl p-6 shadow-2xl backdrop-blur-xl">
+                            <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-3">
+                                <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] flex items-center gap-2">
+                                    <Zap className="w-3 h-3" /> System Diagnostics
+                                </h4>
+                                <button onClick={() => setShowDebug(false)} className="text-white/30 hover:text-white text-[10px] font-bold">FECHAR</button>
                             </div>
+                            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar font-mono text-[11px]">
+                                {debugLogs.map((log, i) => (
+                                    <div key={i} className={`p-2 rounded ${log.includes('ERRO') || log.includes('FALHA') ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'text-white/60'}`}>
+                                        {log}
+                                    </div>
+                                ))}
+                                {debugLogs.length === 0 && <div className="text-white/20 italic">Aguardando telemetria...</div>}
+                            </div>
+                            {isLoading && (
+                                <div className="mt-4 flex items-center gap-3">
+                                    <Loader2 className="w-3 h-3 text-primary animate-spin" />
+                                    <span className="text-[10px] text-white/40 animate-pulse font-medium">IA está processando múltiplos modelos em cascata...</span>
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
+            <AnimatePresence mode="wait">
+                {!generatedEbook ? (
+                    <motion.section
+                        key="input-section" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }}
+                        className="flex-1 flex flex-col items-center justify-center px-4 space-y-8 animate-in fade-in duration-1000 relative z-10"
+                    >
+                        <div className="flex flex-col items-center text-center space-y-4">
+                            <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full mb-2">
+                                <Sparkles className="w-3 h-3 text-primary" />
+                                <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Next-Gen Publishing</span>
+                            </div>
+                            <h1 className="text-5xl md:text-[84px] font-extrabold tracking-tighter text-center leading-[0.95] max-w-4xl pb-4 text-white">
+                                Crie eBooks completos <br /> com <span className="text-gradient">IA em minutos.</span>
+                            </h1>
+                            <p className="text-white/50 text-xl md:text-2xl font-medium max-w-2xl tracking-tight">Estrutura, escreve e entrega seu ebook pronto.</p>
+                        </div>
+                    </motion.section>
+                ) : (
+                    <motion.section
+                        key="result-section" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
+                        className="flex-1 flex flex-col items-center px-4 pt-12 space-y-8 relative z-10 overflow-y-auto"
+                    >
+                        <div className="max-w-6xl w-full tech-balloon p-8 md:p-12 space-y-10">
+                            <div className="flex items-center justify-between border-b border-white/5 pb-8">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full">
+                                            <Zap className="w-3 h-3 text-primary animate-pulse" />
+                                            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Estúdio de Design Ativo</span>
+                                        </div>
+                                        {generatedEbook.is_fallback && (
+                                            <span className="px-2 py-1 bg-amber-500/20 text-amber-500 text-[10px] font-black rounded border border-amber-500/30 animate-pulse">MODO DE SEGURANÇA</span>
+                                        )}
+                                    </div>
+                                </div>
+                                <button onClick={() => { setGeneratedEbook(null); setCoverImageData(null); }} className="h-12 px-6 rounded-xl flex items-center gap-2 text-white/60 hover:text-white transition-all bg-white/5 hover:bg-white/10">
+                                    <ChevronLeft className="w-4 h-4" /> Novo Projeto
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                                <div className="lg:col-span-5 flex justify-center perspective-1000">
+                                    <motion.div initial={{ rotateY: 30 }} animate={{ rotateY: -10 }} whileHover={{ rotateY: -20, rotateX: 5 }} className="relative group transition-all duration-700 ease-out" style={{ transformStyle: 'preserve-3d' }}>
+                                        <div className="w-[300px] md:w-[380px] aspect-[1/1.4] rounded-r-lg shadow-[25px_25px_50px_rgba(0,0,0,0.6)] relative overflow-hidden border border-white/10" style={{ backgroundColor: generatedEbook.visual_theme?.primary_color || '#1a1830' }}>
+                                            {coverImageData ? (
+                                                <img
+                                                    id="cover-img-element"
+                                                    src={coverImageData}
+                                                    className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 opacity-100"
+                                                    alt="Book Cover"
+                                                    onError={(e) => {
+                                                        console.warn("Imagem original falhou na UI.");
+                                                    }}
+                                                />
+                                            ) : isGeneratingCover ? (
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-black/40 backdrop-blur-sm z-20">
+                                                    <Loader2 className="w-8 h-8 text-white/50 animate-spin mb-4" />
+                                                    <span className="text-[10px] font-black tracking-widest text-[#E93DE5] uppercase text-center animate-pulse">
+                                                        PINTANDO A ARTE 8K (POLLINATIONS)...
+                                                    </span>
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    </motion.div>
+                                </div>
+
+                                <div className="lg:col-span-7 space-y-8">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-1">
+                                            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">Estilo Sugerido</p>
+                                            <p className="text-lg font-bold text-white uppercase">{generatedEbook.visual_theme?.design_mood || 'Professional'}</p>
+                                        </div>
+                                        <div className={`p-6 rounded-2xl border transition-all ${isGeneratingChapters ? 'bg-primary/10 border-primary/30 animate-pulse' : 'bg-white/5 border-white/5'} space-y-1`}>
+                                            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">Ilustrações do eBook</p>
+                                            <div className="flex items-center gap-2 text-white font-bold text-sm">
+                                                {isGeneratingChapters ? (
+                                                    <>
+                                                        <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                                                        <span>GERANDO ARTES INTERNAS...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <BookOpen className="w-3 h-3 text-primary" />
+                                                        <span>{chapterImages.length} ILUSTRAÇÕES PRONTAS</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onClick={downloadEbookPDF} className="w-full bg-gradient-to-r from-[#E93DE5] to-[#5B33F5] text-white py-6 rounded-2xl flex items-center justify-center gap-3 font-black uppercase tracking-widest shadow-xl hover:-translate-y-1 transition-all">
+                                        <FileDown className="w-6 h-6" /> Baixar PDF Customizado
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.section>
+                )}
+            </AnimatePresence>
+
             {!generatedEbook && (
-                <div className="fixed bottom-16 left-1/2 -translate-x-1/2 w-full max-w-4xl px-4 z-50">
-                    <div className="glass-card p-6 flex flex-col md:flex-row gap-6 shadow-4xl">
-                        <textarea
-                            value={content} onChange={(e) => setContent(e.target.value)}
-                            placeholder="Descreva seu ebook ou cole manuscritos..."
-                            className="bg-transparent flex-1 outline-none p-4 min-h-[140px] text-xl font-medium custom-scrollbar placeholder:opacity-20"
-                        />
-                        <button onClick={handleCreateEbook} disabled={isLoading || !content} className="px-16 rounded-[1.5rem] bg-white text-black font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all disabled:opacity-30">
-                            {isLoading ? <Loader2 className="animate-spin" /> : "Publicar"}
+                <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-full max-w-4xl px-4 z-50">
+                    <div className="tech-balloon p-3 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-2xl">
+                        <div className="flex-1 flex items-center studio-input-container px-5 py-2 group">
+                            <Upload className="w-5 h-5 text-white/20 mr-4" />
+                            <textarea
+                                value={content} onChange={(e) => setContent(e.target.value)} disabled={isLoading}
+                                placeholder="Cole o conteúdo completo do seu eBook aqui..."
+                                className="bg-transparent border-none outline-none w-full text-lg text-white placeholder:text-white/20 py-3 min-h-[120px] resize-none custom-scrollbar"
+                            />
+                        </div>
+                        <button
+                            onClick={handleCreateEbook}
+                            disabled={content.length === 0 || isLoading || cooldown > 0}
+                            className="px-10 py-5 rounded-2xl bg-gradient-to-r from-[#E93DE5] to-[#5B33F5] text-white font-black uppercase tracking-widest hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isLoading ? (
+                                <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                            ) : cooldown > 0 ? (
+                                `Aguarde ${cooldown}s`
+                            ) : (
+                                "Criar eBook"
+                            )}
                         </button>
                     </div>
                 </div>
             )}
+            <div className="fixed inset-0 pointer-events-none z-0">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 blur-[120px] rounded-full" />
+            </div>
         </main>
     );
 }
