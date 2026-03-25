@@ -38,28 +38,13 @@ async function generateTypographyLayer(bgUrl: string | null, config: any): Promi
                 ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, 800, 1200);
             }
 
-            // Typography Layout Logic (Fixed for Professionalism)
-            const title = (config.title || 'EBOOK').replace(/^.*?:\s*/, '').replace(/:/g, '').toUpperCase();
-            ctx.fillStyle = '#FFFFFF';
-            let fontSize = title.length > 20 ? 60 : 80;
-            if (title.length > 40) fontSize = 45;
+            // Typography Layout Logic (Clean - The AI now bakes the title)
+            // ctx.fillStyle = '#FFFFFF'; ... (Removido para atender pedido de baked-in text)
 
-            const fontStack = config.font === 'sans' ? "'Montserrat', sans-serif" : "'Playfair Display', serif";
-            ctx.font = `900 ${fontSize}px ${fontStack}`;
-
-            const words = title.split(' '); let line = ''; let y = 450;
-            for (let n = 0; n < words.length; n++) {
-                let testLine = line + words[n] + ' ';
-                if (ctx.measureText(testLine).width > 700 && n > 0) {
-                    ctx.fillText(line, 400, y); line = words[n] + ' '; y += fontSize + 10;
-                } else { line = testLine; }
-            }
-            ctx.textAlign = 'center'; ctx.fillText(line, 400, y);
-
-            ctx.fillStyle = config.secondary || '#E93DE5'; ctx.fillRect(360, y + 40, 80, 4);
-
-            ctx.fillStyle = '#AAAAAA'; ctx.font = "900 14px 'Montserrat', sans-serif"; ctx.letterSpacing = "6px";
-            ctx.fillText((config.author || 'LUMINA').toUpperCase(), 400, 1100);
+            // Minimalist Branding (Author only, subtle)
+            ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = "700 12px 'Montserrat', sans-serif"; ctx.letterSpacing = "6px";
+            ctx.textAlign = 'center';
+            ctx.fillText((config.author || 'LUMINA').toUpperCase(), 400, 1150);
 
             resolve(canvas.toDataURL('image/jpeg', 0.9));
         };
@@ -124,7 +109,9 @@ export default function Home() {
 
             const variationPromises = Array(4).fill(0).map(async (_, i) => {
                 const seed = Math.floor(Math.random() * 2000);
-                const artPrompt = theme.image_generation_prompt + ". atmospheric, professional, highly realistic photography, no text";
+                // Prompt robusto com título embutido para o FLUX
+                const artPrompt = theme.image_generation_prompt +
+                    `. The title "${title}" is written in massive, elegant, high-contrast typography in the center, 8k, professional book cover design.`;
 
                 try {
                     const res = await fetch('/api/generate-cover', {
