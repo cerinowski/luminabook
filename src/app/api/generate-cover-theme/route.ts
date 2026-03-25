@@ -24,12 +24,11 @@ export async function POST(req: Request) {
     create a high-end visual theme.
     
     Rules:
-    1. Colors: Highly sophisticated, designer palettes (e.g. Sage & Teracotta, Midnight & Gold).
-    2. image_generation_prompt: CREATE A VISUAL METAPHOR FOR THE TITLE.
-       - NEVER SHOW A BOOK OR A EBOOK IN THE IMAGE. 
-       - If it's about Health/Gut: show "Vibrant organic botanical patterns, glowing microscopic ecosystems, or fresh macro photography of vital ingredients."
-       - If it's about Fitness: show "Dynamic abstract energy flow, stone/marble textures, or human vitality motifs."
-       - If it's about Finance: show "Modern steel architecture, geometric growth patterns, or glass textures."
+    1. Colors: Highly sophisticated, designer palettes.
+    2. image_generation_prompt: 
+       - IF THE USER DESCRIPTION "${description}" IS NOT EMPTY, USE IT AS THE ABSOLUTE CORE OF THE PROMPT. Focus 100% on making "${description}" look like a high-end designer book cover.
+       - IF EMPTY, create a visual metaphor for the title "${title}".
+       - NEVER SHOW A BOOK OR A EBOOK IN THE IMAGE.
     3. Style: HIGHLY REALISTIC or REFINED EDITORIAL ILLUSTRATION. 8k, professional photography.
     4. NO TEXT in the image. Pure background art only.
     5. Clean the title (no colons).
