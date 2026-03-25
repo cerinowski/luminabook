@@ -99,6 +99,7 @@ export default function Home() {
 
     // Design State
     const [variations, setVariations] = useState<string[]>([]);
+    const [baseArtUrls, setBaseArtUrls] = useState<string[]>([]); // Store original URLs
     const [selectedCover, setSelectedCover] = useState<string | null>(null);
     const [selectedFont, setSelectedFont] = useState<'serif' | 'sans'>('serif');
     const [approvedTheme, setApprovedTheme] = useState<any>(null);
@@ -125,10 +126,12 @@ export default function Home() {
             setApprovedTheme(theme);
 
             addLog("Pintando 4 variações exclusivas (FLUX)...");
+            const urls: string[] = [];
             const variationPromises = Array(4).fill(0).map(async (_, i) => {
-                await new Promise(r => setTimeout(r, i * 800)); // Small staggered delay
+                await new Promise(r => setTimeout(r, i * 600));
                 const seed = Math.floor(Math.random() * 2000);
                 const artUrl = `https://pollinations.ai/p/${encodeURIComponent(theme.image_generation_prompt + ". atmospheric, professional, NO TEXT")}?width=800&height=1200&seed=${seed}&model=flux&nologo=true`;
+                urls.push(artUrl);
                 return generateTypographyLayer(artUrl, {
                     title: theme.title || title,
                     author: author || "Lumina Studio",
@@ -138,10 +141,30 @@ export default function Home() {
                 });
             });
             const newVariations = await Promise.all(variationPromises);
+            setBaseArtUrls(urls);
             setVariations(newVariations);
         } catch (e) { addLog("Erro no motor de arte."); }
         finally { setIsLoading(false); }
     };
+
+    // Real-Time Style Sync
+    useEffect(() => {
+        if (!selectedCover || !approvedTheme) return;
+        const syncStyle = async () => {
+            const idx = variations.indexOf(selectedCover);
+            if (idx === -1 || !baseArtUrls[idx]) return;
+            const updated = await generateTypographyLayer(baseArtUrls[idx], {
+                title: approvedTheme.title || title,
+                author: author || "Lumina Studio",
+                primary: approvedTheme.primary_color,
+                secondary: approvedTheme.secondary_color,
+                font: selectedFont
+            });
+            setSelectedCover(updated);
+            const newVers = [...variations]; newVers[idx] = updated; setVariations(newVers);
+        };
+        syncStyle();
+    }, [approvedTheme, selectedFont]);
 
     const handleCreateEbook = async () => {
         if (!content || !selectedCover) return;
@@ -179,47 +202,42 @@ export default function Home() {
 
         (generatedEbook.chapters || []).forEach((ch: any, i: number) => {
             doc.addPage();
-            // Header Bar (Magazine Style)
-            doc.setFillColor(sr, sg, sb);
-            doc.rect(0, 0, 210, 40, 'F');
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(10); doc.setFont('helvetica', 'bold');
-            doc.text(`CAPÍTULO ${i + 1}`, 20, 15);
-            doc.setFontSize(22);
-            doc.text(doc.splitTextToSize(ch.title.toUpperCase(), 170), 20, 28);
+            // High-End Header (Asymmetric)
+            doc.setFillColor(30, 30, 40); doc.rect(0, 0, 210, 80, 'F');
+            if (chapterImages[i]) doc.addImage(chapterImages[i], 'JPEG', 110, 0, 100, 80, undefined, 'FAST');
 
-            // Chapter Image
-            if (chapterImages[i]) {
-                doc.addImage(chapterImages[i], 'JPEG', 20, 50, 170, 100, undefined, 'FAST');
-            }
+            doc.setFillColor(sr, sg, sb); doc.rect(20, 20, 5, 40, 'F'); // Vertical Accent Bar
+            doc.setTextColor(255, 255, 255); doc.setFontSize(10); doc.text(`CAPÍTULO ${i + 1}`, 30, 25);
+            doc.setFontSize(28); doc.setFont('helvetica', 'bold');
+            doc.text(doc.splitTextToSize(ch.title.toUpperCase(), 75), 30, 40);
 
             doc.addPage();
-            doc.setFontSize(8); doc.setTextColor(150, 150, 150);
-            doc.text(generatedEbook.title.toUpperCase(), 20, 15);
+            // Accent sidebar (Organic Decor)
+            doc.setFillColor(sr, sg, sb); doc.rect(0, 0, 8, 297, 'F');
+            doc.setFillColor(sr, sg, sb); doc.circle(210, 297, 10, 'F'); // Solid small accent
 
+            doc.setFontSize(8); doc.setTextColor(150, 150, 150); doc.text(generatedEbook.title.toUpperCase(), 25, 15);
             doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(40, 40, 40);
             let y = 30;
             const lines = doc.splitTextToSize(ch.content, 170);
 
             lines.forEach((line: string) => {
-                if (y > 275) { doc.addPage(); y = 30; }
+                if (y > 275) { doc.addPage(); y = 30; doc.setFillColor(sr, sg, sb); doc.rect(0, 0, 8, 297, 'F'); }
 
-                // Detection of special blocks
                 if (line.startsWith('###')) {
-                    y += 5; doc.setFont('helvetica', 'bold'); doc.setTextColor(sr, sg, sb);
-                    doc.setFontSize(14); doc.text(line.replace('###', '').trim(), 20, y);
-                    y += 10; doc.setFontSize(11); doc.setTextColor(40, 40, 40); doc.setFont('helvetica', 'normal');
+                    y += 10; doc.setFillColor(sr, sg, sb); doc.rect(25, y - 8, 2, 8, 'F');
+                    doc.setFont('helvetica', 'bold'); doc.setTextColor(sr, sg, sb);
+                    doc.setFontSize(16); doc.text(line.replace('###', '').trim(), 30, y);
+                    y += 12; doc.setFontSize(11); doc.setTextColor(40, 40, 40); doc.setFont('helvetica', 'normal');
                 } else if (line.includes('[TIP]') || line.includes('[ATENÇÃO]')) {
                     const cleanLine = line.replace('[TIP]', '').replace('[ATENÇÃO]', '').trim();
-                    doc.setFillColor(255, 245, 220); doc.setDrawColor(255, 200, 100);
-                    doc.rect(18, y - 5, 174, 12, 'FD');
-                    doc.setFont('helvetica', 'bold'); doc.setTextColor(150, 100, 0);
-                    doc.text("NOTA:", 22, y + 2);
-                    doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60);
-                    doc.text(cleanLine, 40, y + 2);
-                    y += 15;
+                    doc.setFillColor(245, 245, 245); doc.rect(22, y - 6, 170, 16, 'F');
+                    doc.setDrawColor(sr, sg, sb); doc.rect(22, y - 6, 170, 16);
+                    doc.setFont('helvetica', 'bold'); doc.setTextColor(sr, sg, sb); doc.text("NOTA:", 26, y + 3);
+                    doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60); doc.text(cleanLine, 45, y + 3);
+                    y += 20;
                 } else {
-                    doc.text(line, 20, y); y += 7;
+                    doc.text(line, 25, y); y += 8;
                 }
             });
         });
