@@ -143,14 +143,34 @@ export default function Home() {
                 const artPrompt = theme.image_generation_prompt + ", professional photography, depth of field, 8k, ultra-detailed, NO TEXT";
 
                 try {
-                    const res = await fetch('/api/generate-cover', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ prompt: artPrompt + ` --seed ${seed}` })
-                    });
-                    const data = await res.json();
-                    if (data.error || !data.base64) throw new Error(data.error || "HF Error");
-                    const { base64 } = data;
+                    // TENTA GERAR DIRETAMENTE NO CLIENTE (NANO-BANANA STYLE / ULTRA STABLE)
+                    let base64 = "";
+                    try {
+                        const pollUrl = `https://pollinations.ai/p/${encodeURIComponent(artPrompt)}?width=800&height=1200&seed=${seed}&model=flux&nologo=true`;
+                        const pollRes = await fetch(pollUrl);
+                        if (pollRes.ok) {
+                            const blob = await pollRes.blob();
+                            base64 = await new Promise((resolve) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => resolve(reader.result as string);
+                                reader.readAsDataURL(blob);
+                            });
+                        }
+                    } catch (err) {
+                        console.warn("Client-side generation failed, trying server fallback...", err);
+                    }
+
+                    // FALLBACK PARA O SERVIDOR SE O CLIENTE FALHAR
+                    if (!base64) {
+                        const res = await fetch('/api/generate-cover', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ prompt: artPrompt + ` --seed ${seed}` })
+                        });
+                        const data = await res.json();
+                        if (data.error || !data.base64) throw new Error(data.error || "HF Error");
+                        base64 = data.base64;
+                    }
 
                     const composed = await generateTypographyLayer(base64, {
                         title: theme.title || title,
