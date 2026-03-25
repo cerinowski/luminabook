@@ -51,6 +51,11 @@ export async function POST(req: Request) {
         const theme = JSON.parse(jsonMatch[0]);
         theme.title = title || theme.title;
 
+        // FORÇA O PROMPT DO USUÁRIO SE ELE EXISTIR (BYPASS GEMINI)
+        if (description && description.trim().length > 0) {
+            theme.image_generation_prompt = description.trim();
+        }
+
         console.log("SUCCESSFUL THEME GENERATED:", theme); // DEBUG
 
         return NextResponse.json(theme);
