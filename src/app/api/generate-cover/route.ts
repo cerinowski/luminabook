@@ -15,13 +15,13 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'HUGGINGFACE_API_KEY is missing' }, { status: 500 });
         }
 
-        console.log('Solicitando capa pro HuggingFace (Tiered Strategy)...');
-
         const models = [
             "black-forest-labs/FLUX.1-dev",
             "black-forest-labs/FLUX.1-schnell",
             "stabilityai/stable-diffusion-xl-base-1.0",
-            "runwayml/stable-diffusion-v1-5"
+            "runwayml/stable-diffusion-v1-5",
+            "prompthero/openjourney",
+            "stabilityai/stable-diffusion-2-1"
         ];
 
         let lastResponse = null;
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
             try {
                 console.log(`Tentando modelo: ${model}...`);
                 const response = await fetch(
-                    `https://router.huggingface.co/hf-inference/models/${model}`,
+                    `https://api-inference.huggingface.co/models/${model}`,
                     {
                         headers: {
                             Authorization: `Bearer ${apiKey}`,

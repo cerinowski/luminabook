@@ -34,7 +34,7 @@ async function generateTypographyLayer(bgUrl: string | null, config: any): Promi
             } else {
                 const bgGrad = ctx.createLinearGradient(0, 0, 800, 1200);
                 bgGrad.addColorStop(0, config.primary || '#050510');
-                bgGrad.addColorStop(1, '#000000');
+                bgGrad.addColorStop(1, config.secondary || '#000000');
                 ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, 800, 1200);
             }
 
@@ -164,6 +164,7 @@ export default function Home() {
                     return composed;
                 } catch (e: any) {
                     addLog(`Variação ${i + 1} falhou: ${e.message}`);
+                    // SAFETY FALLBACK: Gerar um gradiente de alta qualidade baseado no tema
                     return generateTypographyLayer(null, {
                         title: theme.title || title,
                         author: author || "Lumina Studio",
