@@ -143,26 +143,35 @@ export default function Home() {
                 const artPrompt = theme.image_generation_prompt + ", professional photography, depth of field, 8k, ultra-detailed, NO TEXT";
 
                 try {
-                    // TENTA GERAR NO CLIENTE (NANO-BANANA)
+                    // TENTA GERAR NO CLIENTE (NANO-BANANA / DIRECT INJECTION EXTREME)
                     let base64 = "";
                     try {
+                        const seed = Math.floor(Math.random() * 1000000);
                         const pollUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(artPrompt)}?width=800&height=1200&seed=${seed}&model=flux&nologo=true`;
-                        const pollRes = await fetch(pollUrl);
-                        if (pollRes.ok) {
-                            const blob = await pollRes.blob();
-                            base64 = await new Promise((resolve) => {
-                                const reader = new FileReader();
-                                reader.onloadend = () => resolve(reader.result as string);
-                                reader.readAsDataURL(blob);
-                            });
-                            if (base64) console.log(`Variação ${i + 1}: Cliente OK`);
-                        }
-                    } catch (err) {
-                        console.warn("Client fallback failed", err);
-                    }
 
-                    // FALLBACK PARA O SERVIDOR
-                    if (!base64) {
+                        const imgTest = new Image();
+                        imgTest.crossOrigin = "anonymous";
+                        base64 = await new Promise<string>((resolve, reject) => {
+                            const timeout = setTimeout(() => reject(new Error("Timeout")), 30000);
+                            imgTest.onload = () => {
+                                clearTimeout(timeout);
+                                const canvas = document.createElement("canvas");
+                                canvas.width = imgTest.width;
+                                canvas.height = imgTest.height;
+                                const ctx = canvas.getContext("2d");
+                                ctx?.drawImage(imgTest, 0, 0);
+                                resolve(canvas.toDataURL("image/jpeg"));
+                            };
+                            imgTest.onerror = () => {
+                                clearTimeout(timeout);
+                                reject(new Error("Load Error"));
+                            };
+                            imgTest.src = pollUrl;
+                        });
+                        if (base64) console.log(`Variação ${i + 1}: Nano-Banana Cliente OK`);
+                    } catch (err) {
+                        console.warn("Nano-Banana Direct Fallback...", err);
+                        // SE A INJEÇÃO DIRETA FALHAR, TENTA O SERVIDOR
                         const res = await fetch('/api/generate-cover', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -171,7 +180,6 @@ export default function Home() {
                         const data = await res.json();
                         if (data.error || !data.base64) throw new Error(data.error || "IA Error");
                         base64 = data.base64;
-                        console.log(`Variação ${i + 1}: Servidor OK (${data.engine || 'Proxy'})`);
                     }
 
                     const composed = await generateTypographyLayer(base64, {
