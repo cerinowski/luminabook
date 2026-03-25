@@ -71,7 +71,7 @@ function generateFallbackEbook(content: string) {
 
 export async function POST(req: Request) {
   try {
-    const { content } = await req.json();
+    const { content, approvedTitle, approvedTheme } = await req.json();
 
     if (!content) {
       return NextResponse.json({ error: "Content is required" }, { status: 400 });
@@ -97,23 +97,23 @@ export async function POST(req: Request) {
           const prompt = `Convert the text into a professional eBook JSON file for a premium publishing studio. 
           Rules:
           1. Keep all core content and organize gracefully into chapters. Do not uppercase entire sentences, do not use weird formatting or drop caps, keep text natural and readable.
-          2. CRITICAL: For each chapter, you must include a 'chapter_image_prompt'. This prompt MUST BE for HIGHLY REALISTIC PHOTOGRAPHY. ALWAYS maintain strict logical realism (e.g., do NOT put floating internal organs next to wine glasses or food). If the topic is medical/biological, use either a realistic scientific style or a lifestyle scene of a healthy person, NEVER bizarre surrealism or floating body parts.
+          2. ${approvedTheme ? 'IMPORTANT: Use the approved visual theme and prompt provided below.' : "CRITICAL: For each chapter, you must include a 'chapter_image_prompt'. This prompt MUST BE for HIGHLY REALISTIC PHOTOGRAPHY."} ALWAYS maintain strict logical realism (e.g., do NOT put floating internal organs next to wine glasses or food). If the topic is medical/biological, use either a realistic scientific style or a lifestyle scene of a healthy person, NEVER bizarre surrealism or floating body parts.
           3. DESIGN SPEC: You are a Master Book Layout Designer for a luxury publisher.
-          4. COLORS: Choose a SOPHISTICATED, HIGH-CONTRAST pair that matches the cover content/theme. CRITICAL: MUST provide perfectly valid #HEX codes for both.
-          5. METADATA: Derive a catchy 'subtitle' (5-7 words) and a professional 'author_name' (or use a pseudonym).
+          4. COLORS: ${approvedTheme ? `Use PRIMARY: ${approvedTheme.primary_color} and SECONDARY: ${approvedTheme.secondary_color}` : "Choose a SOPHISTICATED, HIGH-CONTRAST pair that matches the cover content/theme. CRITICAL: MUST provide perfectly valid #HEX codes for both."}
+          5. METADATA: ${approvedTitle ? `The Title is: "${approvedTitle}"` : "Derive a catchy 'subtitle' (5-7 words) and a professional 'author_name' (or use a pseudonym)."}
           6. TITLES: Do NOT prefix chapter titles with colons (':') or 'Chapter X:'. Write clean, direct titles.
 
           JSON Format: { 
-            "title": "...", 
+            "title": "${approvedTitle || '...'}", 
             "subtitle": "...", 
             "author_name": "...",
             "chapters": [{ "title": "...", "content": "...", "chapter_image_prompt": "..." }], 
             "visual_theme": { 
-              "primary_color": "#HEX", 
-              "secondary_color": "#HEX", 
+              "primary_color": "${approvedTheme?.primary_color || '#HEX'}", 
+              "secondary_color": "${approvedTheme?.secondary_color || '#HEX'}", 
               "layout_type": "luxury_editorial", 
-              "image_generation_prompt": "Write ONLY the visual description here. NO surrealism, NO flying body parts. e.g: 'A highly realistic photograph of an elegant dining room table with fresh vegetables...'",
-              "design_mood": "..." 
+              "image_generation_prompt": "${approvedTheme?.image_generation_prompt || 'Visual description here...'}",
+              "design_mood": "${approvedTheme?.design_mood || '...'}" 
             } 
           }
           

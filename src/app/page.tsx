@@ -8,7 +8,7 @@ import jsPDF from 'jspdf';
 // Fontes de Luxo para o motor de tipografia
 const GOOGLE_FONTS_URL = "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Montserrat:wght@400;700;900&display=swap";
 
-// --- MOTOR DE TIPOGRAFIA LUMINA v4.0 ---
+// --- MOTOR DE TIPOGRAFIA LUMINA v5.0 ---
 async function generateTypographyLayer(bgUrl: string, config: any): Promise<string> {
     return new Promise((resolve) => {
         const canvas = document.createElement('canvas');
@@ -16,8 +16,6 @@ async function generateTypographyLayer(bgUrl: string, config: any): Promise<stri
         canvas.height = 1200;
         const ctx = canvas.getContext('2d');
         if (!ctx) return resolve(bgUrl);
-
-        // img handling moved to bottom
 
         const renderText = (loadedImg: HTMLImageElement | null) => {
             if (loadedImg) {
@@ -31,7 +29,6 @@ async function generateTypographyLayer(bgUrl: string, config: any): Promise<stri
                 ctx.fillRect(0, 0, 800, 1200);
             }
 
-            // 2. Overlay Sutil para garantir legibilidade (Gradiente)
             const gradient = ctx.createLinearGradient(0, 0, 0, 1200);
             gradient.addColorStop(0, 'rgba(0,0,0,0.4)');
             gradient.addColorStop(0.3, 'rgba(0,0,0,0)');
@@ -40,30 +37,24 @@ async function generateTypographyLayer(bgUrl: string, config: any): Promise<stri
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, 800, 1200);
 
-            // 3. Título Principal (Massivo e Elegante)
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-
-            // Sombra do texto
             ctx.shadowColor = 'rgba(0,0,0,0.5)';
             ctx.shadowBlur = 15;
             ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 5;
 
             let rawTitle = config.title || 'EBOOK';
-            rawTitle = rawTitle.replace(/^.*?:\s*/, '').replace(/:/g, '').trim(); // Remove colons from title
+            rawTitle = rawTitle.replace(/^.*?:\s*/, '').replace(/:/g, '').trim();
             const title = rawTitle.toUpperCase();
 
             ctx.fillStyle = '#FFFFFF';
-
-            // Ajuste dinâmico de tamanho de fonte para o título
             let fontSize = 80;
             if (title.length > 20) fontSize = 60;
             if (title.length > 40) fontSize = 45;
 
             ctx.font = `900 ${fontSize}px 'Montserrat', sans-serif`;
 
-            // Desenha o título com quebra de linha inteligente
             const words = title.split(' ');
             let line = '';
             let y = 450;
@@ -84,10 +75,9 @@ async function generateTypographyLayer(bgUrl: string, config: any): Promise<stri
             }
             ctx.fillText(line, 400, y);
 
-            // 4. Subtítulo (Refinado)
             ctx.shadowBlur = 5;
             ctx.font = `400 24px 'Montserrat', sans-serif`;
-            const subtitle = (config.subtitle || '').toUpperCase();
+            const subtitle = (config.subtitle || 'O guia prático para transformação').toUpperCase();
             const subWords = subtitle.split(' ');
             let subLine = '';
             let subY = y + 80;
@@ -104,12 +94,10 @@ async function generateTypographyLayer(bgUrl: string, config: any): Promise<stri
             }
             ctx.fillText(subLine, 400, subY);
 
-            // 5. Nome do Autor (Rodapé High-End)
             ctx.font = `700 20px 'Montserrat', sans-serif`;
             ctx.letterSpacing = "4px";
-            ctx.fillText(config.author || 'LUMINA EDITORIAL', 400, 1100);
+            ctx.fillText(config.author || 'LUMINA STUDIO', 400, 1100);
 
-            // 6. Detalhe Minimalista (Linha de acento)
             ctx.strokeStyle = config.secondary || '#E93DE5';
             ctx.lineWidth = 4;
             ctx.beginPath();
@@ -123,40 +111,38 @@ async function generateTypographyLayer(bgUrl: string, config: any): Promise<stri
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.src = bgUrl;
-
         img.onload = () => renderText(img);
-        img.onerror = () => {
-            console.warn("Pollinations fetch failed. Rendering text over gradient.");
-            renderText(null);
-        };
-        setTimeout(() => {
-            if (canvas.toDataURL('image/jpeg').length < 1000) renderText(null);
-        }, 6000);
+        img.onerror = () => renderText(null);
+        setTimeout(() => { if (canvas.toDataURL('image/jpeg').length < 1000) renderText(null); }, 6000);
     });
 }
 
 export default function Home() {
     const [content, setContent] = useState('');
+    const [customTitle, setCustomTitle] = useState('');
+    const [coverDescription, setCoverDescription] = useState('');
+    const [approvedTheme, setApprovedTheme] = useState<any>(null);
+    const [currentStep, setCurrentStep] = useState(1);
     const [userCredits, setUserCredits] = useState(1000);
     const [requiredCredits, setRequiredCredits] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
+    const [isCoverPreviewing, setIsCoverPreviewing] = useState(false);
     const [generatedEbook, setGeneratedEbook] = useState<any>(null);
     const [coverImageData, setCoverImageData] = useState<string | null>(null);
     const [isGeneratingCover, setIsGeneratingCover] = useState(false);
     const [chapterImages, setChapterImages] = useState<string[]>([]);
     const [isGeneratingChapters, setIsGeneratingChapters] = useState(false);
-    const [isAiTextCover, setIsAiTextCover] = useState(false);
     const [debugLogs, setDebugLogs] = useState<string[]>([]);
     const [showDebug, setShowDebug] = useState(false);
     const [cooldown, setCooldown] = useState(0);
 
+    const addLog = (msg: string) => {
+        setDebugLogs(prev => [...prev.slice(-15), `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    };
+
     useEffect(() => {
-        if (content.trim().length === 0) {
-            setRequiredCredits(0);
-        } else {
-            const calculated = Math.ceil(content.length / 500);
-            setRequiredCredits(calculated);
-        }
+        if (content.trim().length === 0) setRequiredCredits(0);
+        else setRequiredCredits(Math.ceil(content.length / 500));
     }, [content]);
 
     useEffect(() => {
@@ -166,317 +152,103 @@ export default function Home() {
         }
     }, [cooldown]);
 
-    const addLog = (msg: string) => {
-        setDebugLogs(prev => [...prev.slice(-15), `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    const handleGenerateCoverPreview = async () => {
+        if (!customTitle && !coverDescription) return addLog("Erro: Digite título ou descrição.");
+        setIsCoverPreviewing(true);
+        addLog("Solicitando design de capa...");
+        try {
+            const res = await fetch('/api/generate-cover-theme', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: customTitle, description: coverDescription }),
+            });
+            const theme = await res.json();
+            setApprovedTheme(theme);
+            addLog(`Design "${theme.design_mood}" selecionado.`);
+            await generateVisualCover(theme);
+        } catch (error) { addLog("Erro ao gerar prévia."); }
+        finally { setIsCoverPreviewing(false); }
+    };
+
+    const generateVisualCover = async (theme: any) => {
+        setIsGeneratingCover(true);
+        const artUrl = `https://pollinations.ai/p/${encodeURIComponent(theme.image_generation_prompt + ". NO TEXT")}?width=800&height=1200&seed=${Math.floor(Math.random() * 1000)}&model=flux&nologo=true`;
+        const merged = await generateTypographyLayer(artUrl, {
+            title: theme.title || customTitle,
+            subtitle: "Premium Editorial Series",
+            author: "LUMINA STUDIO",
+            primary: theme.primary_color,
+            secondary: theme.secondary_color
+        });
+        setCoverImageData(merged);
+        setIsGeneratingCover(false);
     };
 
     const handleCreateEbook = async () => {
         if (!content || requiredCredits > userCredits || cooldown > 0) return;
-
         setIsLoading(true);
         setDebugLogs([]);
-        addLog("Iniciando motor de criação ultra-resiliente...");
-        addLog("Camada 1: Testando modelos Flash em cascata (0s delay)");
-
+        addLog("Compilando eBook...");
         try {
             const response = await fetch('/api/generate-ebook', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content }),
+                body: JSON.stringify({ content, approvedTitle: customTitle, approvedTheme }),
             });
-
             const data = await response.json();
-
-            if (!response.ok) {
-                const errorDetail = data.details || data.error || 'Falha na geração';
-                addLog(`INFO: ${errorDetail}`);
-
-                if (errorDetail.includes("429") || errorDetail.includes("quota")) {
-                    addLog("AVISO: Cota Google excedida. Tentando modo de resiliência local...");
-                }
-
-                // If it's a hard 500 but we have a fallback object, the above might not apply
-                // But our new backend ALWAYS returns a 200 with is_fallback: true or a simplified object
-            }
-
-            if (data.is_fallback) {
-                addLog("⚠️ MODO DE SEGURANÇA ATIVO: IA do Google indisponível.");
-                addLog("Diagramação finalizada via Motor de Ressonância Local.");
-            } else {
-                addLog("Sucesso! Diagramação via IA de alta performance.");
-            }
-
             setGeneratedEbook(data);
             setUserCredits(prev => prev - requiredCredits);
-
-            // Inicia geração oficial da capa gráfica
-            generateCoverPreview(data);
-        } catch (error: any) {
-            console.error('Error:', error);
-            addLog(`ESTADO CRÍTICO: ${error.message}`);
-            setShowDebug(true);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const generateCoverPreview = async (ebookData: any) => {
-        setIsGeneratingCover(true);
-        try {
-            const theme = ebookData.visual_theme || {};
-            const primary = theme.primary_color || '#1a1830';
-            const secondary = theme.secondary_color || '#E93DE5';
-
-            const lines = content.split('\n').filter(l => l.trim());
-            const firstLine = lines[0]?.replace(/[#*]/g, '').trim() || "eBook";
-            const finalTitle = (ebookData.title && ebookData.title.length > 15 && !ebookData.title.includes('...'))
-                ? ebookData.title
-                : firstLine;
-
-            const basePrompt = theme.image_generation_prompt || `A premium minimalist book cover context`;
-
-            addLog("Gerando Arte Base via Pollinations...");
-            const safeArtPrompt = encodeURIComponent(`${basePrompt}. Premium editorial background, atmospheric, minimalist, cinematic lighting, ultra high resolution. NO TEXT. NO CHARACTERS. NO BOOKS.`);
-            const artUrl = `https://pollinations.ai/p/${safeArtPrompt}?width=800&height=1200&seed=${Math.floor(Math.random() * 1000)}&model=flux&nologo=true`;
-
-            const initialMerged = await generateTypographyLayer(artUrl, {
-                title: finalTitle,
-                subtitle: ebookData.subtitle || "O guia prático para transformação",
-                author: ebookData.author_name || "Premium Editorial Studio",
-                primary: primary,
-                secondary: secondary
-            });
-            setCoverImageData(initialMerged);
-            setIsGeneratingCover(false);
-
-            addLog("Refinando Arte com Motor HuggingFace Dev...");
-            fetch('/api/generate-cover', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: `FLAT FRONT VIEW. ${basePrompt}. Atmospheric background art. NO TEXT. NO LETTERS.` })
-            }).then(async (res) => {
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.base64) {
-                        const finalMerged = await generateTypographyLayer(data.base64, {
-                            title: finalTitle,
-                            subtitle: ebookData.subtitle || "O guia prático para transformação",
-                            author: ebookData.author_name || "Premium Editorial Studio",
-                            primary: primary,
-                            secondary: secondary
-                        });
-                        setCoverImageData(finalMerged);
-                        addLog("Capa Finalizada com Tipografia de Alta Precisão.");
-                    }
-                }
-            }).catch(() => addLog("Usando Pollinations como arte final."));
-
-            if (ebookData.chapters && ebookData.chapters.length > 0) {
+            if (data.chapters) {
                 setIsGeneratingChapters(true);
-                const images: string[] = [];
-                for (let i = 0; i < ebookData.chapters.length; i++) {
-                    const chapter = ebookData.chapters[i];
-                    const chapterPrompt = chapter.chapter_image_prompt || `Abstract editorial illustration about ${chapter.title}`;
-                    const safeCmpPrompt = encodeURIComponent(chapterPrompt.slice(0, 150));
-                    const imgUrl = `https://pollinations.ai/p/${safeCmpPrompt}?width=800&height=600&seed=${Math.floor(Math.random() * 1000)}&model=flux&nologo=true`;
-                    images.push(imgUrl);
-                }
+                const images = data.chapters.map((c: any) =>
+                    `https://pollinations.ai/p/${encodeURIComponent(c.chapter_image_prompt || c.title)}?width=800&height=600&seed=${Math.floor(Math.random() * 1000)}&model=flux&nologo=true`
+                );
                 setChapterImages(images);
                 setIsGeneratingChapters(false);
             }
-
-        } catch (err) {
-            setIsGeneratingCover(false);
-        }
+        } catch (error: any) { addLog(`Erro: ${error.message}`); }
+        finally { setIsLoading(false); }
     };
-
-    // (Função getBase64ImageFromUrl deletada, substituída por lógica nativa do Backend NodeJS)
 
     const downloadEbookPDF = async () => {
         if (!generatedEbook) return;
-
         setIsLoading(true);
         try {
-            console.log('Initiating Masterpiece Editorial Studio...');
             const doc = new jsPDF();
             const theme = generatedEbook.visual_theme || {};
-            const primary = theme.primary_color || '#1a1830';
-            const secondary = theme.secondary_color || '#E93DE5';
+            const [pr, pg, pb] = theme.primary_color ? [parseInt(theme.primary_color.slice(1, 3), 16), parseInt(theme.primary_color.slice(3, 5), 16), parseInt(theme.primary_color.slice(5, 7), 16)] : [26, 24, 48];
+            const [sr, sg, sb] = theme.secondary_color ? [parseInt(theme.secondary_color.slice(1, 3), 16), parseInt(theme.secondary_color.slice(3, 5), 16), parseInt(theme.secondary_color.slice(5, 7), 16)] : [233, 61, 229];
 
             const margin = 28;
             const pageWidth = 210;
-            const pageHeight = 297;
             const contentWidth = pageWidth - (margin * 2);
-            const bodyLineHeight = 8;
-            const paragraphSpacing = 4;
 
-            const hexToRgb = (hex: string) => {
-                const h = hex.replace('#', '');
-                const r = parseInt(h.slice(0, 2), 16) || 0;
-                const g = parseInt(h.slice(2, 4), 16) || 0;
-                const b = parseInt(h.slice(4, 6), 16) || 0;
-                return [r, g, b];
-            };
-
-            const [pr, pg, pb] = hexToRgb(primary);
-            const [sr, sg, sb] = hexToRgb(secondary);
-
-            doc.setFillColor(pr, pg, pb);
-            doc.rect(0, 0, pageWidth, pageHeight, 'F');
-
-            try {
-                if (coverImageData) {
-                    // O PDF requere um Base64 estrito injetado nas entranhas ou buga na Vercel. 
-                    // Vamos faturar ele na hora H do download usando a rede pública do usuário passando pelo proxy aberto "AllOrigins":
-                    console.log("Criptografando Capa para o Motor PDF via AllOrigins...");
-
-                    let pdfSafeBase64 = null;
-
-                    // 1. Primeira tentativa: Extrair imagem JÁ CARREGADA da tela (Canvas) - 0 delay
-                    const imgEl = document.getElementById('cover-img-element') as HTMLImageElement;
-                    if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
-                        try {
-                            const canvas = document.createElement('canvas');
-                            canvas.width = imgEl.naturalWidth;
-                            canvas.height = imgEl.naturalHeight;
-                            const ctx = canvas.getContext('2d');
-                            if (ctx) {
-                                ctx.drawImage(imgEl, 0, 0);
-                                const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-                                if (dataUrl && dataUrl.length > 100) {
-                                    pdfSafeBase64 = dataUrl;
-                                    console.log("Capa extraída do Canvas da UI perfeitamente!");
-                                }
-                            }
-                        } catch (e) {
-                            console.warn("Canvas cross-origin taint, caindo para fetch...");
-                        }
-                    }
-
-                    // 2. Segunda tentativa: Se o Canvas falhar, tenta buscar os dados
-                    if (!pdfSafeBase64) {
-                        if (coverImageData.startsWith('data:image')) {
-                            pdfSafeBase64 = coverImageData;
-                        } else {
-                            const urlsToTry = [
-                                coverImageData,
-                                'https://corsproxy.io/?' + encodeURIComponent(coverImageData),
-                                'https://api.allorigins.win/raw?url=' + encodeURIComponent(coverImageData)
-                            ];
-
-                            for (const fetchUrl of urlsToTry) {
-                                try {
-                                    console.log("Buscando imagem para PDF nativo via:", fetchUrl);
-                                    const res = await fetch(fetchUrl);
-                                    if (res.ok) {
-                                        const blob = await res.blob();
-                                        const bufferBase64 = await new Promise<string>((resolve, reject) => {
-                                            const reader = new FileReader();
-                                            reader.onloadend = () => resolve(reader.result as string);
-                                            reader.onerror = reject;
-                                            reader.readAsDataURL(blob);
-                                        });
-
-                                        // Forçar que seja interpretado como imagem
-                                        if (bufferBase64) {
-                                            if (bufferBase64.startsWith('data:image')) {
-                                                pdfSafeBase64 = bufferBase64;
-                                            } else if (bufferBase64.startsWith('data:application/octet-stream')) {
-                                                pdfSafeBase64 = bufferBase64.replace('data:application/octet-stream', 'data:image/jpeg');
-                                            }
-                                        }
-
-                                        if (pdfSafeBase64 && pdfSafeBase64.startsWith('data:image')) {
-                                            break; // Sucesso real!
-                                        }
-                                    }
-                                } catch (e) {
-                                    console.warn("Falha na rota da imagem:", fetchUrl);
-                                }
-                            }
-                        }
-                    }
-
-                    if (pdfSafeBase64 && pdfSafeBase64.startsWith('data:image')) {
-                        const imgRatio = 840 / 1188;
-                        const pageRatio = pageWidth / pageHeight;
-
-                        let drawWidth = pageWidth;
-                        let drawHeight = pageHeight;
-                        let dx = 0;
-                        let dy = 0;
-
-                        if (imgRatio > pageRatio) {
-                            drawHeight = pageHeight;
-                            drawWidth = pageHeight * imgRatio;
-                            dx = (pageWidth - drawWidth) / 2;
-                        } else {
-                            drawWidth = pageWidth;
-                            drawHeight = pageWidth / imgRatio;
-                            dy = (pageHeight - drawHeight) / 2;
-                        }
-
-                        doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
-                        const imgFormat = pdfSafeBase64.toLowerCase().includes('image/png') ? 'PNG' : 'JPEG';
-                        doc.addImage(pdfSafeBase64, imgFormat, dx, dy, drawWidth, drawHeight, undefined, 'FAST');
-
-                        console.log("Capa AI (FLUX) 100% Pura Ancorada no PDF (Sem overlapp vetorial).");
-                    } else {
-                        console.warn("A ancoragem da imagem da Capa AI Falhou. Emitindo PDF cego (apenas com cores).");
-                    }
-                }
-            } catch (e) {
-                console.error('Motor jsPDF destruído subitamente:', e);
+            // Capa
+            if (coverImageData) {
+                const imgFormat = coverImageData.includes('png') ? 'PNG' : 'JPEG';
+                doc.addImage(coverImageData, imgFormat, 0, 0, 210, 297, undefined, 'FAST');
             }
 
-            // 3. Processamento de Capítulos Editoriais
-            const chapters = generatedEbook.chapters || [];
-
-            for (let idx = 0; idx < chapters.length; idx++) {
-                const chapter = chapters[idx];
-
-                // PÁGINA DE ROSTO DO CAPÍTULO (FULL PAGE VIBE)
+            // Capítulos
+            for (let idx = 0; idx < (generatedEbook.chapters || []).length; idx++) {
+                const chapter = generatedEbook.chapters[idx];
                 doc.addPage();
-
-                // Background sutil do capítulo
                 doc.setDrawColor(sr, sg, sb);
-                doc.setLineWidth(0.5);
-                doc.rect(10, 10, pageWidth - 20, pageHeight - 20); // Border
+                doc.rect(10, 10, 190, 277);
 
-                let curY = 60;
-
-                // Título do Capítulo em destaque
-                doc.setGState(new (doc as any).GState({ opacity: 0.1 }));
                 doc.setTextColor(sr, sg, sb);
                 doc.setFontSize(140);
-                doc.text(`${idx + 1}`, pageWidth / 2, 120, { align: 'center' });
-                doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
+                doc.text(`${idx + 1}`, 105, 120, { align: 'center' });
 
                 const chapterTitle = (chapter.title || '').toUpperCase();
-
-                // Dynamic font size for chapter cover titles - VERY aggressive scaling
-                let chapterFontSize = 24;
-                if (chapterTitle.length > 30) chapterFontSize = 18;
-                if (chapterTitle.length > 50) chapterFontSize = 15;
-                if (chapterTitle.length > 80) chapterFontSize = 12;
-
-                doc.setFontSize(chapterFontSize);
+                let fontSize = chapterTitle.length > 50 ? 15 : 24;
+                doc.setFontSize(fontSize);
                 doc.setFont('helvetica', 'bold');
-                doc.setTextColor(pr, pg, pb);
+                doc.text(doc.splitTextToSize(chapterTitle, 170), 105, 140, { align: 'center' });
 
-                // Wider width for chapter covers to prevent truncation
-                const chapterContentWidth = pageWidth - 40;
-                const splitTitle = doc.splitTextToSize(chapterTitle, chapterContentWidth);
-                doc.text(splitTitle, pageWidth / 2, 140, { align: 'center' });
-
-                doc.setFont('helvetica', 'normal'); // Important reset
-
-                // INSERÇÃO DA IMAGEM DO CAPÍTULO (Se existir) - USANDO PROXY PARA EVITAR CORS NO PDF
-                const chapterImgUrl = chapterImages[idx];
-                if (chapterImgUrl) {
+                if (chapterImages[idx]) {
                     try {
-                        console.log(`Buscando imagem do capítulo ${idx + 1} para o PDF...`);
-                        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(chapterImgUrl)}`;
+                        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(chapterImages[idx])}`;
                         const imgRes = await fetch(proxyUrl);
                         if (imgRes.ok) {
                             const blob = await imgRes.blob();
@@ -485,282 +257,114 @@ export default function Home() {
                                 reader.onloadend = () => res(reader.result as string);
                                 reader.readAsDataURL(blob);
                             });
-
-                            const imgW = 150;
-                            const imgH = 112; // 4:3 ratio
-                            doc.addImage(base64, 'JPEG', (pageWidth - imgW) / 2, 160, imgW, imgH, undefined, 'FAST');
-                            curY = 280;
+                            doc.addImage(base64, 'JPEG', 30, 160, 150, 112, undefined, 'FAST');
                         }
-                    } catch (e) {
-                        console.warn("Falha ao incluir imagem do capítulo no PDF");
-                    }
+                    } catch (e) { }
                 }
 
-                // PÁGINA DE CONTEÚDO DO CAPÍTULO - Adicionando Design Geométrico
+                // Conteúdo
                 doc.addPage();
-                doc.setFont('helvetica', 'normal'); // Start normal
-
-                // Elemento Geométrico de Fundo (Sutil)
-                doc.setGState(new (doc as any).GState({ opacity: 0.05 }));
-                doc.setFillColor(sr, sg, sb);
-                doc.rect(0, 0, 40, 297, 'F');
-                doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
-
-                doc.setDrawColor(sr, sg, sb);
-                doc.setLineWidth(0.5);
-                doc.line(margin, 20, pageWidth - margin, 20);
-
-                doc.setTextColor(sr, sg, sb);
+                doc.setFont('helvetica', 'bold');
                 doc.setFontSize(8);
-                doc.setFont('helvetica', 'bold'); // Bold only for header
+                doc.setTextColor(sr, sg, sb);
+                doc.text(generatedEbook.title.toUpperCase(), margin, 15);
+                doc.text(`CAPÍTULO ${idx + 1}`, 210 - margin, 15, { align: 'right' });
 
-                // Truncate book title in header
-                const headerTitle = generatedEbook.title.toUpperCase();
-                const safeHeaderTitle = headerTitle.length > 45 ? headerTitle.slice(0, 42) + '...' : headerTitle;
-                doc.text(safeHeaderTitle, margin, 15);
-                doc.text(`CAPÍTULO ${idx + 1}`, pageWidth - margin, 15, { align: 'right' });
-
-                doc.setFont('helvetica', 'normal'); // RESET IMMEDIATELY AFTER HEADER
-                doc.setTextColor(40, 40, 40);
+                doc.setFont('helvetica', 'normal');
                 doc.setFontSize(11);
-
+                doc.setTextColor(40, 40, 40);
+                let curY = 35;
                 const paragraphs = (chapter.content || '').split('\n').filter((p: string) => p.trim());
-
                 paragraphs.forEach((para: string) => {
                     const lines = doc.splitTextToSize(para, contentWidth);
                     lines.forEach((line: string) => {
                         if (curY > 275) {
                             doc.addPage();
-                            doc.setFont('helvetica', 'normal'); // New page starts normal
-
-                            doc.setDrawColor(sr, sg, sb);
-                            doc.line(margin, 20, pageWidth - margin, 20);
-
-                            doc.setTextColor(sr, sg, sb);
-                            doc.setFontSize(7);
-                            doc.setFont('helvetica', 'bold');
-                            doc.text(`CONTINUAÇÃO ${chapter.title.toUpperCase()}`, margin, 15);
-
-                            doc.setFont('helvetica', 'normal'); // RESET AFTER CONTINUATION
-                            doc.setFontSize(11);
-                            doc.setTextColor(40, 40, 40);
+                            doc.setFont('helvetica', 'normal');
                             curY = 35;
                         }
                         doc.text(line, margin, curY);
-                        curY += bodyLineHeight;
+                        curY += 8;
                     });
-                    curY += paragraphSpacing;
+                    curY += 4;
                 });
-
-                // Footer / Page Number
-                const pTotal = (doc as any).internal.getNumberOfPages();
-                doc.setFontSize(9);
-                doc.setTextColor(sr, sg, sb);
-                doc.setFont('helvetica', 'bold');
-                doc.text(`${pTotal}`, pageWidth / 2, 288, { align: 'center' });
-                doc.setFont('helvetica', 'normal'); // Final reset for this chapter loop iteration
-
-                // Detalhe Geométrico Rodapé
-                doc.setFillColor(sr, sg, sb);
-                doc.rect(pageWidth / 2 - 10, 290, 20, 1, 'F');
             }
-
-            const safeFileName = (generatedEbook.title || 'ebook').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            doc.save(`${safeFileName}.pdf`);
-            console.log('Premium Editorial Studio Success.');
-        } catch (error: any) {
-            console.error('Critical Layout Error:', error);
-            alert('Erro de diagramação. O conteúdo pode ser complexo demais.');
-        } finally {
-            setIsLoading(false);
-        }
+            doc.save(`${(generatedEbook.title || 'ebook').replace(/[^a-z0-9]/gi, '_')}.pdf`);
+        } catch (e) { console.error(e); }
+        finally { setIsLoading(false); }
     };
 
     return (
-        <main className="min-h-screen flex flex-col pt-20 pb-40 relative overflow-hidden">
-            <style jsx global>{`
-                @import url('${GOOGLE_FONTS_URL}');
-                body {
-                    font-family: 'Montserrat', sans-serif;
-                }
-            `}</style>
+        <main className="min-h-screen flex flex-col pt-20 pb-40 bg-[#050510] text-white overflow-x-hidden">
+            <style jsx global>{` @import url('${GOOGLE_FONTS_URL}'); body { font-family: 'Montserrat', sans-serif; background: #050510; } `}</style>
 
-            <nav className="fixed top-0 left-0 right-0 h-16 flex items-center justify-center px-6 studio-toolbar z-50">
-                <div className="absolute left-6 flex items-center gap-2 text-sm font-medium text-white/50">
-                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                    <span className="bg-white/5 px-2 py-1 rounded-md text-white/80">LumiaBook Beta</span>
-                </div>
-                <div className="flex items-center">
-                    <img src="/logo.png" alt="LumiaBook" className="h-10 transition-all hover:scale-105 cursor-pointer" />
-                </div>
-                <div className="absolute right-6 flex items-center gap-4">
-                    <div className="flex flex-col items-end hidden md:flex">
-                        <span className="text-[10px] text-white/40 uppercase font-black">Seus Créditos</span>
-                        <span className="text-sm font-bold text-primary">{userCredits} ✨</span>
+            <div className="max-w-6xl mx-auto px-6 w-full relative z-10">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-16">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-tr from-purple-600 to-pink-500 rounded-xl flex items-center justify-center">
+                            <Sparkles className="text-white w-6 h-6" />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl font-black tracking-tighter uppercase">LUMINA <span className="text-purple-400">STUDIO</span></h1>
+                            <p className="text-[10px] text-gray-400 font-bold tracking-widest uppercase">Motor Editorial de Luxo v5.0</p>
+                        </div>
                     </div>
                 </div>
-            </nav>
 
-            <AnimatePresence>
-                {showDebug && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
-                        className="fixed bottom-32 left-1/2 -translate-x-1/2 w-full max-w-2xl z-[100] px-4"
-                    >
-                        <div className="bg-[#1a1830]/95 border border-primary/30 rounded-2xl p-6 shadow-2xl backdrop-blur-xl">
-                            <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-3">
-                                <h4 className="text-xs font-black text-primary uppercase tracking-[0.2em] flex items-center gap-2">
-                                    <Zap className="w-3 h-3" /> System Diagnostics
-                                </h4>
-                                <button onClick={() => setShowDebug(false)} className="text-white/30 hover:text-white text-[10px] font-bold">FECHAR</button>
-                            </div>
-                            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar font-mono text-[11px]">
-                                {debugLogs.map((log, i) => (
-                                    <div key={i} className={`p-2 rounded ${log.includes('ERRO') || log.includes('FALHA') ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'text-white/60'}`}>
-                                        {log}
-                                    </div>
-                                ))}
-                                {debugLogs.length === 0 && <div className="text-white/20 italic">Aguardando telemetria...</div>}
-                            </div>
-                            {isLoading && (
-                                <div className="mt-4 flex items-center gap-3">
-                                    <Loader2 className="w-3 h-3 text-primary animate-spin" />
-                                    <span className="text-[10px] text-white/40 animate-pulse font-medium">IA está processando múltiplos modelos em cascata...</span>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 text-left">
+                    <div className="flex flex-col gap-6">
+                        <div className="flex items-center gap-4 mb-2">
+                            {[1, 2].map(s => (
+                                <div key={s} className="flex items-center gap-2">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${currentStep >= s ? 'bg-purple-600' : 'bg-white/10 text-gray-500'}`}>{s}</div>
+                                    <span className={`text-[10px] font-bold uppercase tracking-widest ${currentStep === s ? 'text-white' : 'text-gray-500'}`}>{s === 1 ? 'Capa' : 'Conteúdo'}</span>
                                 </div>
-                            )}
+                            ))}
                         </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
-            <AnimatePresence mode="wait">
-                {!generatedEbook ? (
-                    <motion.section
-                        key="input-section" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }}
-                        className="flex-1 flex flex-col items-center justify-center px-4 space-y-8 animate-in fade-in duration-1000 relative z-10"
-                    >
-                        <div className="flex flex-col items-center text-center space-y-4">
-                            <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full mb-2">
-                                <Sparkles className="w-3 h-3 text-primary" />
-                                <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Next-Gen Publishing</span>
-                            </div>
-                            <h1 className="text-5xl md:text-[84px] font-extrabold tracking-tighter text-center leading-[0.95] max-w-4xl pb-4 text-white">
-                                Crie eBooks completos <br /> com <span className="text-gradient">IA em minutos.</span>
-                            </h1>
-                            <p className="text-white/50 text-xl md:text-2xl font-medium max-w-2xl tracking-tight">Estrutura, escreve e entrega seu ebook pronto.</p>
-                        </div>
-                    </motion.section>
-                ) : (
-                    <motion.section
-                        key="result-section" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
-                        className="flex-1 flex flex-col items-center px-4 pt-12 space-y-8 relative z-10 overflow-y-auto"
-                    >
-                        <div className="max-w-6xl w-full tech-balloon p-8 md:p-12 space-y-10">
-                            <div className="flex items-center justify-between border-b border-white/5 pb-8">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full">
-                                            <Zap className="w-3 h-3 text-primary animate-pulse" />
-                                            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Estúdio de Design Ativo</span>
-                                        </div>
-                                        {generatedEbook.is_fallback && (
-                                            <span className="px-2 py-1 bg-amber-500/20 text-amber-500 text-[10px] font-black rounded border border-amber-500/30 animate-pulse">MODO DE SEGURANÇA</span>
-                                        )}
-                                    </div>
-                                </div>
-                                <button onClick={() => { setGeneratedEbook(null); setCoverImageData(null); }} className="h-12 px-6 rounded-xl flex items-center gap-2 text-white/60 hover:text-white transition-all bg-white/5 hover:bg-white/10">
-                                    <ChevronLeft className="w-4 h-4" /> Novo Projeto
-                                </button>
-                            </div>
-
-                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                                <div className="lg:col-span-5 flex justify-center perspective-1000">
-                                    <motion.div initial={{ rotateY: 30 }} animate={{ rotateY: -10 }} whileHover={{ rotateY: -20, rotateX: 5 }} className="relative group transition-all duration-700 ease-out" style={{ transformStyle: 'preserve-3d' }}>
-                                        <div className="w-[300px] md:w-[380px] aspect-[1/1.4] rounded-r-lg shadow-[25px_25px_50px_rgba(0,0,0,0.6)] relative overflow-hidden border border-white/10" style={{ backgroundColor: generatedEbook.visual_theme?.primary_color || '#1a1830' }}>
-                                            {coverImageData ? (
-                                                <img
-                                                    id="cover-img-element"
-                                                    src={coverImageData}
-                                                    className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 opacity-100"
-                                                    alt="Book Cover"
-                                                    onError={(e) => {
-                                                        console.warn("Imagem original falhou na UI.");
-                                                    }}
-                                                />
-                                            ) : isGeneratingCover ? (
-                                                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-black/40 backdrop-blur-sm z-20">
-                                                    <Loader2 className="w-8 h-8 text-white/50 animate-spin mb-4" />
-                                                    <span className="text-[10px] font-black tracking-widest text-[#E93DE5] uppercase text-center animate-pulse">
-                                                        PINTANDO A ARTE 8K (POLLINATIONS)...
-                                                    </span>
-                                                </div>
-                                            ) : null}
-                                        </div>
-                                    </motion.div>
-                                </div>
-
-                                <div className="lg:col-span-7 space-y-8">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-1">
-                                            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">Estilo Sugerido</p>
-                                            <p className="text-lg font-bold text-white uppercase">{generatedEbook.visual_theme?.design_mood || 'Professional'}</p>
-                                        </div>
-                                        <div className={`p-6 rounded-2xl border transition-all ${isGeneratingChapters ? 'bg-primary/10 border-primary/30 animate-pulse' : 'bg-white/5 border-white/5'} space-y-1`}>
-                                            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">Ilustrações do eBook</p>
-                                            <div className="flex items-center gap-2 text-white font-bold text-sm">
-                                                {isGeneratingChapters ? (
-                                                    <>
-                                                        <Loader2 className="w-3 h-3 animate-spin text-primary" />
-                                                        <span>GERANDO ARTES INTERNAS...</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <BookOpen className="w-3 h-3 text-primary" />
-                                                        <span>{chapterImages.length} ILUSTRAÇÕES PRONTAS</span>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button onClick={downloadEbookPDF} className="w-full bg-gradient-to-r from-[#E93DE5] to-[#5B33F5] text-white py-6 rounded-2xl flex items-center justify-center gap-3 font-black uppercase tracking-widest shadow-xl hover:-translate-y-1 transition-all">
-                                        <FileDown className="w-6 h-6" /> Baixar PDF Customizado
+                        <AnimatePresence mode="wait">
+                            {currentStep === 1 ? (
+                                <motion.div key="s1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6 bg-white/5 p-8 rounded-3xl border border-white/10">
+                                    <h2 className="text-xl font-black uppercase tracking-tighter">1. Design da Capa</h2>
+                                    <input value={customTitle} onChange={(e) => setCustomTitle(e.target.value)} placeholder="Título do eBook" className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-white font-bold" />
+                                    <textarea value={coverDescription} onChange={(e) => setCoverDescription(e.target.value)} placeholder="Descrição visual da capa..." rows={4} className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-white font-bold resize-none" />
+                                    <button onClick={handleGenerateCoverPreview} disabled={isCoverPreviewing} className="w-full py-4 bg-white text-black font-black rounded-2xl hover:bg-purple-200 transition-all flex items-center justify-center gap-3">
+                                        {isCoverPreviewing ? <Loader2 className="animate-spin" /> : <Zap className="fill-current w-5 h-5" />} GERAR PRÉVIA
                                     </button>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.section>
-                )}
-            </AnimatePresence>
-
-            {!generatedEbook && (
-                <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-full max-w-4xl px-4 z-50">
-                    <div className="tech-balloon p-3 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-2xl">
-                        <div className="flex-1 flex items-center studio-input-container px-5 py-2 group">
-                            <Upload className="w-5 h-5 text-white/20 mr-4" />
-                            <textarea
-                                value={content} onChange={(e) => setContent(e.target.value)} disabled={isLoading}
-                                placeholder="Cole o conteúdo completo do seu eBook aqui..."
-                                className="bg-transparent border-none outline-none w-full text-lg text-white placeholder:text-white/20 py-3 min-h-[120px] resize-none custom-scrollbar"
-                            />
-                        </div>
-                        <button
-                            onClick={handleCreateEbook}
-                            disabled={content.length === 0 || isLoading || cooldown > 0}
-                            className="px-10 py-5 rounded-2xl bg-gradient-to-r from-[#E93DE5] to-[#5B33F5] text-white font-black uppercase tracking-widest hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {isLoading ? (
-                                <Loader2 className="w-5 h-5 animate-spin mx-auto" />
-                            ) : cooldown > 0 ? (
-                                `Aguarde ${cooldown}s`
+                                    {coverImageData && <button onClick={() => setCurrentStep(2)} className="w-full py-4 bg-purple-600/20 text-purple-400 border border-purple-500/30 font-black rounded-2xl hover:bg-purple-600/30 transition-all">AVANÇAR PARA CONTEÚDO</button>}
+                                </motion.div>
                             ) : (
-                                "Criar eBook"
+                                <motion.div key="s2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6 bg-white/5 p-8 rounded-3xl border border-white/10">
+                                    <div className="flex justify-between items-center"><h2 className="text-xl font-black uppercase tracking-tighter">2. Projeto Editorial</h2><button onClick={() => setCurrentStep(1)} className="text-[10px] font-black text-gray-500 uppercase">Voltar</button></div>
+                                    <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Cole o texto aqui..." className="w-full bg-black/40 border border-white/10 rounded-2xl p-6 text-white text-sm font-medium leading-relaxed min-h-[400px] resize-none" />
+                                    <div className="flex justify-between items-center p-4 bg-purple-900/20 rounded-2xl">
+                                        <div className="flex flex-col"><span className="text-[9px] font-black text-purple-400 uppercase tracking-widest">Investimento</span><span className="text-xl font-black">{requiredCredits} Créditos</span></div>
+                                        <button onClick={handleCreateEbook} disabled={isLoading || !content || requiredCredits > userCredits} className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-500 text-white font-black rounded-2xl">
+                                            {isLoading ? <Loader2 className="animate-spin" /> : "GERAR EBOOK"}
+                                        </button>
+                                    </div>
+                                </motion.div>
                             )}
-                        </button>
+                        </AnimatePresence>
+                    </div>
+
+                    <div className="flex flex-col gap-6">
+                        <div className="relative aspect-[2/3] bg-black/40 border border-white/10 rounded-3xl overflow-hidden flex items-center justify-center shadow-2xl">
+                            {coverImageData ? (
+                                <img id="cover-img-element" src={coverImageData} className="w-full h-full object-cover" alt="Preview" />
+                            ) : (
+                                <div className="text-center opacity-20"><Upload className="w-12 h-12 mx-auto mb-4" /><p className="font-black uppercase text-xs">Aguardando Design</p></div>
+                            )}
+                            {(isCoverPreviewing || isGeneratingCover || isLoading) && (
+                                <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-4 z-20">
+                                    <Loader2 className="w-12 h-12 text-purple-500 animate-spin" />
+                                    <p className="font-black uppercase tracking-tighter animate-pulse italic">Processando...</p>
+                                </div>
+                            )}
+                        </div>
+                        {generatedEbook && <button onClick={downloadEbookPDF} className="w-full py-6 bg-white text-black font-black rounded-3xl flex items-center justify-center gap-3"><FileDown className="w-6 h-6" /> BAIXAR PDF FINAL</button>}
                     </div>
                 </div>
-            )}
-            <div className="fixed inset-0 pointer-events-none z-0">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 blur-[120px] rounded-full" />
             </div>
         </main>
     );
