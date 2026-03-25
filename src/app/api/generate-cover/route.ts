@@ -15,6 +15,22 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'HUGGINGFACE_API_KEY is missing' }, { status: 500 });
         }
 
+        console.log('Iniciando Geração com Pollinations AI (Primary Stable Engine)...');
+        try {
+            const pollUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=800&height=1200&model=flux&nologo=true&seed=${Math.floor(Math.random() * 100000)}`;
+            const pollRes = await fetch(pollUrl);
+            if (pollRes.ok) {
+                const arrayBuffer = await pollRes.arrayBuffer();
+                const base64 = Buffer.from(arrayBuffer).toString('base64');
+                console.log('Capa gerada com sucesso via Pollinations!');
+                return NextResponse.json({ base64: `data:image/jpeg;base64,${base64}`, engine: 'Pollinations' });
+            }
+            console.warn(`Pollinations falhou (Status ${pollRes.status}), tentando HuggingFace...`);
+        } catch (e) {
+            console.error('Erro no Pollinations:', e);
+        }
+
+        console.log('Fallback: Tentando HuggingFace (Tiered Strategy)...');
         const models = [
             "black-forest-labs/FLUX.1-dev",
             "black-forest-labs/FLUX.1-schnell",
@@ -58,27 +74,9 @@ export async function POST(req: Request) {
         }
 
         if (!lastResponse || !lastResponse.ok) {
-            console.warn('HuggingFace falhou, tentando Pollinations AI (Super-Stable)...');
-            try {
-                // Pollinations.ai - 100% Free & Stable Fallback
-                const pollUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=800&height=1200&model=flux&nologo=true&seed=${Math.floor(Math.random() * 100000)}`;
-                const pollRes = await fetch(pollUrl);
-                if (pollRes.ok) {
-                    const arrayBuffer = await pollRes.ok ? await pollRes.arrayBuffer() : null;
-                    if (arrayBuffer) {
-                        const buffer = Buffer.from(arrayBuffer);
-                        const base64 = buffer.toString('base64');
-                        console.log('Capa recebida via Pollinations AI!');
-                        return NextResponse.json({ base64: `data:image/jpeg;base64,${base64}` });
-                    }
-                }
-            } catch (e) {
-                console.error('Pollinations AI falhou também:', e);
-            }
-
             const status = lastResponse?.status || 504;
             return NextResponse.json({
-                error: `HuggingFace falhou (Status ${status}). Tente novamente em instantes.`,
+                error: `Todas as IAs falharam (Status ${status}). Tente uma descrição mais simples.`,
                 status
             }, { status: 504 });
         }

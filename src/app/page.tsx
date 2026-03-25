@@ -134,7 +134,7 @@ export default function Home() {
             const theme = await res.json();
             setApprovedTheme(theme);
 
-            addLog("Pintando 4 variações exclusivas (FLUX)...");
+            addLog(`Pintando 4 variações exclusivas (Lumina-Glow)...`);
             const newVariations: string[] = [];
             const urls: string[] = []; // In this context, urls will store the base64 from HF
 
