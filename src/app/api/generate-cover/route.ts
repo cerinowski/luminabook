@@ -5,32 +5,33 @@ export const maxDuration = 60; // Força limite máximo da Vercel Hobby (60s)
 export async function POST(req: Request) {
     try {
         const { prompt } = await req.json();
-        const apiKey = process.env.HUGGINGFACE_API_KEY;
+        const apiKey = process.env.HUGGINGFACE_API_KEY?.trim();
 
         if (!prompt) {
             return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+        }
+
+        console.log('Iniciando Geração com Lumina-Glow (Nano Banana Style)...');
+        try {
+            // Pollinations.ai - Highly Stable Public Endpoint
+            const seed = Math.floor(Math.random() * 999999);
+            const pollUrl = `https://pollinations.ai/p/${encodeURIComponent(prompt)}?width=800&height=1200&seed=${seed}&model=flux&nologo=true`;
+
+            const pollRes = await fetch(pollUrl, { signal: AbortSignal.timeout(30000) });
+            if (pollRes.ok) {
+                const arrayBuffer = await pollRes.arrayBuffer();
+                const base64 = Buffer.from(arrayBuffer).toString('base64');
+                return NextResponse.json({ base64: `data:image/jpeg;base64,${base64}`, engine: 'Lumina-Glow' });
+            }
+        } catch (e) {
+            console.error('Lumina-Glow Falhou:', e);
         }
 
         if (!apiKey) {
             return NextResponse.json({ error: 'HUGGINGFACE_API_KEY is missing' }, { status: 500 });
         }
 
-        console.log('Iniciando Geração com Pollinations AI (Primary Stable Engine)...');
-        try {
-            const pollUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=800&height=1200&model=flux&nologo=true&seed=${Math.floor(Math.random() * 100000)}`;
-            const pollRes = await fetch(pollUrl);
-            if (pollRes.ok) {
-                const arrayBuffer = await pollRes.arrayBuffer();
-                const base64 = Buffer.from(arrayBuffer).toString('base64');
-                console.log('Capa gerada com sucesso via Pollinations!');
-                return NextResponse.json({ base64: `data:image/jpeg;base64,${base64}`, engine: 'Pollinations' });
-            }
-            console.warn(`Pollinations falhou (Status ${pollRes.status}), tentando HuggingFace...`);
-        } catch (e) {
-            console.error('Erro no Pollinations:', e);
-        }
-
-        console.log('Fallback: Tentando HuggingFace (Tiered Strategy)...');
+        console.log('Tentando Fallback: HuggingFace (Tiered Strategy)...');
         const models = [
             "black-forest-labs/FLUX.1-dev",
             "black-forest-labs/FLUX.1-schnell",
