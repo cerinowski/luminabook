@@ -17,13 +17,19 @@ async function generateTypographyLayer(bgUrl: string, config: any): Promise<stri
         const ctx = canvas.getContext('2d');
         if (!ctx) return resolve(bgUrl);
 
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = bgUrl;
+        // img handling moved to bottom
 
-        img.onload = () => {
-            // 1. Desenha o Fundo AI
-            ctx.drawImage(img, 0, 0, 800, 1200);
+        const renderText = (loadedImg: HTMLImageElement | null) => {
+            if (loadedImg) {
+                ctx.drawImage(loadedImg, 0, 0, 800, 1200);
+            } else {
+                const pr = config.primary || '#0a0a0f';
+                const bgGrad = ctx.createLinearGradient(0, 0, 800, 1200);
+                bgGrad.addColorStop(0, pr);
+                bgGrad.addColorStop(1, '#000000');
+                ctx.fillStyle = bgGrad;
+                ctx.fillRect(0, 0, 800, 1200);
+            }
 
             // 2. Overlay Sutil para garantir legibilidade (Gradiente)
             const gradient = ctx.createLinearGradient(0, 0, 0, 1200);
@@ -44,7 +50,10 @@ async function generateTypographyLayer(bgUrl: string, config: any): Promise<stri
             ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 5;
 
-            const title = (config.title || 'EBOOK').toUpperCase();
+            let rawTitle = config.title || 'EBOOK';
+            rawTitle = rawTitle.replace(/^.*?:\s*/, '').replace(/:/g, '').trim(); // Remove colons from title
+            const title = rawTitle.toUpperCase();
+
             ctx.fillStyle = '#FFFFFF';
 
             // Ajuste dinâmico de tamanho de fonte para o título
@@ -111,7 +120,18 @@ async function generateTypographyLayer(bgUrl: string, config: any): Promise<stri
             resolve(canvas.toDataURL('image/jpeg', 0.9));
         };
 
-        img.onerror = () => resolve(bgUrl);
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = bgUrl;
+
+        img.onload = () => renderText(img);
+        img.onerror = () => {
+            console.warn("Pollinations fetch failed. Rendering text over gradient.");
+            renderText(null);
+        };
+        setTimeout(() => {
+            if (canvas.toDataURL('image/jpeg').length < 1000) renderText(null);
+        }, 6000);
     });
 }
 
@@ -281,7 +301,7 @@ export default function Home() {
             const doc = new jsPDF();
             const theme = generatedEbook.visual_theme || {};
             const primary = theme.primary_color || '#1a1830';
-            const secondary = theme.color_palette?.secondary || '#E93DE5'; // Use color_palette for secondary
+            const secondary = theme.secondary_color || '#E93DE5';
 
             const margin = 28;
             const pageWidth = 210;
