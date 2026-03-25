@@ -454,29 +454,28 @@ export default function Home() {
 
                 const chapterTitle = (chapter.title || '').toUpperCase();
 
-                // Dynamic font size for chapter cover titles - more aggressive scaling
-                let chapterFontSize = 26;
-                if (chapterTitle.length > 30) chapterFontSize = 20;
-                if (chapterTitle.length > 60) chapterFontSize = 16;
-                if (chapterTitle.length > 100) chapterFontSize = 14;
+                // Dynamic font size for chapter cover titles - VERY aggressive scaling
+                let chapterFontSize = 24;
+                if (chapterTitle.length > 30) chapterFontSize = 18;
+                if (chapterTitle.length > 50) chapterFontSize = 15;
+                if (chapterTitle.length > 80) chapterFontSize = 12;
 
                 doc.setFontSize(chapterFontSize);
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(pr, pg, pb);
 
-                // Use a wider width for chapter covers to avoid unnecessary breaks
-                const chapterContentWidth = pageWidth - (margin * 1.5);
+                // Wider width for chapter covers to prevent truncation
+                const chapterContentWidth = pageWidth - 40;
                 const splitTitle = doc.splitTextToSize(chapterTitle, chapterContentWidth);
                 doc.text(splitTitle, pageWidth / 2, 140, { align: 'center' });
 
-                doc.setFont('helvetica', 'normal'); // Reset for safety
+                doc.setFont('helvetica', 'normal'); // Important reset
 
                 // INSERÇÃO DA IMAGEM DO CAPÍTULO (Se existir) - USANDO PROXY PARA EVITAR CORS NO PDF
                 const chapterImgUrl = chapterImages[idx];
                 if (chapterImgUrl) {
                     try {
                         console.log(`Buscando imagem do capítulo ${idx + 1} para o PDF...`);
-                        // Usamos proxy para garantir que o jsPDF consiga ler os bytes da imagem (Cross-Origin)
                         const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(chapterImgUrl)}`;
                         const imgRes = await fetch(proxyUrl);
                         if (imgRes.ok) {
@@ -499,30 +498,31 @@ export default function Home() {
 
                 // PÁGINA DE CONTEÚDO DO CAPÍTULO - Adicionando Design Geométrico
                 doc.addPage();
+                doc.setFont('helvetica', 'normal'); // Start normal
 
                 // Elemento Geométrico de Fundo (Sutil)
                 doc.setGState(new (doc as any).GState({ opacity: 0.05 }));
                 doc.setFillColor(sr, sg, sb);
-                doc.rect(0, 0, 40, 297, 'F'); // Faixa lateral esquerda sutil
+                doc.rect(0, 0, 40, 297, 'F');
                 doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
 
                 doc.setDrawColor(sr, sg, sb);
                 doc.setLineWidth(0.5);
-                doc.line(margin, 20, pageWidth - margin, 20); // Divider top
+                doc.line(margin, 20, pageWidth - margin, 20);
 
                 doc.setTextColor(sr, sg, sb);
                 doc.setFontSize(8);
-                doc.setFont('helvetica', 'bold');
+                doc.setFont('helvetica', 'bold'); // Bold only for header
 
-                // Truncate book title in header if too long to prevent overlap
+                // Truncate book title in header
                 const headerTitle = generatedEbook.title.toUpperCase();
-                const safeHeaderTitle = headerTitle.length > 50 ? headerTitle.slice(0, 47) + '...' : headerTitle;
+                const safeHeaderTitle = headerTitle.length > 45 ? headerTitle.slice(0, 42) + '...' : headerTitle;
                 doc.text(safeHeaderTitle, margin, 15);
                 doc.text(`CAPÍTULO ${idx + 1}`, pageWidth - margin, 15, { align: 'right' });
 
+                doc.setFont('helvetica', 'normal'); // RESET IMMEDIATELY AFTER HEADER
                 doc.setTextColor(40, 40, 40);
                 doc.setFontSize(11);
-                doc.setFont('helvetica', 'normal'); // Reset to normal weight for content
 
                 const paragraphs = (chapter.content || '').split('\n').filter((p: string) => p.trim());
 
@@ -531,15 +531,20 @@ export default function Home() {
                     lines.forEach((line: string) => {
                         if (curY > 275) {
                             doc.addPage();
+                            doc.setFont('helvetica', 'normal'); // New page starts normal
+
                             doc.setDrawColor(sr, sg, sb);
                             doc.line(margin, 20, pageWidth - margin, 20);
+
                             doc.setTextColor(sr, sg, sb);
                             doc.setFontSize(7);
-                            // Cleaned CONTINUAÇÃO text
+                            doc.setFont('helvetica', 'bold');
                             doc.text(`CONTINUAÇÃO ${chapter.title.toUpperCase()}`, margin, 15);
-                            curY = 35;
+
+                            doc.setFont('helvetica', 'normal'); // RESET AFTER CONTINUATION
                             doc.setFontSize(11);
                             doc.setTextColor(40, 40, 40);
+                            curY = 35;
                         }
                         doc.text(line, margin, curY);
                         curY += bodyLineHeight;
@@ -547,11 +552,13 @@ export default function Home() {
                     curY += paragraphSpacing;
                 });
 
-                // Footer / Page Number / Geom Accents
+                // Footer / Page Number
                 const pTotal = (doc as any).internal.getNumberOfPages();
                 doc.setFontSize(9);
                 doc.setTextColor(sr, sg, sb);
+                doc.setFont('helvetica', 'bold');
                 doc.text(`${pTotal}`, pageWidth / 2, 288, { align: 'center' });
+                doc.setFont('helvetica', 'normal'); // Final reset for this chapter loop iteration
 
                 // Detalhe Geométrico Rodapé
                 doc.setFillColor(sr, sg, sb);
