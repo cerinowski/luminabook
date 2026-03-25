@@ -11,84 +11,39 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
         }
 
-        console.log('Iniciando Geração com Lumina-Glow (Nano Banana Style)...');
+        console.log('NANO BANANA ENGINE: Gerando...', { prompt });
+
         try {
-            // Pollinations.ai - Highly Stable Public Endpoint
-            const seed = Math.floor(Math.random() * 999999);
-            const pollUrl = `https://pollinations.ai/p/${encodeURIComponent(prompt)}?width=800&height=1200&seed=${seed}&model=flux&nologo=true`;
+            const seed = Math.floor(Math.random() * 1000000);
+            const pollUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=800&height=1200&seed=${seed}&model=flux&nologo=true`;
 
-            const pollRes = await fetch(pollUrl, { signal: AbortSignal.timeout(30000) });
-            if (pollRes.ok) {
-                const arrayBuffer = await pollRes.arrayBuffer();
-                const base64 = Buffer.from(arrayBuffer).toString('base64');
-                return NextResponse.json({ base64: `data:image/jpeg;base64,${base64}`, engine: 'Lumina-Glow' });
+            const res = await fetch(pollUrl);
+            if (res.ok) {
+                const buffer = await res.arrayBuffer();
+                const base64 = Buffer.from(buffer).toString('base64');
+                return NextResponse.json({ base64: `data:image/jpeg;base64,${base64}`, engine: 'Nano-Banana' });
             }
-        } catch (e) {
-            console.error('Lumina-Glow Falhou:', e);
+        } catch (pollError: any) {
+            console.error('NANO BANANA FAILED (Poll), trying HF...', pollError.message);
         }
 
-        if (!apiKey) {
-            return NextResponse.json({ error: 'HUGGINGFACE_API_KEY is missing' }, { status: 500 });
-        }
-
-        console.log('Tentando Fallback: HuggingFace (Tiered Strategy)...');
-        const models = [
-            "black-forest-labs/FLUX.1-dev",
-            "black-forest-labs/FLUX.1-schnell",
-            "stabilityai/stable-diffusion-xl-base-1.0",
-            "runwayml/stable-diffusion-v1-5",
-            "prompthero/openjourney",
-            "stabilityai/stable-diffusion-2-1"
-        ];
-
-        let lastResponse = null;
-        for (const model of models) {
+        if (apiKey) {
             try {
-                console.log(`Tentando modelo: ${model}...`);
-                const response = await fetch(
-                    `https://api-inference.huggingface.co/models/${model}`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${apiKey}`,
-                            "Content-Type": "application/json",
-                        },
-                        method: "POST",
-                        body: JSON.stringify({
-                            inputs: prompt,
-                            parameters: model.includes('dev') ? { guidance_scale: 3.5, num_inference_steps: 28 } : {}
-                        }),
-                        cache: 'no-store',
-                        signal: AbortSignal.timeout(25000) // 25s por tentativa
-                    }
-                );
-
-                if (response.ok) {
-                    lastResponse = response;
-                    break;
+                const hfRes = await fetch("https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell", {
+                    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+                    method: "POST",
+                    body: JSON.stringify({ inputs: prompt }),
+                    signal: AbortSignal.timeout(20000)
+                });
+                if (hfRes.ok) {
+                    const buffer = await hfRes.arrayBuffer();
+                    return NextResponse.json({ base64: `data:image/jpeg;base64,${Buffer.from(buffer).toString('base64')}`, engine: 'HF-Schnell' });
                 }
-                const errorBody = await response.text();
-                console.warn(`Modelo ${model} falhou: ${response.status} - ${errorBody}`);
-                lastResponse = response; // Store for final error reporting
-            } catch (e) {
-                console.error(`Erro ao tentar ${model}:`, e);
-            }
+            } catch (hfErr) { }
         }
 
-        if (!lastResponse || !lastResponse.ok) {
-            const status = lastResponse?.status || 504;
-            return NextResponse.json({
-                error: `Todas as IAs falharam (Status ${status}). Tente uma descrição mais simples.`,
-                status
-            }, { status: 504 });
-        }
+        return NextResponse.json({ error: "Todas as IAs falharam. Usando Modo de Segurança (Gradiente)." }, { status: 500 });
 
-        const arrayBuffer = await lastResponse.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const base64 = buffer.toString('base64');
-        const contentType = lastResponse.headers.get('content-type') || 'image/jpeg';
-
-        console.log('Capa recebida via Tiered Logic! Tamanho:', base64.length);
-        return NextResponse.json({ base64: `data:${contentType};base64,${base64}` });
     } catch (error: any) {
         console.error('HF Proxy Catch:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });

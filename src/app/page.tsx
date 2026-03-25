@@ -143,10 +143,10 @@ export default function Home() {
                 const artPrompt = theme.image_generation_prompt + ", professional photography, depth of field, 8k, ultra-detailed, NO TEXT";
 
                 try {
-                    // TENTA GERAR DIRETAMENTE NO CLIENTE (NANO-BANANA STYLE / ULTRA STABLE)
+                    // TENTA GERAR NO CLIENTE (NANO-BANANA)
                     let base64 = "";
                     try {
-                        const pollUrl = `https://pollinations.ai/p/${encodeURIComponent(artPrompt)}?width=800&height=1200&seed=${seed}&model=flux&nologo=true`;
+                        const pollUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(artPrompt)}?width=800&height=1200&seed=${seed}&model=flux&nologo=true`;
                         const pollRes = await fetch(pollUrl);
                         if (pollRes.ok) {
                             const blob = await pollRes.blob();
@@ -155,21 +155,23 @@ export default function Home() {
                                 reader.onloadend = () => resolve(reader.result as string);
                                 reader.readAsDataURL(blob);
                             });
+                            if (base64) console.log(`Variação ${i + 1}: Cliente OK`);
                         }
                     } catch (err) {
-                        console.warn("Client-side generation failed, trying server fallback...", err);
+                        console.warn("Client fallback failed", err);
                     }
 
-                    // FALLBACK PARA O SERVIDOR SE O CLIENTE FALHAR
+                    // FALLBACK PARA O SERVIDOR
                     if (!base64) {
                         const res = await fetch('/api/generate-cover', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ prompt: artPrompt + ` --seed ${seed}` })
+                            body: JSON.stringify({ prompt: artPrompt })
                         });
                         const data = await res.json();
-                        if (data.error || !data.base64) throw new Error(data.error || "HF Error");
+                        if (data.error || !data.base64) throw new Error(data.error || "IA Error");
                         base64 = data.base64;
+                        console.log(`Variação ${i + 1}: Servidor OK (${data.engine || 'Proxy'})`);
                     }
 
                     const composed = await generateTypographyLayer(base64, {
