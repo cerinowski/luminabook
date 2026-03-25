@@ -128,12 +128,6 @@ export async function POST(req: Request) {
 
           ebookData = JSON.parse(jsonMatch[0]);
           if (ebookData) {
-            if (ebookData.title) ebookData.title = ebookData.title.replace(/^.*?:\s*/, '').replace(/:/g, '').trim();
-            if (ebookData.chapters) {
-              ebookData.chapters.forEach((c: any) => {
-                c.title = c.title.replace(/^.*?:\s*/, '').replace(/:/g, '').trim();
-              });
-            }
             break;
           }
         } catch (error: any) {
@@ -155,6 +149,20 @@ export async function POST(req: Request) {
     if (!ebookData) {
       console.warn("AI Generation Failed. Triggering Fallback Engine...");
       ebookData = generateFallbackEbook(content);
+    }
+
+    // UNIVERSAL SANITIZATION: Clear colons and prefixes from any source (AI or Fallback)
+    if (ebookData) {
+      if (ebookData.title) {
+        ebookData.title = ebookData.title.replace(/^.*?:\s*/, '').replace(/:/g, '').trim();
+      }
+      if (ebookData.chapters) {
+        ebookData.chapters.forEach((c: any) => {
+          if (c.title) {
+            c.title = c.title.replace(/^.*?:\s*/, '').replace(/:/g, '').trim();
+          }
+        });
+      }
     }
 
     return NextResponse.json(ebookData);

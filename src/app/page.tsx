@@ -456,7 +456,9 @@ export default function Home() {
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(pr, pg, pb);
                 const chapterTitle = chapter.title.toUpperCase();
-                const splitTitle = doc.splitTextToSize(chapterTitle, contentWidth);
+                const splitTitleRaw = doc.splitTextToSize(chapterTitle, contentWidth);
+                // Limit title to 2 lines on chapter covers to avoid overlap with illustration
+                const splitTitle = splitTitleRaw.length > 2 ? [...splitTitleRaw.slice(0, 1), splitTitleRaw.slice(1).join(' ').slice(0, 40) + '...'] : splitTitleRaw;
                 doc.text(splitTitle, pageWidth / 2, 140, { align: 'center' });
 
                 // INSERÇÃO DA IMAGEM DO CAPÍTULO (Se existir) - USANDO PROXY PARA EVITAR CORS NO PDF
@@ -501,7 +503,11 @@ export default function Home() {
                 doc.setTextColor(sr, sg, sb);
                 doc.setFontSize(8);
                 doc.setFont('helvetica', 'bold');
-                doc.text(generatedEbook.title.toUpperCase(), margin, 15);
+
+                // Truncate book title in header if too long to prevent overlap
+                const headerTitle = generatedEbook.title.toUpperCase();
+                const safeHeaderTitle = headerTitle.length > 50 ? headerTitle.slice(0, 47) + '...' : headerTitle;
+                doc.text(safeHeaderTitle, margin, 15);
                 doc.text(`CAPÍTULO ${idx + 1}`, pageWidth - margin, 15, { align: 'right' });
 
                 curY = 45;
@@ -555,7 +561,8 @@ export default function Home() {
                             doc.line(margin, 20, pageWidth - margin, 20);
                             doc.setTextColor(sr, sg, sb);
                             doc.setFontSize(7);
-                            doc.text(`... CONTINUAÇÃO: ${chapter.title.toUpperCase()}`, margin, 15);
+                            // Cleaned CONTINUAÇÃO text
+                            doc.text(`CONTINUAÇÃO ${chapter.title.toUpperCase()}`, margin, 15);
                             curY = 35;
                             doc.setFontSize(11);
                             doc.setTextColor(40, 40, 40);
