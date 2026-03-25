@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || "");
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY || "");
 
 export async function POST(req: Request) {
     let title = "";
@@ -24,10 +24,14 @@ export async function POST(req: Request) {
     create a high-end visual theme.
     
     Rules:
-    1. Colors MUST be sophisticated and high-contrast.
-    2. Provide perfectly valid #HEX codes.
-    3. image_generation_prompt must be a PURE visual description, HIGHLY REALISTIC PHOTOGRAPHY, NO TEXT. 
-    4. NO surrealism, NO floating organs. Ensure the background has a smooth area for text.
+    1. Colors: Highly sophisticated, designer palettes (e.g. Sage & Teracotta, Midnight & Gold).
+    2. image_generation_prompt: CREATE A VISUAL METAPHOR FOR THE TITLE.
+       - NEVER SHOW A BOOK OR A EBOOK IN THE IMAGE. 
+       - If it's about Health/Gut: show "Vibrant organic botanical patterns, glowing microscopic ecosystems, or fresh macro photography of vital ingredients."
+       - If it's about Fitness: show "Dynamic abstract energy flow, stone/marble textures, or human vitality motifs."
+       - If it's about Finance: show "Modern steel architecture, geometric growth patterns, or glass textures."
+    3. Style: HIGHLY REALISTIC or REFINED EDITORIAL ILLUSTRATION. 8k, professional photography.
+    4. NO TEXT in the image. Pure background art only.
     5. Clean the title (no colons).
 
     JSON Format:
@@ -35,7 +39,7 @@ export async function POST(req: Request) {
       "title": "${title}",
       "primary_color": "#HEX",
       "secondary_color": "#HEX",
-      "image_generation_prompt": "A professional book cover background featuring...",
+      "image_generation_prompt": "A high-end book cover using a visual metaphor for ${title}, specifically [Detailed Metaphor], 8k, professional, UNIFORM BACKGROUND, NO TEXT",
       "design_mood": "Short mood description"
     }`;
 
@@ -46,7 +50,9 @@ export async function POST(req: Request) {
 
         if (!jsonMatch) throw new Error("JSON_NOT_FOUND");
         const theme = JSON.parse(jsonMatch[0]);
-        theme.title = title || theme.title; // Force user title
+        theme.title = title || theme.title;
+
+        console.log("SUCCESSFUL THEME GENERATED:", theme); // DEBUG
 
         return NextResponse.json(theme);
     } catch (error: any) {
