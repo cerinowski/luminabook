@@ -47,15 +47,21 @@ export async function POST(req: Request) {
                     lastResponse = response;
                     break;
                 }
-                console.warn(`Modelo ${model} falhou: ${response.status}`);
+                const errorBody = await response.text();
+                console.warn(`Modelo ${model} falhou: ${response.status} - ${errorBody}`);
+                lastResponse = response; // Store for final error reporting
             } catch (e) {
                 console.error(`Erro ao tentar ${model}:`, e);
             }
         }
 
         if (!lastResponse || !lastResponse.ok) {
+            const status = lastResponse?.status || 504;
             console.error('All models failed or timed out.');
-            return NextResponse.json({ error: 'Failed to generate image on all available models' }, { status: 504 });
+            return NextResponse.json({
+                error: `Failed on all models (Status ${status}). HuggingFace might be overloaded or rate-limiting.`,
+                status
+            }, { status: 504 });
         }
 
         const arrayBuffer = await lastResponse.arrayBuffer();

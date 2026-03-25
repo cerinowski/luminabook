@@ -148,8 +148,9 @@ export default function Home() {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ prompt: artPrompt + ` --seed ${seed}` })
                     });
-                    const { base64, error } = await res.json();
-                    if (error || !base64) throw new Error(error || "HF Error");
+                    const data = await res.json();
+                    if (data.error || !data.base64) throw new Error(data.error || "HF Error");
+                    const { base64 } = data;
 
                     const composed = await generateTypographyLayer(base64, {
                         title: theme.title || title,
