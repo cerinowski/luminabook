@@ -97,7 +97,7 @@ export async function POST(req: Request) {
           const prompt = `Convert the text into a professional eBook JSON file for a premium publishing studio. 
           Rules:
           1. Keep all core content and organize gracefully into chapters. Do not uppercase entire sentences, do not use weird formatting or drop caps, keep text natural and readable.
-          2. CRITICAL: For each chapter, you must include a 'chapter_image_prompt'. This prompt MUST BE for HIGHLY REALISTIC PHOTOGRAPHY. Do NOT use cartoons, fantasy, anthropomorphic animals, or bizarre colors unless explicitly requested. Everything must look like a real, professional photograph or highly grounded, realistic editorial art.
+          2. CRITICAL: For each chapter, you must include a 'chapter_image_prompt'. This prompt MUST BE for HIGHLY REALISTIC PHOTOGRAPHY. ALWAYS maintain strict logical realism (e.g., do NOT put floating internal organs next to wine glasses or food). If the topic is medical/biological, use either a realistic scientific style or a lifestyle scene of a healthy person, NEVER bizarre surrealism or floating body parts.
           3. DESIGN SPEC: You are a Master Book Layout Designer for a luxury publisher.
           4. COLORS: Choose a SOPHISTICATED, HIGH-CONTRAST pair that matches the cover content/theme. CRITICAL: MUST provide perfectly valid #HEX codes for both.
           5. METADATA: Derive a catchy 'subtitle' (5-7 words) and a professional 'author_name' (or use a pseudonym).
@@ -112,7 +112,7 @@ export async function POST(req: Request) {
               "primary_color": "#HEX", 
               "secondary_color": "#HEX", 
               "layout_type": "luxury_editorial", 
-              "image_generation_prompt": "Write ONLY the visual description here, eg: 'A highly realistic photograph of an elegant dining room table with fresh vegetables...'",
+              "image_generation_prompt": "Write ONLY the visual description here. NO surrealism, NO flying body parts. e.g: 'A highly realistic photograph of an elegant dining room table with fresh vegetables...'",
               "design_mood": "..." 
             } 
           }
