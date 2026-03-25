@@ -48,7 +48,9 @@ async function generateTypographyLayer(bgUrl: string, config: any): Promise<stri
             ctx.fillStyle = '#FFFFFF';
             let fontSize = title.length > 20 ? 60 : 80;
             if (title.length > 40) fontSize = 45;
-            ctx.font = `900 ${fontSize}px 'Montserrat', sans-serif`;
+
+            const fontStack = config.font === 'sans' ? "'Montserrat', sans-serif" : "'Playfair Display', serif";
+            ctx.font = `900 ${fontSize}px ${fontStack}`;
 
             const words = title.split(' '); let line = ''; let y = 450;
             for (let n = 0; n < words.length; n++) {
@@ -93,6 +95,7 @@ export default function Home() {
     // Design State
     const [variations, setVariations] = useState<string[]>([]);
     const [selectedCover, setSelectedCover] = useState<string | null>(null);
+    const [selectedFont, setSelectedFont] = useState<'serif' | 'sans'>('serif');
     const [approvedTheme, setApprovedTheme] = useState<any>(null);
     const [chapterImages, setChapterImages] = useState<string[]>([]);
     const [generatedEbook, setGeneratedEbook] = useState<any>(null);
@@ -117,15 +120,16 @@ export default function Home() {
             setApprovedTheme(theme);
 
             addLog("Pintando 4 variações exclusivas (FLUX)...");
-            addLog("Pintando 4 variações exclusivas (FLUX)...");
-            const variationPromises = Array(4).fill(0).map((_, i) => {
+            const variationPromises = Array(4).fill(0).map(async (_, i) => {
+                await new Promise(r => setTimeout(r, i * 800)); // Small staggered delay
                 const seed = Math.floor(Math.random() * 2000);
                 const artUrl = `https://pollinations.ai/p/${encodeURIComponent(theme.image_generation_prompt + ". atmospheric, professional, NO TEXT")}?width=800&height=1200&seed=${seed}&model=flux&nologo=true`;
                 return generateTypographyLayer(artUrl, {
                     title: theme.title || title,
                     author: author || "Lumina Studio",
                     primary: theme.primary_color,
-                    secondary: theme.secondary_color
+                    secondary: theme.secondary_color,
+                    font: selectedFont
                 });
             });
             const newVariations = await Promise.all(variationPromises);
@@ -170,18 +174,48 @@ export default function Home() {
 
         (generatedEbook.chapters || []).forEach((ch: any, i: number) => {
             doc.addPage();
-            doc.setDrawColor(sr, sg, sb); doc.rect(10, 10, 190, 277);
-            doc.setTextColor(sr, sg, sb); doc.setFontSize(140); doc.text(`${i + 1}`, 105, 120, { align: 'center' });
-            doc.setFontSize(ch.title.length > 50 ? 15 : 24); doc.setFont('helvetica', 'bold');
-            doc.text(doc.splitTextToSize(ch.title.toUpperCase(), 170), 105, 140, { align: 'center' });
+            // Header Bar (Magazine Style)
+            doc.setFillColor(sr, sg, sb);
+            doc.rect(0, 0, 210, 40, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+            doc.text(`CAPÍTULO ${i + 1}`, 20, 15);
+            doc.setFontSize(22);
+            doc.text(doc.splitTextToSize(ch.title.toUpperCase(), 170), 20, 28);
+
+            // Chapter Image
+            if (chapterImages[i]) {
+                doc.addImage(chapterImages[i], 'JPEG', 20, 50, 170, 100, undefined, 'FAST');
+            }
 
             doc.addPage();
-            doc.setFontSize(8); doc.text(generatedEbook.title.toUpperCase(), 28, 15);
+            doc.setFontSize(8); doc.setTextColor(150, 150, 150);
+            doc.text(generatedEbook.title.toUpperCase(), 20, 15);
+
             doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(40, 40, 40);
-            let y = 35;
-            doc.splitTextToSize(ch.content, 154).forEach((line: string) => {
-                if (y > 275) { doc.addPage(); y = 35; }
-                doc.text(line, 28, y); y += 8;
+            let y = 30;
+            const lines = doc.splitTextToSize(ch.content, 170);
+
+            lines.forEach((line: string) => {
+                if (y > 275) { doc.addPage(); y = 30; }
+
+                // Detection of special blocks
+                if (line.startsWith('###')) {
+                    y += 5; doc.setFont('helvetica', 'bold'); doc.setTextColor(sr, sg, sb);
+                    doc.setFontSize(14); doc.text(line.replace('###', '').trim(), 20, y);
+                    y += 10; doc.setFontSize(11); doc.setTextColor(40, 40, 40); doc.setFont('helvetica', 'normal');
+                } else if (line.includes('[TIP]') || line.includes('[ATENÇÃO]')) {
+                    const cleanLine = line.replace('[TIP]', '').replace('[ATENÇÃO]', '').trim();
+                    doc.setFillColor(255, 245, 220); doc.setDrawColor(255, 200, 100);
+                    doc.rect(18, y - 5, 174, 12, 'FD');
+                    doc.setFont('helvetica', 'bold'); doc.setTextColor(150, 100, 0);
+                    doc.text("NOTA:", 22, y + 2);
+                    doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60);
+                    doc.text(cleanLine, 40, y + 2);
+                    y += 15;
+                } else {
+                    doc.text(line, 20, y); y += 7;
+                }
             });
         });
         doc.save(`${title.replace(/\s/g, '_')}.pdf`);
@@ -260,7 +294,7 @@ export default function Home() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                                     {isLoading ? Array(4).fill(0).map((_, i) => <div key={i} className="aspect-[2/3] bg-white/5 rounded-2xl animate-pulse border border-white/10 flex items-center justify-center"><Loader2 className="animate-spin text-white/20" /></div>) :
                                         variations.map((v, i) => (
-                                            <motion.div key={i} whileHover={{ y: -10 }} onClick={() => { setSelectedCover(v); setActiveTab('editorial'); }} className={`relative group cursor-pointer aspect-[2/3] rounded-2xl overflow-hidden border-2 transition-all ${selectedCover === v ? 'border-purple-500 shadow-2xl shadow-purple-500/20' : 'border-white/5'}`}>
+                                            <motion.div key={i} whileHover={{ y: -10 }} onClick={() => { setSelectedCover(v); setActiveTab('style'); }} className={`relative group cursor-pointer aspect-[2/3] rounded-2xl overflow-hidden border-2 transition-all ${selectedCover === v ? 'border-purple-500 shadow-2xl shadow-purple-500/20' : 'border-white/5'}`}>
                                                 <img src={v} className="w-full h-full object-cover" alt={`Capa ${i + 1}`} />
                                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
                                                     <div className="bg-white text-black px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest">Selecionar Esta</div>
@@ -320,13 +354,13 @@ export default function Home() {
                                     <div className="space-y-6">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Tipografia Principal</label>
                                         <div className="flex flex-col gap-3">
-                                            <button className="p-6 rounded-2xl bg-white/5 border border-purple-500 flex items-center justify-between">
+                                            <button onClick={() => setSelectedFont('serif')} className={`p-6 rounded-2xl bg-white/5 border flex items-center justify-between transition-all ${selectedFont === 'serif' ? 'border-purple-500 shadow-lg shadow-purple-500/10' : 'border-white/5 opacity-50 grayscale'}`}>
                                                 <div className="text-left"><p className="font-serif text-lg">Playfair Display</p><p className="text-[9px] text-white/30 uppercase font-black">Serifado Elegante</p></div>
-                                                <CheckCircle2 className="w-5 h-5 text-purple-500" />
+                                                {selectedFont === 'serif' && <CheckCircle2 className="w-5 h-5 text-purple-500" />}
                                             </button>
-                                            <button className="p-6 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
+                                            <button onClick={() => setSelectedFont('sans')} className={`p-6 rounded-2xl bg-white/5 border flex items-center justify-between transition-all ${selectedFont === 'sans' ? 'border-purple-500 shadow-lg shadow-purple-500/10' : 'border-white/5 opacity-50 grayscale'}`}>
                                                 <div className="text-left"><p className="font-sans text-lg">Montserrat</p><p className="text-[9px] text-white/30 uppercase font-black">Moderno & Clean</p></div>
-                                                <div className="w-5 h-5 rounded-full border border-white/20" />
+                                                {selectedFont === 'sans' && <CheckCircle2 className="w-5 h-5 text-purple-500" />}
                                             </button>
                                         </div>
                                     </div>

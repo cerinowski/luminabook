@@ -103,20 +103,24 @@ export async function POST(req: Request) {
           5. METADATA: ${approvedTitle ? `The Title is: "${approvedTitle}"` : "Derive a catchy 'subtitle' (5-7 words) and a professional 'author_name' (or use a pseudonym)."}
           6. TITLES: Do NOT prefix chapter titles with colons (':') or 'Chapter X:'. Write clean, direct titles.
 
-          JSON Format: { 
-            "title": "${approvedTitle || '...'}", 
-            "subtitle": "...", 
-            "author_name": "...",
-            "chapters": [{ "title": "...", "content": "...", "chapter_image_prompt": "..." }], 
-            "visual_theme": { 
-              "primary_color": "${approvedTheme?.primary_color || '#HEX'}", 
-              "secondary_color": "${approvedTheme?.secondary_color || '#HEX'}", 
-              "layout_type": "luxury_editorial", 
+          7. RICH FORMATTING: Use '### Subheader' for key sections. Wrap important tips/warnings in '[TIP] ...' or '[ATENÇÃO] ...' for magazine-style callouts.
+          JSON Format: {
+            "title": "${approvedTitle || '...'}",
+            "subtitle": "...",
+            "author_name": "${approvedAuthor || '...'}",
+            "chapters": [
+              { "title": "CHAPTER TITLE", "content": "Full chapter text with ### and [TIP] markers...", "chapter_image_prompt": "Prompt for a professional illustration/photo related to this chapter" }
+            ],
+            "visual_theme": {
+              "primary_color": "${approvedTheme?.primary_color || '#HEX'}",
+              "secondary_color": "${approvedTheme?.secondary_color || '#HEX'}",
+              "layout_type": "luxury_editorial",
               "image_generation_prompt": "${approvedTheme?.image_generation_prompt || 'Visual description here...'}",
-              "design_mood": "${approvedTheme?.design_mood || '...'}" 
-            } 
+              "design_mood": "${approvedTheme?.design_mood || '...'}",
+              "font_style": "Serif/Sans"
+            }
           }
-          
+
           Text: ${content}`;
 
           const result = await model.generateContent(prompt);
