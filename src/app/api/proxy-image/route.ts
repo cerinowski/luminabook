@@ -2,55 +2,55 @@ import { NextResponse } from 'next/server';
 
 export const maxDuration = 60;
 
+// VALIDAÇÃO FERROVIÁRIA G18
+const isValidImage = (buffer: Buffer) => {
+    if (!buffer || buffer.length < 30000) return false;
+
+    const isPng = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47;
+    const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8;
+
+    return isPng || isJpeg;
+};
+
 export async function POST(req: Request) {
     try {
         const { url } = await req.json();
         if (!url) return NextResponse.json({ error: 'URL is required' }, { status: 400 });
 
-        console.log(`[G17 PROXY] Fetching: ${url.substring(0, 50)}...`);
+        console.log(`[G18 PROXY] Fetching: ${url.substring(0, 50)}...`);
 
-        const response = await fetch(url, {
+        const res = await fetch(url, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+                'User-Agent': 'Mozilla/5.0',
+                'Accept': 'image/*'
             },
             cache: 'no-store'
         });
 
-        if (!response.ok) {
-            return NextResponse.json({ error: `Fetch Fail: ${response.status}` }, { status: 500 });
+        const contentType = res.headers.get("content-type") || "";
+        if (!res.ok || !contentType.startsWith("image/")) {
+            console.error("[G18 PROXY] Rejeitado. Status:", res.status, "Content-Type:", contentType);
+            return NextResponse.json({ error: 'Invalid data type or fetch error' }, { status: 500 });
         }
 
-        const arrayBuffer = await response.arrayBuffer();
+        const arrayBuffer = await res.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        // --- G17 UNBREAKABLE VALIDATION ---
+        if (!isValidImage(buffer)) {
+            console.error("[G18 PROXY] Rejeitado por integridade (Small/Non-Image). Size:", Math.round(buffer.length / 1024), "KB");
+            return NextResponse.json({ error: 'Integrity Check Failed' }, { status: 500 });
+        }
+
         const b64 = buffer.toString('base64');
-        const sizeKB = Math.round(buffer.length / 1024);
+        let finalType = contentType;
+        if (buffer[0] === 0x89) finalType = 'image/png';
+        if (buffer[0] === 0xFF) finalType = 'image/jpeg';
 
-        // 1. Check for HTML (Common for error pages)
-        const sample = buffer.toString('utf8', 0, 100).toLowerCase();
-        if (sample.includes('<!doctype') || sample.includes('<html') || sample.includes('{ "error"')) {
-            console.error('[G17] Blocked: Response is HTML/JSON Error, not image.');
-            return NextResponse.json({ error: 'Invalid Data Format' }, { status: 500 });
-        }
-
-        // 2. Check for Minimum Size (Real AI art in HD is > 20KB)
-        if (buffer.length < 10000) {
-            console.error('[G17] Blocked: Image too small produced (placeholder?). Size:', sizeKB, 'KB');
-            return NextResponse.json({ error: 'Placeholder Detected' }, { status: 500 });
-        }
-
-        // 3. Detect MIME
-        let contentType = response.headers.get('content-type') || 'image/jpeg';
-        if (buffer[0] === 0x89 && buffer[1] === 0x50) contentType = 'image/png';
-        if (buffer[0] === 0xFF && buffer[1] === 0xD8) contentType = 'image/jpeg';
-
-        console.log(`[G17] Delivered: ${sizeKB}KB`);
+        console.log(`[G18 PROXY] Success: ${Math.round(buffer.length / 1024)}KB`);
         return NextResponse.json({
-            base64: `data:${contentType};base64,${b64}`,
+            base64: `data:${finalType};base64,${b64}`,
             size: buffer.length,
-            engine: 'Proxy-Unbreakable'
+            engine: 'Proxy-Iron'
         });
 
     } catch (error: any) {

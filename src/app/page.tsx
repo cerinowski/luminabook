@@ -53,19 +53,22 @@ export default function Home() {
                         body: JSON.stringify({ prompt: artPrompt })
                     });
                     const data = await res.json();
-                    // --- G17 UNBREAKABLE PIXEL CHECK ---
-                    if (data.base64 && data.base64.length > 15000) {
-                        addLog(`V${i + 1}: HD OK (${Math.round(data.base64.length / 1024)}KB)`);
+
+                    // --- G18 IRON PIXEL CHECK (30KB MIN) ---
+                    if (data.base64 && data.base64.length > 30000) {
+                        const sizeKB = Math.round(data.base64.length / 1024 * 0.75); // Estimativa real
+                        addLog(`V${i + 1}: Iron OK (${sizeKB}KB via ${data.engine})`);
                         updateVariation(i, data.base64, 'done'); continue;
                     } else {
-                        addLog(`V${i + 1}: Recusada (Dado Inválido/Pequeno).`);
+                        addLog(`V${i + 1}: Rejeitada (Sombra/Ghost)`);
                     }
-                } catch (e) { }
+                } catch (e: any) {
+                    addLog(`V${i + 1}: Erro: ${e.message.substring(0, 20)}`);
+                }
 
-                // TENTATIVA 2: EMERGENCY PROXY (REFORÇADA)
+                // TENTATIVA 2: HYPER-BYPASS (IRON VALIDATED)
                 try {
                     const seed = Math.floor(Math.random() * 999999);
-                    // USANDO TURBO PARA VELOCIDADE E MODELO FLUX PARA QUALIDADE NO BYPASS
                     const pollUrl = `https://pollinations.ai/p/${encodeURIComponent(artPrompt.substring(0, 400))}?width=800&height=1200&seed=${seed}&model=flux&nologo=true`;
 
                     const pRes = await fetch('/api/proxy-image', {
@@ -73,11 +76,11 @@ export default function Home() {
                         body: JSON.stringify({ url: pollUrl })
                     });
                     const pData = await pRes.json();
-                    if (pData.base64 && pData.base64.length > 15000) {
-                        addLog(`V${i + 1}: Bypass HD (${Math.round(pData.base64.length / 1024)}KB)`);
+                    if (pData.base64 && pData.base64.length > 30000) {
+                        addLog(`V${i + 1}: Bypass Iron (${Math.round(pData.base64.length / 1024 * 0.75)}KB)`);
                         updateVariation(i, pData.base64, 'done'); continue;
                     } else {
-                        addLog(`V${i + 1}: Bypass Rejeitado.`);
+                        addLog(`V${i + 1}: Bypass Falhou.`);
                     }
                 } catch (e) { }
 
