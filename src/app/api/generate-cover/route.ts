@@ -13,7 +13,13 @@ export async function POST(req: Request) {
 
         console.log('--- NANO BANANA G15 SAAS MASTER START ---');
 
-        const isValid = (buf: Buffer) => buf && buf.length > 3000;
+        // --- G17 UNBREAKABLE VALIDATION ---
+        const isValid = (buf: Buffer) => {
+            if (!buf || buf.length < 15000) return false; // Book cover HD > 15KB
+            const sample = buf.toString('utf8', 0, 100).toLowerCase();
+            if (sample.includes('<!doctype') || sample.includes('<html')) return false;
+            return true;
+        };
 
         // PRIORIDADE 1: GEMINI IMAGEN 3 (ELITE)
         if (geminiKey) {
@@ -25,7 +31,8 @@ export async function POST(req: Request) {
                 const candidates = result.response.candidates;
                 if (candidates && candidates[0]?.content?.parts[0]?.inlineData) {
                     const b64 = candidates[0].content.parts[0].inlineData.data;
-                    if (isValid(Buffer.from(b64, 'base64'))) {
+                    const buf = Buffer.from(b64, 'base64');
+                    if (isValid(buf)) {
                         return NextResponse.json({ base64: `data:image/png;base64,${b64}`, engine: 'Gemini (Elite)' });
                     }
                 }

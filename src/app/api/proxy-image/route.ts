@@ -7,7 +7,7 @@ export async function POST(req: Request) {
         const { url } = await req.json();
         if (!url) return NextResponse.json({ error: 'URL is required' }, { status: 400 });
 
-        console.log(`[G13 PROXY] Fetching: ${url.substring(0, 100)}...`);
+        console.log(`[G17 PROXY] Fetching: ${url.substring(0, 50)}...`);
 
         const response = await fetch(url, {
             headers: {
@@ -18,37 +18,42 @@ export async function POST(req: Request) {
         });
 
         if (!response.ok) {
-            return NextResponse.json({ error: `Downstream Fail: ${response.status}` }, { status: response.status });
+            return NextResponse.json({ error: `Fetch Fail: ${response.status}` }, { status: 500 });
         }
 
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        // --- G13 INTELLIGENT SNIFFING ---
-        // Verifica se o buffer "parece" uma imagem (Magic Bytes ou tamanho mínimo)
-        if (buffer.length < 1000) {
-            const text = buffer.toString('utf8');
-            console.error('[G13] Invalid Image Buffer. Content:', text.substring(0, 100));
-            return NextResponse.json({ error: 'Invalid Image Data' }, { status: 500 });
+        // --- G17 UNBREAKABLE VALIDATION ---
+        const b64 = buffer.toString('base64');
+        const sizeKB = Math.round(buffer.length / 1024);
+
+        // 1. Check for HTML (Common for error pages)
+        const sample = buffer.toString('utf8', 0, 100).toLowerCase();
+        if (sample.includes('<!doctype') || sample.includes('<html') || sample.includes('{ "error"')) {
+            console.error('[G17] Blocked: Response is HTML/JSON Error, not image.');
+            return NextResponse.json({ error: 'Invalid Data Format' }, { status: 500 });
         }
 
-        // Detectamos o tipo real se possível
-        let contentType = response.headers.get('content-type') || 'image/jpeg';
+        // 2. Check for Minimum Size (Real AI art in HD is > 20KB)
+        if (buffer.length < 10000) {
+            console.error('[G17] Blocked: Image too small produced (placeholder?). Size:', sizeKB, 'KB');
+            return NextResponse.json({ error: 'Placeholder Detected' }, { status: 500 });
+        }
 
-        // Se o buffer começar com "GIF8" (GIF), "PNG" (PNG), "ÿØÿ" (JPEG)
-        // Isso é opcional mas garante o MIME correto
+        // 3. Detect MIME
+        let contentType = response.headers.get('content-type') || 'image/jpeg';
         if (buffer[0] === 0x89 && buffer[1] === 0x50) contentType = 'image/png';
         if (buffer[0] === 0xFF && buffer[1] === 0xD8) contentType = 'image/jpeg';
 
-        console.log(`[G13] Success: ${buffer.length} bytes delivered.`);
-        const base64 = buffer.toString('base64');
+        console.log(`[G17] Delivered: ${sizeKB}KB`);
         return NextResponse.json({
-            base64: `data:${contentType};base64,${base64}`,
-            size: buffer.length
+            base64: `data:${contentType};base64,${b64}`,
+            size: buffer.length,
+            engine: 'Proxy-Unbreakable'
         });
 
     } catch (error: any) {
-        console.error('SERVER PROXY ERROR:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

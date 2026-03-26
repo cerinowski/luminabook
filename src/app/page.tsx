@@ -53,9 +53,12 @@ export default function Home() {
                         body: JSON.stringify({ prompt: artPrompt })
                     });
                     const data = await res.json();
-                    if (data.base64 && data.base64.length > 5000) {
-                        addLog(`V${i + 1}: OK (${Math.round(data.base64.length / 1024)}KB)`);
+                    // --- G17 UNBREAKABLE PIXEL CHECK ---
+                    if (data.base64 && data.base64.length > 15000) {
+                        addLog(`V${i + 1}: HD OK (${Math.round(data.base64.length / 1024)}KB)`);
                         updateVariation(i, data.base64, 'done'); continue;
+                    } else {
+                        addLog(`V${i + 1}: Recusada (Dado Inválido/Pequeno).`);
                     }
                 } catch (e) { }
 
@@ -70,9 +73,11 @@ export default function Home() {
                         body: JSON.stringify({ url: pollUrl })
                     });
                     const pData = await pRes.json();
-                    if (pData.base64 && pData.base64.length > 5000) {
-                        addLog(`V${i + 1}: Bypass OK (${Math.round(pData.base64.length / 1024)}KB)`);
+                    if (pData.base64 && pData.base64.length > 15000) {
+                        addLog(`V${i + 1}: Bypass HD (${Math.round(pData.base64.length / 1024)}KB)`);
                         updateVariation(i, pData.base64, 'done'); continue;
+                    } else {
+                        addLog(`V${i + 1}: Bypass Rejeitado.`);
                     }
                 } catch (e) { }
 
