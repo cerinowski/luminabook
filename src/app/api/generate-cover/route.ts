@@ -16,10 +16,7 @@ export async function POST(req: Request) {
         // ORDEM DE PRIORIDADE: O QUE FUNCIONAR PRIMEIRO GANHA
         const models = [
             "black-forest-labs/FLUX.1-schnell",
-            "black-forest-labs/FLUX.1-dev",
-            "stabilityai/stable-diffusion-xl-base-1.0",
-            "runwayml/stable-diffusion-v1-5",
-            "prompthero/openjourney"
+            "black-forest-labs/FLUX.1-dev"
         ];
 
         // 1. TENTA HUGGINGFACE (TIERED)
