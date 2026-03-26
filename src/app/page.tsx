@@ -143,44 +143,17 @@ export default function Home() {
                 const artPrompt = theme.image_generation_prompt + ", professional photography, depth of field, 8k, ultra-detailed, NO TEXT";
 
                 try {
-                    // TENTA GERAR NO CLIENTE (NANO-BANANA / DIRECT INJECTION EXTREME)
-                    let base64 = "";
-                    try {
-                        const seed = Math.floor(Math.random() * 1000000);
-                        const pollUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(artPrompt)}?width=800&height=1200&seed=${seed}&model=flux&nologo=true`;
+                    // NANO BANANA ENGINE (SERVER PROXY - ULTRA STABLE)
+                    const res = await fetch('/api/generate-cover', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt: artPrompt })
+                    });
+                    const data = await res.json();
+                    if (data.error || !data.base64) throw new Error(data.error || "IA Error");
 
-                        const imgTest = new Image();
-                        imgTest.crossOrigin = "anonymous";
-                        base64 = await new Promise<string>((resolve, reject) => {
-                            const timeout = setTimeout(() => reject(new Error("Timeout")), 30000);
-                            imgTest.onload = () => {
-                                clearTimeout(timeout);
-                                const canvas = document.createElement("canvas");
-                                canvas.width = imgTest.width;
-                                canvas.height = imgTest.height;
-                                const ctx = canvas.getContext("2d");
-                                ctx?.drawImage(imgTest, 0, 0);
-                                resolve(canvas.toDataURL("image/jpeg"));
-                            };
-                            imgTest.onerror = () => {
-                                clearTimeout(timeout);
-                                reject(new Error("Load Error"));
-                            };
-                            imgTest.src = pollUrl;
-                        });
-                        if (base64) console.log(`Variação ${i + 1}: Nano-Banana Cliente OK`);
-                    } catch (err) {
-                        console.warn("Nano-Banana Direct Fallback...", err);
-                        // SE A INJEÇÃO DIRETA FALHAR, TENTA O SERVIDOR
-                        const res = await fetch('/api/generate-cover', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ prompt: artPrompt })
-                        });
-                        const data = await res.json();
-                        if (data.error || !data.base64) throw new Error(data.error || "IA Error");
-                        base64 = data.base64;
-                    }
+                    const base64 = data.base64;
+                    addLog(`Variação ${i + 1}: Sucesso via ${data.engine || 'Nano'}`);
 
                     const composed = await generateTypographyLayer(base64, {
                         title: theme.title || title,
