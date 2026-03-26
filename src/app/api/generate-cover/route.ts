@@ -1,3 +1,4 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from 'next/server';
 
 export const maxDuration = 60;
@@ -5,70 +6,62 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
     try {
         const { prompt } = await req.json();
-        const apiKey = process.env.HUGGINGFACE_API_KEY?.trim();
+        const geminiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY;
 
         if (!prompt) {
             return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
         }
 
-        console.log('--- NANO BANANA ENGINE START ---', { prompt });
+        console.log('--- NANO BANANA G6 GENERATION ---', { prompt });
 
-        // ORDEM DE PRIORIDADE: O QUE FUNCIONAR PRIMEIRO GANHA
-        const models = [
-            "black-forest-labs/FLUX.1-schnell",
-            "black-forest-labs/FLUX.1-dev"
-        ];
+        if (geminiKey) {
+            try {
+                const genAI = new GoogleGenerativeAI(geminiKey.trim());
+                // MODELO OFICIAL DE GERAÇÃO DE IMAGEM DO GEMINI (NANO-BANANA GRADE)
+                const model = genAI.getGenerativeModel({ model: "imagen-3.0-generate-001" });
 
-        // 1. TENTA HUGGINGFACE (TIERED)
-        if (apiKey) {
-            for (const model of models) {
-                try {
-                    console.log(`Tentando HF: ${model}...`);
-                    const res = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
-                        headers: {
-                            Authorization: `Bearer ${apiKey}`,
-                            "Content-Type": "application/json",
-                            "x-use-cache": "false"
-                        },
-                        method: "POST",
-                        body: JSON.stringify({ inputs: prompt }),
-                        signal: AbortSignal.timeout(15000)
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+
+                // O Imagen 3 retorna a imagem em formato binário ou base64 no inlineData
+                const candidates = response.candidates;
+                if (candidates && candidates[0]?.content?.parts[0]?.inlineData) {
+                    const base64 = candidates[0].content.parts[0].inlineData.data;
+                    const mimeType = candidates[0].content.parts[0].inlineData.mimeType || 'image/png';
+
+                    return NextResponse.json({
+                        base64: `data:${mimeType};base64,${base64}`,
+                        engine: 'Nano-Banana (Imagen-3)'
                     });
-
-                    if (res.ok) {
-                        const buffer = await res.arrayBuffer();
-                        const base64 = Buffer.from(buffer).toString('base64');
-                        return NextResponse.json({
-                            base64: `data:image/jpeg;base64,${base64}`,
-                            engine: `Nano-${model.split('/').pop()}`
-                        });
-                    }
-                } catch (e) {
-                    console.warn(`HF ${model} falhou, tentando próximo...`);
                 }
+            } catch (geminiErr: any) {
+                console.error("Gemini Imagen 3 Failed:", geminiErr.message);
+                // Se o modelo Imagen 3 não estiver disponível, o erro será capturado aqui
             }
         }
 
-        // 2. TENTA POLLINATIONS (SE TUDO FALHAR)
-        try {
-            console.log('Fallback: Pollinations...');
-            const seed = Math.floor(Math.random() * 999999);
-            const pollUrl = `https://pollinations.ai/p/${encodeURIComponent(prompt)}?width=800&height=1200&seed=${seed}&model=flux&nologo=true`;
-            const pollRes = await fetch(pollUrl);
-            if (pollRes.ok) {
-                const buffer = await pollRes.arrayBuffer();
-                const base64 = Buffer.from(buffer).toString('base64');
-                return NextResponse.json({
-                    base64: `data:image/jpeg;base64,${base64}`,
-                    engine: 'Nano-Pollinations'
+        // FALLBACK HUGGINGFACE (TIER 1)
+        const hfKey = process.env.HUGGINGFACE_API_KEY?.trim();
+        if (hfKey) {
+            try {
+                const hfRes = await fetch("https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell", {
+                    headers: { Authorization: `Bearer ${hfKey}`, "Content-Type": "application/json" },
+                    method: "POST",
+                    body: JSON.stringify({ inputs: prompt }),
+                    signal: AbortSignal.timeout(20000)
                 });
-            }
-        } catch (pollErr) {
-            console.error('Pollinations tbm falhou:', pollErr);
+                if (hfRes.ok) {
+                    const buffer = await hfRes.arrayBuffer();
+                    return NextResponse.json({
+                        base64: `data:image/jpeg;base64,${Buffer.from(buffer).toString('base64')}`,
+                        engine: 'Nano-Fallback (Flux)'
+                    });
+                }
+            } catch (e) { }
         }
 
         return NextResponse.json({
-            error: "Todas as IAs falharam. Tente novamente em instantes.",
+            error: "Habilite o Imagen 3 no Google AI Studio ou use uma chave HuggingFace válida.",
             status: 504
         }, { status: 504 });
 
