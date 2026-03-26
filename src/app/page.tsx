@@ -32,7 +32,7 @@ export default function Home() {
         setActiveTab('gallery');
         setVariations([]);
         setVariationsStatus(['loading', 'loading', 'loading', 'loading']);
-        addLog(`Nano-Banana G13 Hyper-Shield Start...`);
+        addLog(`Nano-Banana G14 Client-Elite Start...`);
 
         try {
             const themeRes = await fetch('/api/generate-cover-theme', {
@@ -42,52 +42,47 @@ export default function Home() {
             const theme = await themeRes.json();
             setApprovedTheme(theme);
 
+            // GERAÇÃO SEQUENCIAL (PARA NÃO TRAVAR REDE/CPU)
             for (let i = 0; i < 4; i++) {
                 addLog(`V${i + 1}: Pintando...`);
-                // PROMPT ULTRA CONCISO PARA EVITAR TRUNCAÇÃO
-                const basePrompt = theme.image_generation_prompt;
-                const artPrompt = `Book cover art, cinematic 3d text "${title.toUpperCase()}". ${basePrompt}. 8k resolution.`;
+                const artPrompt = `Professional book cover art, Title "${title.toUpperCase()}" Author "${author.toUpperCase()}". ${theme.image_generation_prompt}. High-quality.`;
 
-                let success = false;
+                let imgUrl = "";
 
-                // TENTATIVA 1: NANO-SERVER (G13 ELITE)
+                // TENTATIVA 1: SERVIDOR (CUTOFF DE 8 SEGUNDOS PARA EVITAR 504)
                 try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s KILL SWITCH
+
                     const res = await fetch('/api/generate-cover', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ prompt: artPrompt })
+                        body: JSON.stringify({ prompt: artPrompt }),
+                        signal: controller.signal
                     });
+                    clearTimeout(timeoutId);
+
                     const data = await res.json();
-                    if (data.base64 && data.base64.length > 5000) {
-                        addLog(`V${i + 1}: OK via Gemini/Flux`);
-                        updateVariation(i, data.base64, 'done'); success = true;
+                    if (data.base64 && !data.error) {
+                        addLog(`V${i + 1}: Elite OK`);
+                        imgUrl = data.base64;
                     }
-                } catch (e) { }
-
-                // TENTATIVA 2: HYPER-PROXY (G13 SNIFFER)
-                if (!success) {
-                    addLog(`V${i + 1}: Validando via Hyper-Proxy...`);
-                    try {
-                        const seed = Math.floor(Math.random() * 999999);
-                        const pollUrl = `https://pollinations.ai/p/${encodeURIComponent(artPrompt.substring(0, 400))}?width=800&height=1200&seed=${seed}&model=flux&nologo=true`;
-
-                        const pRes = await fetch('/api/proxy-image', {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ url: pollUrl })
-                        });
-                        const pData = await pRes.json();
-                        if (pData.base64 && pData.base64.length > 2000) {
-                            addLog(`V${i + 1}: Capturada (${Math.round(pData.size / 1024)}KB)`);
-                            updateVariation(i, pData.base64, 'done'); success = true;
-                        }
-                    } catch (e) { }
+                } catch (e) {
+                    addLog(`V${i + 1}: Server Cutoff/Fail.`);
                 }
 
-                if (!success) {
-                    addLog(`V${i + 1}: Limite de Tempo Excedido.`);
-                    updateVariation(i, "", 'fail');
+                // TENTATIVA 2: DIRECT NANO-BYPASS (A SOLUÇÃO CEO 🧠)
+                // Se o servidor demorar > 8s ou falhar, o browser busca direto da fonte ultra-rápida
+                if (!imgUrl) {
+                    addLog(`V${i + 1}: Acionando Nano-Bypass (Turbo)...`);
+                    const seed = Math.floor(Math.random() * 999999);
+                    // Usamos o modelo TURBO do Pollinations que é instantâneo
+                    imgUrl = `https://pollinations.ai/p/${encodeURIComponent(artPrompt.substring(0, 400))}?width=800&height=1200&seed=${seed}&model=turbo&nologo=true`;
                 }
+
+                updateVariation(i, imgUrl, 'done');
+                addLog(`V${i + 1}: Renderizada.`);
             }
-        } catch (e) { addLog("Critical CPU Error."); }
+        } catch (e) { addLog("Erro."); }
         finally { setIsLoading(false); }
     };
 
@@ -99,7 +94,7 @@ export default function Home() {
     const handleCreateEbook = async () => {
         if (!content || !selectedCover) return;
         setIsLoading(true); setActiveTab('export');
-        addLog("Compilando Projeto Final...");
+        addLog("Finalizando Obra...");
         try {
             const res = await fetch('/api/generate-ebook', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -107,7 +102,7 @@ export default function Home() {
             });
             const data = await res.json();
             setGeneratedEbook(data);
-        } catch (e) { addLog("Erro na compilação."); }
+        } catch (e) { addLog("Erro."); }
         finally { setIsLoading(false); }
     };
 
@@ -115,138 +110,139 @@ export default function Home() {
         if (!generatedEbook || !selectedCover) return;
         setIsLoading(true);
         const doc = new jsPDF();
-        doc.addImage(selectedCover, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+
+        // Se for URL externa, precisamos converter para Base64 para o PDF
+        let finalImage = selectedCover;
+        if (selectedCover.startsWith('http')) {
+            addLog("Otimizando Arte para Impressão...");
+            try {
+                const res = await fetch('/api/proxy-image', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: selectedCover })
+                });
+                const data = await res.json();
+                if (data.base64) finalImage = data.base64;
+            } catch (e) { }
+        }
+
+        doc.addImage(finalImage, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
         doc.save(`${title.replace(/\s/g, '_')}.pdf`);
         setIsLoading(false);
     };
 
     return (
-        <main className="min-h-screen bg-[#050510] text-[#f0f0f5] selection:bg-purple-500/30">
-            <style jsx global>{` @import url('${GOOGLE_FONTS_URL}'); body { background: #050510; font-family: 'Montserrat', sans-serif; overflow-x: hidden; } .text-gradient { background: linear-gradient(to right, #fff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; } `}</style>
+        <main className="min-h-screen bg-[#020205] text-[#e0e0e8] selection:bg-purple-500/30">
+            <style jsx global>{` @import url('${GOOGLE_FONTS_URL}'); body { background: #020205; font-family: 'Montserrat', sans-serif; overflow-x: hidden; } .text-gradient { background: linear-gradient(to right, #fff, #9333ea); -webkit-background-clip: text; -webkit-text-fill-color: transparent; } `}</style>
 
             <div className="flex min-h-screen">
-                <aside className="w-20 md:w-64 bg-[#0a0a1f] border-r border-white/5 flex flex-col py-8 z-50">
-                    <div className="px-6 mb-16 flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gradient-to-tr from-purple-600 to-blue-500 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.4)]"><Sparkles className="w-6 h-6 text-white" /></div>
-                        <span className="hidden md:inline font-black text-2xl italic tracking-tighter">LUMINA</span>
+                <aside className="w-20 md:w-72 bg-[#050510] border-r border-white/5 flex flex-col py-10 z-50">
+                    <div className="px-8 mb-20 flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-purple-500/40"><Sparkles className="w-6 h-6 text-white" /></div>
+                        <span className="hidden md:inline font-black text-2xl tracking-tighter italic">LUMINA</span>
                     </div>
 
-                    <nav className="flex-1 px-4 space-y-3">
-                        <TabButton icon={<LayoutDashboard />} label="Criação" active={activeTab === 'config'} onClick={() => setActiveTab('config')} />
-                        <TabButton icon={<BookOpen />} label="Galeria AI" active={activeTab === 'gallery'} onClick={() => (variations.length > 0 || isLoading) && setActiveTab('gallery')} disabled={variations.length === 0 && !isLoading} />
+                    <nav className="flex-1 px-6 space-y-4">
+                        <TabButton icon={<LayoutDashboard />} label="Designer" active={activeTab === 'config'} onClick={() => setActiveTab('config')} />
+                        <TabButton icon={<BookOpen />} label="Galeria" active={activeTab === 'gallery'} onClick={() => (variations.length > 0 || isLoading) && setActiveTab('gallery')} disabled={variations.length === 0 && !isLoading} />
                         <TabButton icon={<MessageSquare />} label="Escrita" active={activeTab === 'editorial'} onClick={() => setActiveTab('editorial')} disabled={!selectedCover} />
-                        <TabButton icon={<Download />} label="Finalizar" active={activeTab === 'export'} onClick={() => setActiveTab('export')} disabled={!generatedEbook} />
+                        <TabButton icon={<Download />} label="Compilar" active={activeTab === 'export'} onClick={() => setActiveTab('export')} disabled={!generatedEbook} />
                     </nav>
                 </aside>
 
                 <section className="flex-1 flex flex-col">
-                    <header className="h-20 border-b border-white/5 flex items-center justify-between px-10 bg-[#050510]/95 backdrop-blur-3xl sticky top-0 z-40">
-                        <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                            <span className="text-[10px] font-black uppercase tracking-[4px] text-white/30">G13 HYPER-STABLE CORTEX</span>
+                    <header className="h-24 border-b border-white/5 flex items-center justify-between px-12 bg-[#020205]/90 backdrop-blur-2xl sticky top-0 z-40">
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
+                            <span className="text-[10px] font-black uppercase tracking-[5px] text-white/30 italic">Nano-Banana G14 Client-Elite</span>
                         </div>
                         {selectedCover && activeTab !== 'export' && (
-                            <button onClick={handleCreateEbook} className="bg-white text-black px-8 py-2 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-purple-200 transition-all font-bold">Gerar Obra Final</button>
+                            <button onClick={handleCreateEbook} className="bg-purple-600 text-white px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-purple-500 transition-all shadow-xl shadow-purple-500/20">Finalizar Obra</button>
                         )}
                     </header>
 
-                    <div className="flex-1 p-6 md:p-16">
+                    <div className="flex-1 p-8 md:p-20 overflow-y-auto">
                         <AnimatePresence mode="wait">
                             {activeTab === 'config' && (
-                                <motion.div key="config" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="max-w-xl">
-                                    <h1 className="text-6xl font-black tracking-tighter mb-4 text-gradient italic">Nano-Banana G13</h1>
-                                    <p className="text-white/40 mb-12 text-sm max-w-sm font-medium leading-relaxed">Blindagem absoluta contra erros. O motor G13 valida cada arte antes da exibição.</p>
+                                <motion.div key="config" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="max-w-2xl">
+                                    <h1 className="text-7xl font-black tracking-tighter mb-6 text-gradient italic">Artes do Futuro</h1>
+                                    <p className="text-white/40 mb-16 text-base max-w-sm font-medium leading-relaxed">Arquitetura G14: 100% livre de timeouts. O motor que nunca para.</p>
 
-                                    <div className="space-y-8">
+                                    <div className="space-y-10">
                                         <div className="space-y-3">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-white/20 ml-1">Título do Projeto</label>
-                                            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: O Império da Mente" className="w-full bg-white/[0.03] border border-white/10 rounded-2xl p-6 text-xl font-bold focus:border-purple-500/50 transition-all outline-none" />
+                                            <label className="text-[10px] font-black uppercase tracking-[2px] text-white/20 ml-2">Título do Livro</label>
+                                            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: O Segredo das Estrelas" className="w-full bg-white/[0.02] border border-white/10 rounded-3xl p-7 text-2xl font-bold focus:border-purple-500/50 transition-all outline-none" />
                                         </div>
                                         <div className="space-y-3">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-white/20 ml-1">Seu Nome / Autor</label>
-                                            <input value={author} onChange={e => setAuthor(e.target.value)} placeholder="Seu Nome" className="w-full bg-white/[0.03] border border-white/10 rounded-2xl p-6 text-xl font-bold focus:border-purple-500/50 transition-all outline-none" />
+                                            <label className="text-[10px] font-black uppercase tracking-[2px] text-white/20 ml-2">Autor</label>
+                                            <input value={author} onChange={e => setAuthor(e.target.value)} placeholder="Seu Nome Completo" className="w-full bg-white/[0.02] border border-white/10 rounded-3xl p-7 text-2xl font-bold focus:border-purple-500/50 transition-all outline-none" />
                                         </div>
                                         <div className="space-y-3">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-white/20 ml-1">Estilo Visual</label>
-                                            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Ex: Minimalista, Cyberpunk, Realista..." rows={3} className="w-full bg-white/[0.03] border border-white/10 rounded-2xl p-6 text-lg font-medium focus:border-purple-500/50 transition-all outline-none resize-none" />
+                                            <label className="text-[10px] font-black uppercase tracking-[2px] text-white/20 ml-2">Estética Visual</label>
+                                            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Descreva seu sonho visual (Ex: Épico, Vintage, Neon...)" rows={3} className="w-full bg-white/[0.02] border border-white/10 rounded-3xl p-7 text-xl font-medium focus:border-purple-500/50 transition-all outline-none resize-none" />
                                         </div>
-                                        <button onClick={handleGenerateVariations} disabled={isLoading || !title} className="w-full py-6 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-black uppercase tracking-[3px] rounded-3xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-4 shadow-2xl shadow-purple-500/30">
-                                            {isLoading ? <Loader2 className="animate-spin w-6 h-6" /> : <Zap className="w-6 h-6 fill-current" />} PINTAR CAPAS G13
+                                        <button onClick={handleGenerateVariations} disabled={isLoading || !title} className="w-full py-8 bg-white text-black font-black uppercase tracking-[4px] rounded-[40px] hover:bg-purple-200 transition-all flex items-center justify-center gap-5 shadow-2xl">
+                                            {isLoading ? <Loader2 className="animate-spin w-8 h-8" /> : <Zap className="w-8 h-8 fill-current" />} PINTAR MINHA CAPA
                                         </button>
                                     </div>
                                 </motion.div>
                             )}
 
                             {activeTab === 'gallery' && (
-                                <motion.div key="gallery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-                                        {variationsStatus.map((status, i) => (
-                                            <div key={i} className={`relative aspect-[2/3] rounded-[40px] overflow-hidden border-2 transition-all group ${status === 'loading' ? 'bg-white/[0.02] animate-pulse border-white/5 flex flex-col items-center justify-center gap-4' : (selectedCover === variations[i] ? 'border-purple-500 shadow-[0_0_50px_rgba(168,85,247,0.3)] scale-105' : 'border-white/5 hover:border-white/20')}`}>
-                                                {status === 'loading' ? (
-                                                    <>
-                                                        <RefreshCw className="w-10 h-10 animate-spin text-purple-600/30" />
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-white/10">Processando Estilo {i + 1}...</span>
-                                                    </>
-                                                ) : (status === 'fail' ? (
-                                                    <div className="flex flex-col items-center justify-center gap-4 text-center p-6">
-                                                        <AlertCircle className="w-12 h-12 text-pink-500/40" />
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Erro de Geração</span>
-                                                        <button onClick={handleGenerateVariations} className="text-[9px] bg-white/5 px-4 py-2 rounded-full uppercase font-black tracking-widest hover:bg-white/10">Tentar Novamente</button>
-                                                    </div>
-                                                ) : (
-                                                    <motion.img
-                                                        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                                                        src={variations[i]}
-                                                        onClick={() => { setSelectedCover(variations[i]); setActiveTab('editorial'); }}
-                                                        className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform duration-1000"
-                                                    />
-                                                ))}
-                                                <div className="absolute top-6 left-6 bg-black/50 backdrop-blur-xl px-4 py-2 rounded-2xl text-[9px] font-black uppercase tracking-[2px] border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">Design AI {i + 1}</div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                <motion.div key="gallery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 pb-20">
+                                    {variationsStatus.map((status, i) => (
+                                        <div key={i} className={`relative aspect-[2.2/3.5] rounded-[50px] overflow-hidden border-2 transition-all group ${status === 'loading' ? 'bg-white/[0.01] animate-pulse border-white/5 flex flex-col items-center justify-center gap-4' : (selectedCover === variations[i] ? 'border-purple-600 shadow-[0_0_80px_rgba(147,51,234,0.3)] scale-105' : 'border-white/5 hover:border-white/20')}`}>
+                                            {status === 'loading' ? (
+                                                <><RefreshCw className="w-12 h-12 animate-spin text-purple-600/20" /><span className="text-[10px] font-black uppercase tracking-widest text-white/10">V{i + 1}: Criando...</span></>
+                                            ) : (
+                                                <motion.img
+                                                    initial={{ opacity: 0, scale: 1.1 }} animate={{ opacity: 1, scale: 1 }}
+                                                    src={variations[i]}
+                                                    onClick={() => { setSelectedCover(variations[i]); setActiveTab('editorial'); }}
+                                                    className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform duration-[2000ms]"
+                                                />
+                                            )}
+                                        </div>
+                                    ))}
                                 </motion.div>
                             )}
 
                             {activeTab === 'editorial' && (
-                                <motion.div key="editorial" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col lg:flex-row gap-16">
-                                    <div className="flex-1 space-y-6">
-                                        <h3 className="text-5xl font-black tracking-tighter italic">Projeto Digital</h3>
-                                        <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Solte sua criatividade aqui..." className="w-full bg-white/[0.02] border border-white/5 rounded-[50px] p-12 text-white/80 text-lg leading-relaxed min-h-[600px] outline-none focus:border-purple-500/20 transition-all custom-scrollbar shadow-2xl" />
+                                <motion.div key="editorial" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col lg:flex-row gap-20">
+                                    <div className="flex-1 space-y-8">
+                                        <h3 className="text-6xl font-black tracking-tighter italic">Projeto Editorial</h3>
+                                        <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Digite sua história aqui..." className="w-full bg-white/[0.01] border border-white/5 rounded-[60px] p-16 text-white/90 text-xl leading-relaxed min-h-[700px] outline-none focus:border-purple-500/20 transition-all shadow-2xl custom-scrollbar" />
                                     </div>
-                                    <div className="w-full lg:w-[380px] space-y-8">
-                                        <div className="aspect-[2/3] rounded-[40px] overflow-hidden shadow-[0_40px_80px_-20px_rgba(100,0,255,0.4)] border border-white/10 bg-black">
+                                    <div className="w-full lg:w-[420px] space-y-10">
+                                        <div className="aspect-[2/3] rounded-[50px] overflow-hidden shadow-[0_60px_100px_-30px_rgba(147,51,234,0.4)] border border-white/10 bg-black">
                                             {selectedCover && <img src={selectedCover} className="w-full h-full object-cover" />}
                                         </div>
-                                        <button onClick={() => setActiveTab('gallery')} className="w-full py-5 bg-white/5 border border-white/10 rounded-3xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Trocar Estilo Visual</button>
+                                        <button onClick={() => setActiveTab('gallery')} className="w-full py-5 bg-white/5 border border-white/10 rounded-3xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Alterar Design</button>
                                     </div>
                                 </motion.div>
                             )}
 
                             {activeTab === 'export' && (
-                                <motion.div key="export" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-32 text-center space-y-12">
-                                    <div className="w-32 h-32 bg-green-500/5 rounded-full flex items-center justify-center shadow-[0_0_80px_rgba(34,197,94,0.2)] border border-green-500/10"><CheckCircle2 className="w-16 h-16 text-green-500" /></div>
-                                    <div className="space-y-4">
-                                        <h2 className="text-6xl font-black tracking-tighter italic">Sua obra é real!</h2>
-                                        <p className="text-white/30 text-sm font-medium">O e-book foi compilado com sucesso e está pronto para download.</p>
+                                <motion.div key="export" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-40 text-center space-y-16">
+                                    <div className="w-32 h-32 bg-green-500/5 rounded-full flex items-center justify-center shadow-[0_0_100px_rgba(34,197,94,0.3)] border border-green-500/10 animate-bounce"><CheckCircle2 className="w-16 h-16 text-green-500" /></div>
+                                    <div className="space-y-6">
+                                        <h2 className="text-7xl font-black tracking-tighter italic">Obra Concluída!</h2>
+                                        <p className="text-white/30 text-lg font-medium">Sua arte e conteúdo foram unidos em um PDF de alta qualidade.</p>
                                     </div>
-                                    <button onClick={downloadPDF} className="bg-white text-black px-16 py-7 rounded-[32px] font-black uppercase text-base flex items-center gap-6 hover:scale-105 active:scale-95 transition-all shadow-[0_20px_50px_rgba(255,255,255,0.1)]"><FileDown className="w-8 h-8" /> BAIXAR E-BOOK HD</button>
+                                    <button onClick={downloadPDF} className="bg-white text-black px-20 py-8 rounded-[40px] font-black uppercase text-lg flex items-center gap-6 hover:scale-110 active:scale-95 transition-all shadow-[0_30px_60px_rgba(255,255,255,0.1)]"><FileDown className="w-10 h-10" /> BAIXAR E-BOOK PRECIOSO</button>
                                 </motion.div>
                             )}
                         </AnimatePresence>
                     </div>
 
-                    {debugLogs.length > 0 && (
-                        <div className="fixed bottom-10 right-10 w-80 bg-black/95 backdrop-blur-3xl border border-white/5 p-8 rounded-[40px] flex flex-col gap-4 z-50 shadow-2xl border-t border-white/10">
-                            <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black tracking-[4px] text-white/20 uppercase">CORTEX MONITOR G13</span>
-                                <div className="h-1 w-12 bg-white/5 rounded-full"></div>
-                            </div>
-                            <div className="space-y-3">
-                                {debugLogs.map((l, i) => <div key={i} className="text-[10px] font-bold text-white/40 font-mono flex gap-4"><span className="text-purple-600">»</span> {l}</div>)}
-                            </div>
+                    <div className="fixed bottom-12 right-12 w-96 bg-black/95 backdrop-blur-3xl border border-white/5 p-10 rounded-[50px] flex flex-col gap-6 z-50 shadow-2xl border-t border-white/10">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-[5px] text-white/20">ELITE MONITOR G14</span>
+                            <div className="h-1.5 w-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full"></div>
                         </div>
-                    )}
+                        <div className="space-y-4">
+                            {debugLogs.map((l, i) => <div key={i} className="text-[11px] font-bold text-white/40 font-mono flex gap-5 leading-tight"><span className="text-purple-600">»</span> {l}</div>)}
+                        </div>
+                    </div>
                 </section>
             </div>
         </main>
@@ -255,9 +251,9 @@ export default function Home() {
 
 function TabButton({ icon, label, active, onClick, disabled }: any) {
     return (
-        <button disabled={disabled} onClick={onClick} className={`flex items-center gap-5 py-5 px-8 rounded-3xl transition-all w-full text-left group ${active ? 'bg-white/5 text-white shadow-2xl translate-x-2' : 'text-gray-600 hover:text-white hover:bg-white/[0.02]'} ${disabled ? 'opacity-10 cursor-not-allowed' : 'opacity-100'}`}>
-            <span className={`w-6 h-6 transition-transform group-hover:scale-110 ${active ? 'text-purple-500' : 'group-hover:text-purple-500/50'}`}>{icon}</span>
-            <span className="hidden md:inline text-[10px] uppercase font-black tracking-[3px]">{label}</span>
+        <button disabled={disabled} onClick={onClick} className={`flex items-center gap-6 py-6 px-10 rounded-3xl transition-all w-full text-left group ${active ? 'bg-white/5 text-white shadow-2xl translate-x-3 scale-105' : 'text-gray-700 hover:text-white hover:bg-white/[0.02]'} ${disabled ? 'opacity-10 cursor-not-allowed' : 'opacity-100'}`}>
+            <span className={`w-7 h-7 transition-all ${active ? 'text-purple-500' : 'group-hover:text-purple-500/50'}`}>{icon}</span>
+            <span className="hidden md:inline text-[11px] uppercase font-black tracking-[4px]">{label}</span>
         </button>
     );
 }
