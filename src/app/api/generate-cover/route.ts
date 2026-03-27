@@ -27,7 +27,7 @@ export async function POST(req: Request) {
                 const response = await openai.images.generate({
                     model: "dall-e-3", prompt, n: 1, size: "1024x1024", response_format: "b64_json"
                 });
-                if (response.data[0].b64_json) {
+                if (response.data && response.data[0] && response.data[0].b64_json) {
                     return NextResponse.json({ base64: `data:image/png;base64,${response.data[0].b64_json}`, engine: 'DALL-E 3 (Elite)' });
                 }
             } catch (e) { }
