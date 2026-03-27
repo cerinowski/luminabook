@@ -25,7 +25,7 @@ function buildPlaceholder(title: string) {
 }
 
 const isValidImage = (buffer: Buffer) => {
-    if (!buffer || buffer.length < 3000) return false;
+    if (!buffer || buffer.length < 1000) return false;
     const isPng = buffer[0] === 0x89 && buffer[1] === 0x50;
     const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8;
     return isPng || isJpeg;
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
         // STAGE 1: DALL-E 3
         if (openAIKey && (requestedModel === 'dalle' || !requestedModel || requestedModel === 'auto')) {
             try {
-                const openai = new OpenAI({ apiKey: openAIKey, timeout: 25000 });
+                const openai = new OpenAI({ apiKey: openAIKey, timeout: 9000 });
                 const response = await openai.images.generate({
                     model: "dall-e-3", prompt, n: 1, size: "1024x1024", response_format: "b64_json"
                 });

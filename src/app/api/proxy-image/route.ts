@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server';
 export const maxDuration = 60;
 
 const isValidImage = (buffer: Buffer) => {
-    if (!buffer || buffer.length < 3000) return false;
+    if (!buffer || buffer.length < 1000) return false;
 
-    const isPng = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47;
+    const isPng = buffer[0] === 0x89 && buffer[1] === 0x50;
     const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8;
 
     return isPng || isJpeg;

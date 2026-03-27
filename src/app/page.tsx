@@ -79,7 +79,8 @@ export default function Home() {
                     addLog(`[Slot ${id}] Iniciando...`);
                     const res = await fetch('/api/generate-cover', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ prompt: customPrompt, title, model: selectedModel })
+                        body: JSON.stringify({ prompt: customPrompt, title, model: selectedModel }),
+                        signal: AbortSignal.timeout(10000) // LIMITE DE 10s PARA EVITAR 504
                     });
                     const data = await res.json();
 
@@ -90,9 +91,9 @@ export default function Home() {
                         return;
                     }
 
-                    addLog(`[Slot ${id}] Servidor em Fallback (${data.engine}). Tentando Bypass...`);
+                    addLog(`[Slot ${id}] Fallback (${data.engine || 'Timeout'}). Bypass...`);
                 } catch (e: any) {
-                    addLog(`[Slot ${id}] Erro Conexão. Tentando Bypass...`);
+                    addLog(`[Slot ${id}] Timeout/Erro (10s). Bypass...`);
                 }
 
                 // Browser Bypass Fallback (A força bruta do frontend)
