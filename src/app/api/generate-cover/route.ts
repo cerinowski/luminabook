@@ -50,7 +50,7 @@ export async function POST(req: Request) {
             try {
                 const openai = new OpenAI({ apiKey: openAIKey });
                 const response = await openai.images.generate({
-                    model: "dall-e-3", prompt, n: 1, size: "1024x1024", response_format: "b64_json"
+                    model: "dall-e-3", prompt, n: 1, size: "1024x1792", response_format: "b64_json"
                 });
                 if (response.data?.[0]?.b64_json) {
                     return NextResponse.json({ ok: true, image: `data:image/png;base64,${response.data[0].b64_json}`, engine: 'DALL-E 3' });
