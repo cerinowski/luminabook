@@ -48,17 +48,17 @@ export async function POST(req: Request) {
         // STAGE 1: DALL-E 3
         if (openAIKey && (requestedModel === 'dalle' || !requestedModel || requestedModel === 'auto')) {
             try {
-                const openai = new OpenAI({ apiKey: openAIKey });
+                const openai = new OpenAI({ apiKey: openAIKey, timeout: 25000 });
                 const response = await openai.images.generate({
-                    model: "dall-e-3", prompt, n: 1, size: "1024x1792", response_format: "b64_json"
+                    model: "dall-e-3", prompt, n: 1, size: "1024x1024", response_format: "b64_json"
                 });
                 if (response.data?.[0]?.b64_json) {
                     return NextResponse.json({ ok: true, image: `data:image/png;base64,${response.data[0].b64_json}`, engine: 'DALL-E 3' });
                 }
             } catch (e: any) {
-                const errDetail = e.response?.data?.error?.message || e.message;
-                lastError = `OpenAI (${e.code || 'ERR'}): ${errDetail.substring(0, 50)}`;
-                console.error(`[OPENAI] ${errDetail}`);
+                const errDetail = e?.error?.message || e?.message || "Erro desconhecido";
+                lastError = `OpenAI: ${errDetail.substring(0, 50)}`;
+                console.error(`[OPENAI]`, e);
             }
         } else if (!openAIKey) {
             lastError = "OpenAI Key Missing";
