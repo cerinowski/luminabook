@@ -48,15 +48,21 @@ export async function POST(req: Request) {
 
         // STAGE 3: POLLINATIONS (Server-Side Bypass Rápido)
         try {
+            console.log(`[STAGE 3] Pollinations Start...`);
             const url = `https://pollinations.ai/p/${encodeURIComponent(prompt.substring(0, 300))}?width=1024&height=1024&seed=${Math.floor(Math.random() * 999)}&model=flux&nologo=true`;
-            const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+            const res = await fetch(url, { signal: AbortSignal.timeout(9000) }); // Aumentado para 9s
             if (res.ok) {
-                const buf = Buffer.from(await res.arrayBuffer());
+                const arrayBuffer = await res.arrayBuffer();
+                const buf = Buffer.from(arrayBuffer);
                 if (isValidImage(buf)) {
+                    console.log(`[STAGE 3] Success: ${Math.round(buf.length / 1024)}KB`);
                     return NextResponse.json({ base64: `data:image/jpeg;base64,${buf.toString('base64')}`, engine: 'Server Bypass' });
                 }
             }
-        } catch (e) { }
+            console.warn(`[STAGE 3] Fallback rejected image or failed fetch.`);
+        } catch (e: any) {
+            console.error(`[STAGE 3] Error: ${e.message}`);
+        }
 
         return NextResponse.json({ error: "Server engines exhausted. Switching to Browser-Power..." }, { status: 503 });
 

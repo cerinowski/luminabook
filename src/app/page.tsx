@@ -72,20 +72,37 @@ export default function Home() {
                 }
             } catch (e) { }
 
-            // --- STAGE 2: BROWSER-POWER BYPASS (UNLIMITED TIME) ---
+            // --- STAGE 2: BROWSER-POWER BYPASS (UNLIMITED TIME VIA PROXY) ---
             if (!finalB64) {
                 addLog(`Ativando Browser-Power (Bypass)...`);
                 try {
-                    // O browser faz o download direto (Contorna os 10s do Vercel)
-                    const res = await fetch(pollUrl);
+                    // Tenta via Proxy Oficial (Contorna CORS)
+                    const res = await fetch('/api/proxy-image', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: pollUrl })
+                    });
+
                     if (res.ok) {
-                        const blob = await res.blob();
-                        if (blob.size > 15000) {
-                            finalB64 = await blobToBase64(blob);
-                            addLog(`Browser OK (${Math.round(blob.size / 1024)}KB)`);
+                        const data = await res.json();
+                        if (data.base64) {
+                            finalB64 = data.base64;
+                            addLog(`Bypass OK: ${data.engine}`);
+                        }
+                    } else {
+                        // Fallback final: Tenta direto no browser (Pode dar CORS, mas é a última esperança)
+                        addLog(`Proxy Fail. Tentativa direta...`);
+                        const directRes = await fetch(pollUrl);
+                        if (directRes.ok) {
+                            const blob = await directRes.blob();
+                            if (blob.size > 15000) {
+                                finalB64 = await blobToBase64(blob);
+                                addLog(`Direct OK (${Math.round(blob.size / 1024)}KB)`);
+                            }
                         }
                     }
-                } catch (e: any) { addLog(`Bypass Fail.`); }
+                } catch (e: any) {
+                    addLog(`Bypass Fail: ${e.message.substring(0, 15)}`);
+                }
             }
 
             if (finalB64) {
