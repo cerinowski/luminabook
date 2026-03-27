@@ -16,8 +16,9 @@ export default function Home() {
     const [isLoading, setIsLoading] = useState(false);
     const [debugLogs, setDebugLogs] = useState<string[]>([]);
 
-    const [cover, setCover] = useState<string | null>(null);
+    const [covers, setCovers] = useState<string[]>([]);
     const [coverStatus, setCoverStatus] = useState<'idle' | 'loading' | 'done' | 'fail'>('idle');
+    const [selectedCoverIndex, setSelectedCoverIndex] = useState<number | null>(null);
 
     const [selectedPalette, setSelectedPalette] = useState('Cyberpunk');
     const [selectedLayout, setSelectedLayout] = useState('Impact');
@@ -41,8 +42,8 @@ export default function Home() {
     const handleGenerateCover = async () => {
         if (!title) return alert("Título é obrigatório!");
         setIsLoading(true); setCoverStatus('loading'); setActiveTab('gallery');
-        setCover(null);
-        addLog(`G26 Infallible Start...`);
+        setCovers([]); setSelectedCoverIndex(null);
+        addLog(`G26 Quad-Engine Start...`);
 
         try {
             const themeRes = await fetch('/api/generate-cover-theme', {
@@ -52,68 +53,67 @@ export default function Home() {
             const theme = await themeRes.json();
             setApprovedTheme(theme);
 
-            const artPrompt = `Professional book cover, Title: "${title.toUpperCase()}", Author: "${author || 'Lumina Studio'}". Style: ${selectedPalette}, Layout: ${selectedLayout}. ${theme.image_generation_prompt}. 8k, centered background art.`;
-            const seed = Math.floor(Math.random() * 999999);
-            const pollUrl = `https://pollinations.ai/p/${encodeURIComponent(artPrompt.substring(0, 400))}?width=1024&height=1024&seed=${seed}&model=flux&nologo=true`;
+            const basePrompt = `Professional book cover, Title: "${title.toUpperCase()}", Author: "${author || 'Lumina Studio'}". Style: ${selectedPalette}, Layout: ${selectedLayout}. ${theme.image_generation_prompt}. 8k, centered background art.`;
 
-            let finalB64 = "";
-
-            // --- STAGE 1: SERVER RELAY (10s LIMIT) ---
-            try {
-                addLog(`Tentativa 1: Server Elite...`);
-                const res = await fetch('/api/generate-cover', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: artPrompt, model: selectedModel })
-                });
-                const data = await res.json();
-                if (data.base64) {
-                    finalB64 = data.base64;
-                    addLog(`Server OK: ${data.engine}`);
-                }
-            } catch (e) { }
-
-            // --- STAGE 2: BROWSER-POWER BYPASS (UNLIMITED TIME VIA PROXY) ---
-            if (!finalB64) {
-                addLog(`Ativando Browser-Power (Bypass)...`);
+            const generateOneWithFallback = async (slotId: number, customPrompt: string) => {
                 try {
-                    // Tenta via Proxy Oficial (Contorna CORS)
-                    const res = await fetch('/api/proxy-image', {
+                    addLog(`[Slot ${slotId}] Iniciando...`);
+                    const res = await fetch('/api/generate-cover', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt: customPrompt, model: selectedModel })
+                    });
+                    const data = await res.json();
+                    if (data.base64) {
+                        addLog(`[Slot ${slotId}] OK: ${data.engine}`);
+                        return data.base64;
+                    }
+                } catch (e) {
+                    addLog(`[Slot ${slotId}] Erro Server. Tentando Bypass...`);
+                }
+
+                try {
+                    const seed = Math.floor(Math.random() * 999999);
+                    const pollUrl = `https://pollinations.ai/p/${encodeURIComponent(customPrompt.substring(0, 400))}?width=1024&height=1024&seed=${seed}&model=flux&nologo=true`;
+                    const proxyRes = await fetch('/api/proxy-image', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ url: pollUrl })
                     });
-
-                    if (res.ok) {
-                        const data = await res.json();
+                    if (proxyRes.ok) {
+                        const data = await proxyRes.json();
                         if (data.base64) {
-                            finalB64 = data.base64;
-                            addLog(`Bypass OK: ${data.engine}`);
-                        }
-                    } else {
-                        // Fallback final: Tenta direto no browser (Pode dar CORS, mas é a última esperança)
-                        addLog(`Proxy Fail. Tentativa direta...`);
-                        const directRes = await fetch(pollUrl);
-                        if (directRes.ok) {
-                            const blob = await directRes.blob();
-                            if (blob.size > 15000) {
-                                finalB64 = await blobToBase64(blob);
-                                addLog(`Direct OK (${Math.round(blob.size / 1024)}KB)`);
-                            }
+                            addLog(`[Slot ${slotId}] Bypass OK.`);
+                            return data.base64;
                         }
                     }
-                } catch (e: any) {
-                    addLog(`Bypass Fail: ${e.message.substring(0, 15)}`);
+                } catch (e) {
+                    addLog(`[Slot ${slotId}] Falha Total.`);
                 }
-            }
+                throw new Error("Falha no slot");
+            };
 
-            if (finalB64) {
-                setCover(finalB64);
+            const prompts = [
+                basePrompt,
+                `${basePrompt}. Cinematic lighting, detailed.`,
+                `${basePrompt}. Dramatic colors, artistic.`,
+                `${basePrompt}. Stylized composition, high contrast.`
+            ];
+
+            const results = await Promise.allSettled(prompts.map((p, i) => generateOneWithFallback(i + 1, p)));
+            const successfulCovers = results
+                .filter(r => r.status === 'fulfilled')
+                .map(r => (r as PromiseFulfilledResult<string>).value);
+
+            if (successfulCovers.length > 0) {
+                setCovers(successfulCovers);
                 setCoverStatus('done');
+                setSelectedCoverIndex(0);
+                addLog(`Sucesso: ${successfulCovers.length}/4 capas.`);
             } else {
-                addLog(`Total Fail.`);
+                addLog(`Falha Total.`);
                 setCoverStatus('fail');
             }
         } catch (e: any) {
-            addLog(`Erro Crítico: ${e.message.substring(0, 20)}`);
+            addLog(`Erro: ${e.message.substring(0, 20)}`);
             setCoverStatus('fail');
         } finally {
             setIsLoading(false);
@@ -121,7 +121,8 @@ export default function Home() {
     };
 
     const handleCreateEbook = async () => {
-        if (!content || !cover) return;
+        const activeCover = selectedCoverIndex !== null ? covers[selectedCoverIndex] : null;
+        if (!content || !activeCover) return;
         setIsLoading(true); setActiveTab('export');
         addLog("Compilando Infallible G26...");
         try {
@@ -136,10 +137,11 @@ export default function Home() {
     };
 
     const downloadPDF = async () => {
-        if (!generatedEbook || !cover) return;
+        const activeCover = selectedCoverIndex !== null ? covers[selectedCoverIndex] : null;
+        if (!generatedEbook || !activeCover) return;
         setIsLoading(true);
         const doc = new jsPDF();
-        doc.addImage(cover, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+        doc.addImage(activeCover, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
         doc.save(`${title.replace(/\s/g, '_')}.pdf`);
         setIsLoading(false);
     };
@@ -159,8 +161,8 @@ export default function Home() {
                         <TabButton icon={<LayoutDashboard />} label="Workshop" active={activeTab === 'config'} onClick={() => setActiveTab('config')} />
                         <TabButton icon={<Palette />} label="Design" active={activeTab === 'design'} onClick={() => setActiveTab('design')} />
                         <TabButton icon={<Cpu />} label="Motores AI" active={activeTab === 'engines'} onClick={() => setActiveTab('engines')} />
-                        <TabButton icon={<BookOpen />} label="Galeria" active={activeTab === 'gallery'} onClick={() => (cover || isLoading) && setActiveTab('gallery')} disabled={!cover && !isLoading} />
-                        <TabButton icon={<MessageSquare />} label="Escrita" active={activeTab === 'editorial'} onClick={() => setActiveTab('editorial')} disabled={!cover} />
+                        <TabButton icon={<BookOpen />} label="Galeria" active={activeTab === 'gallery'} onClick={() => (covers.length > 0 || isLoading) && setActiveTab('gallery')} disabled={covers.length === 0 && !isLoading} />
+                        <TabButton icon={<MessageSquare />} label="Escrita" active={activeTab === 'editorial'} onClick={() => setActiveTab('editorial')} disabled={covers.length === 0} />
                         <TabButton icon={<Download />} label="Salvar" active={activeTab === 'export'} onClick={() => setActiveTab('export')} disabled={!generatedEbook} />
                     </nav>
                 </aside>
@@ -171,7 +173,7 @@ export default function Home() {
                             <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse shadow-[0_0_15px_rgba(59,130,246,0.6)]"></div>
                             <span className="text-[10px] font-black uppercase tracking-[8px] text-white/30 italic">Nano-Banana G26.1 INFALLIBLE 🛡️</span>
                         </div>
-                        {cover && activeTab !== 'export' && (
+                        {covers.length > 0 && activeTab !== 'export' && (
                             <button onClick={handleCreateEbook} className="bg-white text-black px-12 py-3 rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all font-bold shadow-2xl">Compilar Obra Final</button>
                         )}
                     </header>
@@ -250,30 +252,40 @@ export default function Home() {
 
                             {activeTab === 'gallery' && (
                                 <motion.div key="gallery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-20 pb-40">
-                                    <div className={`relative w-[500px] aspect-[2.2/3.5] rounded-[90px] overflow-hidden border-2 transition-all ${coverStatus === 'loading' ? 'bg-white/[0.01] animate-pulse border-white/10 flex flex-col items-center justify-center gap-12' : (cover ? 'border-purple-600 shadow-[0_100px_200px_-50px_rgba(168,85,247,0.6)]' : 'border-white/5')}`}>
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl w-full">
                                         {coverStatus === 'loading' ? (
-                                            <><div className="w-24 h-24 rounded-full border-t-2 border-blue-500 animate-spin"></div><span className="text-xl font-black uppercase tracking-[12px] text-white/20 italic text-center">G26 Infallible...<br /><span className="text-[10px] tracking-[4px] mt-4 opacity-50 italic">Pode levar 10-20s se o bypass ativar</span></span></>
+                                            [1, 2, 3, 4].map(i => (
+                                                <div key={i} className="aspect-[2.2/3.5] rounded-[60px] bg-white/[0.01] animate-pulse border border-white/10 flex flex-col items-center justify-center gap-6">
+                                                    <div className="w-12 h-12 rounded-full border-t-2 border-blue-500 animate-spin"></div>
+                                                    <span className="text-[10px] font-black uppercase tracking-[4px] text-white/20 italic">Slot {i}...</span>
+                                                </div>
+                                            ))
                                         ) : (coverStatus === 'fail' ? (
-                                            <div className="flex flex-col items-center justify-center p-20 text-center gap-10">
+                                            <div className="col-span-full flex flex-col items-center justify-center p-20 text-center gap-10">
                                                 <AlertCircle className="w-20 h-20 text-pink-500/50" />
                                                 <button onClick={handleGenerateCover} className="bg-white text-black px-12 py-6 rounded-full text-base font-black uppercase tracking-[6px] shadow-2xl">Refazer Tentativa</button>
                                             </div>
                                         ) : (
-                                            <motion.img
-                                                initial={{ scale: 1.1, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                                                transition={{ duration: 2 }}
-                                                src={cover!}
-                                                className="w-full h-full object-cover"
-                                            />
+                                            covers.map((c, i) => (
+                                                <motion.div
+                                                    key={i}
+                                                    initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                                                    transition={{ delay: i * 0.1 }}
+                                                    className={`relative aspect-[2.2/3.5] rounded-[60px] overflow-hidden border-2 cursor-pointer transition-all ${selectedCoverIndex === i ? 'border-purple-600 shadow-[0_40px_80px_-20px_rgba(168,85,247,0.4)] scale-105 z-10' : 'border-white/5 opacity-40 hover:opacity-100 hover:border-white/20'}`}
+                                                    onClick={() => setSelectedCoverIndex(i)}
+                                                >
+                                                    <img src={c} className="w-full h-full object-cover" />
+                                                    {selectedCoverIndex === i && (
+                                                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                                                            <button onClick={() => setActiveTab('editorial')} className="bg-white text-black px-10 py-5 rounded-full font-black uppercase tracking-[4px] shadow-2xl hover:scale-110 transition-all text-[11px]">Selecionar esta Capa</button>
+                                                        </div>
+                                                    )}
+                                                </motion.div>
+                                            ))
                                         ))}
-                                        {cover && (
-                                            <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-md">
-                                                <button onClick={() => setActiveTab('editorial')} className="bg-white text-black px-16 py-8 rounded-full font-black uppercase tracking-[8px] shadow-2xl hover:scale-110 transition-all font-bold">Aprovar Capa G26</button>
-                                            </div>
-                                        )}
                                     </div>
-                                    {cover && !isLoading && (
-                                        <button onClick={handleGenerateCover} className="mt-16 flex items-center gap-6 text-white/30 hover:text-white transition-all font-black uppercase tracking-[8px] text-[12px] group"><RefreshCw className="w-6 h-6 group-hover:rotate-180 transition-transform duration-700" /> Nova Tentativa</button>
+                                    {covers.length > 0 && !isLoading && (
+                                        <button onClick={handleGenerateCover} className="mt-20 flex items-center gap-6 text-white/30 hover:text-white transition-all font-black uppercase tracking-[8px] text-[12px] group"><RefreshCw className="w-6 h-6 group-hover:rotate-180 transition-transform duration-700" /> Gerar Novas Opções</button>
                                     )}
                                 </motion.div>
                             )}
@@ -286,7 +298,7 @@ export default function Home() {
                                     </div>
                                     <div className="w-full xl:w-[500px] space-y-14 sticky top-12">
                                         <div className="aspect-[2.2/3.5] rounded-[80px] overflow-hidden shadow-[0_80px_150px_-30px_rgba(168,85,247,0.5)] border border-white/10 bg-black">
-                                            {cover && <img src={cover} className="w-full h-full object-cover" />}
+                                            {selectedCoverIndex !== null && <img src={covers[selectedCoverIndex]} className="w-full h-full object-cover" />}
                                         </div>
                                         <button onClick={() => setActiveTab('gallery')} className="w-full py-8 bg-white/5 border border-white/10 rounded-[45px] text-[13px] font-black uppercase tracking-[6px] hover:bg-white/10 transition-all">Alterar Imagem</button>
                                     </div>
