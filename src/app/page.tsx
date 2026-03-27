@@ -68,7 +68,7 @@ export default function Home() {
             if (!theme?.image_generation_prompt) throw new Error("Resposta do tema inválida");
             setApprovedTheme(theme);
 
-            const basePrompt = `High-end digital background art for a book cover. NO TEXT, NO 3D MOCKUPS, NO PHYSICAL BOOKS, NO TABLES. Simple flat 2D vertical composition. Style: ${selectedPalette}, Mood: ${theme.design_mood}. Description: ${theme.image_generation_prompt}. 8k, professional photography quality. Centered and balanced.`;
+            const basePrompt = `Flat 2D vertical book cover design. The title "${title.toUpperCase()}" and author "${author || 'Lumina Studio'}" must be written in a professional, integrated layout. NO 3D MOCKUPS, NO PHYSICAL BOOKS, NO TABLES. Pure digital graphic design. Style: ${selectedPalette}, Mood: ${theme.design_mood}. Description: ${theme.image_generation_prompt}. 8k, professional quality. Centered and balanced.`;
 
             const updateCard = (id: number, patch: Partial<CoverCard>) => {
                 setCovers(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
