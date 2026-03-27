@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Zap, Upload, Loader2, FileDown, BookOpen, ChevronLeft, CreditCard, LayoutDashboard, Palette, Type, MessageSquare, Download, CheckCircle2, RefreshCw, AlertCircle, Image as ImageIcon, Cpu } from 'lucide-react';
 import jsPDF from 'jspdf';
@@ -50,7 +50,11 @@ export default function Home() {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title, description, palette: selectedPalette, layout: selectedLayout }),
             });
+            if (!themeRes.ok) throw new Error("Falha ao gerar tema da capa");
+
             const theme = await themeRes.json();
+            if (!theme?.image_generation_prompt) throw new Error("Resposta do tema inválida");
+
             setApprovedTheme(theme);
 
             const basePrompt = `Professional book cover, Title: "${title.toUpperCase()}", Author: "${author || 'Lumina Studio'}". Style: ${selectedPalette}, Layout: ${selectedLayout}. ${theme.image_generation_prompt}. 8k, centered background art.`;
@@ -113,8 +117,9 @@ export default function Home() {
                 setCoverStatus('fail');
             }
         } catch (e: any) {
-            addLog(`Erro: ${e.message.substring(0, 20)}`);
+            addLog(`Erro: ${e?.message?.substring(0, 20) || 'erro desconhecido'}`);
             setCoverStatus('fail');
+            console.error(e);
         } finally {
             setIsLoading(false);
         }
@@ -141,7 +146,11 @@ export default function Home() {
         if (!generatedEbook || !activeCover) return;
         setIsLoading(true);
         const doc = new jsPDF();
-        doc.addImage(activeCover, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+
+        // Detecta o tipo da imagem (Charles's Fix)
+        const imageType = activeCover.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+
+        doc.addImage(activeCover, imageType, 0, 0, 210, 297, undefined, 'FAST');
         doc.save(`${title.replace(/\s/g, '_')}.pdf`);
         setIsLoading(false);
     };
