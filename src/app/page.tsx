@@ -30,21 +30,14 @@ export default function Home() {
         setDebugLogs(p => [...p.slice(-10), `[${new Date().toLocaleTimeString()}] ${msg}`]);
     };
 
-    const blobToBase64 = (blob: Blob): Promise<string> => {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-        });
-    };
-
     const handleGenerateCover = async () => {
         if (!title) return alert("Título é obrigatório!");
         setIsLoading(true); setCoverStatus('loading'); setActiveTab('gallery');
         setCover(null);
-        addLog(`G22 Bridge Init...`);
+        addLog(`G23 Unbreakable Init...`);
 
         try {
+            addLog(`Sincronizando Tema...`);
             const themeRes = await fetch('/api/generate-cover-theme', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title, description, palette: selectedPalette, layout: selectedLayout }),
@@ -52,74 +45,37 @@ export default function Home() {
             const theme = await themeRes.json();
             setApprovedTheme(theme);
 
-            const artPrompt = `Professional book cover art, high-end typography "${title.toUpperCase()}". By ${author || 'Lumina'}. Style: ${selectedPalette}, Layout: ${selectedLayout}. ${theme.image_generation_prompt}. 8k realism, masterpiece.`;
-            const seed = Math.floor(Math.random() * 999999);
-            const pollUrl = `https://pollinations.ai/p/${encodeURIComponent(artPrompt.substring(0, 400))}?width=800&height=1200&seed=${seed}&model=flux&nologo=true`;
+            const artPrompt = `High-end book cover art, Title: "${title.toUpperCase()}", Author: "${author || 'Lumina Studio'}". Style: ${selectedPalette}, Layout: ${selectedLayout}. ${theme.image_generation_prompt}. 8k, cinematic lighting, masterpiece background.`;
 
-            let finalB64 = "";
+            addLog(`Solicitando Arte (60s Chain)...`);
 
-            // --- STAGE 1: ELITE GEMINI ---
-            try {
-                addLog(`Tentativa 1: Elite...`);
-                const res = await fetch('/api/generate-cover', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: artPrompt })
-                });
-                const data = await res.json();
-                if (data.base64 && data.base64.length > 25000) {
-                    finalB64 = data.base64;
-                    addLog(`Elite Sucesso (${Math.round(data.base64.length / 1024)}KB)`);
-                } else if (data.error) {
-                    addLog(`Elite Erro: ${data.error.substring(0, 15)}`);
-                }
-            } catch (e: any) { addLog(`Elite Fail: ${e.message.substring(0, 15)}`); }
+            const res = await fetch('/api/generate-cover', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: artPrompt })
+            });
 
-            // --- STAGE 2: SERVER PROXY BYPASS (ANTI-CORS) ---
-            if (!finalB64) {
-                try {
-                    addLog(`Tentativa 2: Server Proxy...`);
-                    const res = await fetch('/api/proxy-image', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ url: pollUrl })
-                    });
-                    const data = await res.json();
-                    if (data.base64 && data.base64.length > 25000) {
-                        finalB64 = data.base64;
-                        addLog(`Proxy OK (${Math.round(data.base64.length / 1024)}KB)`);
-                    }
-                } catch (e: any) { addLog(`Proxy Fail.`); }
-            }
+            const data = await res.json();
 
-            // --- STAGE 3: DIRECT BROWSER TURBO ---
-            if (!finalB64) {
-                try {
-                    addLog(`Tentativa 3: Front Turbo...`);
-                    const res = await fetch(pollUrl);
-                    if (res.ok) {
-                        const blob = await res.blob();
-                        if (blob.size > 20000) {
-                            finalB64 = await blobToBase64(blob);
-                            addLog(`Front OK (${Math.round(blob.size / 1024)}KB)`);
-                        }
-                    }
-                } catch (e: any) { addLog(`Front Fail.`); }
-            }
-
-            if (finalB64) {
-                setCover(finalB64);
+            if (data.base64) {
+                setCover(data.base64);
                 setCoverStatus('done');
+                addLog(`Sucesso: ${data.engine || 'G23'}`);
             } else {
-                addLog(`Bridge Broken: Nada gerado.`);
+                addLog(`Falha: ${data.error || 'Servidor Indisponível'}`);
                 setCoverStatus('fail');
             }
-        } catch (e: any) { addLog(`Erro Crítico: ${e.message}`); }
-        finally { setIsLoading(false); }
+        } catch (e: any) {
+            addLog(`Erro Conexão: ${e.message.substring(0, 20)}`);
+            setCoverStatus('fail');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleCreateEbook = async () => {
         if (!content || !cover) return;
         setIsLoading(true); setActiveTab('export');
-        addLog("Compilando Master G22...");
+        addLog("Compilando Master G23...");
         try {
             const res = await fetch('/api/generate-ebook', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -165,7 +121,7 @@ export default function Home() {
                     <header className="h-24 border-b border-white/5 flex items-center justify-between px-16 bg-[#020205]/95 backdrop-blur-3xl sticky top-0 z-40">
                         <div className="flex items-center gap-3">
                             <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.6)]"></div>
-                            <span className="text-[10px] font-black uppercase tracking-[8px] text-white/30 italic">Nano-Banana G22 Bridge</span>
+                            <span className="text-[10px] font-black uppercase tracking-[8px] text-white/30 italic">Nano-Banana G23 Unbreakable</span>
                         </div>
                         {cover && activeTab !== 'export' && (
                             <button onClick={handleCreateEbook} className="bg-white text-black px-12 py-3 rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all font-bold shadow-2xl">Finalizar Projeto</button>
@@ -176,8 +132,8 @@ export default function Home() {
                         <AnimatePresence mode="wait">
                             {activeTab === 'config' && (
                                 <motion.div key="config" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="max-w-3xl pb-20">
-                                    <h1 className="text-8xl font-black tracking-tighter mb-8 text-gradient italic leading-none">O Ponta de Lança.</h1>
-                                    <p className="text-white/30 mb-20 text-lg max-w-sm font-medium leading-relaxed">G22 Bridge: Tripla-camada de proteção (Elite, Proxy e Turbo) para garantir que sua obra nasça, não importa a latência.</p>
+                                    <h1 className="text-8xl font-black tracking-tighter mb-8 text-gradient italic leading-none">O Indestrutível.</h1>
+                                    <p className="text-white/30 mb-20 text-lg max-w-sm font-medium leading-relaxed">G23 Unbreakable: Cadeia de servidores redundantes (Gemini, HF e Bypass) orquestrada para garantir a entrega em qualquer cenário.</p>
 
                                     <div className="space-y-12">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -196,7 +152,7 @@ export default function Home() {
                                         </div>
                                         <button onClick={handleGenerateCover} disabled={isLoading || !title} className="group relative w-full py-10 bg-white text-black font-black uppercase tracking-[6px] rounded-[50px] hover:bg-purple-200 transition-all flex items-center justify-center gap-6 shadow-[0_30px_60px_-15px_rgba(255,255,255,0.15)] overflow-hidden">
                                             <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                            {isLoading ? <Loader2 className="animate-spin w-10 h-10" /> : <Zap className="w-10 h-10 fill-current" />} FORJAR CAPA G22
+                                            {isLoading ? <Loader2 className="animate-spin w-10 h-10" /> : <Zap className="w-10 h-10 fill-current" />} FORJAR CAPA G23
                                         </button>
                                     </div>
                                 </motion.div>
@@ -236,11 +192,11 @@ export default function Home() {
                                 <motion.div key="gallery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-20 pb-40">
                                     <div className={`relative w-[500px] aspect-[2.2/3.5] rounded-[90px] overflow-hidden border-2 transition-all ${coverStatus === 'loading' ? 'bg-white/[0.01] animate-pulse border-white/10 flex flex-col items-center justify-center gap-12 shadow-[0_50px_100px_rgba(255,255,255,0.05)]' : (cover ? 'border-purple-600 shadow-[0_100px_200px_-50px_rgba(168,85,247,0.6)]' : 'border-white/5')}`}>
                                         {coverStatus === 'loading' ? (
-                                            <><div className="w-24 h-24 rounded-full border-t-2 border-purple-500 animate-spin shadow-[0_0_40px_rgba(168,85,247,0.5)]"></div><span className="text-xl font-black uppercase tracking-[12px] text-white/20 italic">Forjando...</span></>
+                                            <><div className="w-24 h-24 rounded-full border-t-2 border-purple-500 animate-spin shadow-[0_0_40px_rgba(168,85,247,0.5)]"></div><span className="text-xl font-black uppercase tracking-[12px] text-white/20 italic text-center">Forjando pela Rede...<br /><span className="text-[10px] tracking-[4px] mt-4 opacity-50">(Pode levar até 60s)</span></span></>
                                         ) : (coverStatus === 'fail' ? (
                                             <div className="flex flex-col items-center justify-center p-20 text-center gap-10">
                                                 <AlertCircle className="w-20 h-20 text-pink-500/50" />
-                                                <button onClick={handleGenerateCover} className="bg-white text-black px-12 py-6 rounded-full text-base font-black uppercase tracking-[6px] shadow-2xl hover:scale-110 active:scale-95 transition-all">Refazer Tentativa</button>
+                                                <button onClick={handleGenerateCover} className="bg-white text-black px-12 py-6 rounded-full text-base font-black uppercase tracking-[6px] shadow-2xl hover:scale-110 active:scale-95 transition-all">Refazer Tentativa G23</button>
                                             </div>
                                         ) : (
                                             <motion.img
@@ -282,7 +238,7 @@ export default function Home() {
                                     <div className="w-60 h-60 bg-green-500/5 rounded-full flex items-center justify-center shadow-[0_0_150px_rgba(34,197,94,0.4)] border border-green-500/10"><CheckCircle2 className="w-32 h-32 text-green-500" /></div>
                                     <div className="space-y-6">
                                         <h2 className="text-9xl font-black tracking-tighter italic text-gradient leading-none">Compilado.</h2>
-                                        <p className="text-white/20 text-3xl font-medium tracking-[15px] uppercase mt-10">G22 Bridge Master Ready</p>
+                                        <p className="text-white/20 text-3xl font-medium tracking-[15px] uppercase mt-10">G23 Unbreakable Master Ready</p>
                                     </div>
                                     <button onClick={downloadPDF} className="bg-white text-black px-32 py-16 rounded-[70px] font-black uppercase text-2xl flex items-center gap-12 hover:scale-110 active:scale-95 transition-all shadow-2xl shadow-white/5"><FileDown className="w-16 h-16" /> DOWNLOAD FINAL HD</button>
                                 </motion.div>
@@ -292,7 +248,7 @@ export default function Home() {
 
                     <div className="fixed bottom-14 right-14 w-[480px] bg-[#050510]/98 backdrop-blur-3xl border border-white/5 p-16 rounded-[80px] flex flex-col gap-12 z-50 shadow-2xl border-t border-purple-500/40">
                         <div className="flex items-center justify-between border-b border-white/5 pb-10">
-                            <span className="text-[14px] font-black uppercase tracking-[12px] text-white/30 italic">BRIDGE MONITOR G22</span>
+                            <span className="text-[14px] font-black uppercase tracking-[12px] text-white/30 italic">UNBREAKABLE MONITOR G23</span>
                             <div className="flex gap-3">
                                 <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
                                 <span className="w-3 h-3 bg-purple-600 rounded-full animate-pulse delay-200 shadow-[0_0_10px_purple]"></span>
