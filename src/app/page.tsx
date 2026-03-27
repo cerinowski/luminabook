@@ -68,7 +68,7 @@ export default function Home() {
             if (!theme?.image_generation_prompt) throw new Error("Resposta do tema inválida");
             setApprovedTheme(theme);
 
-            const basePrompt = `Professional book cover, Title: "${title.toUpperCase()}", Author: "${author || 'Lumina Studio'}". Style: ${selectedPalette}, Layout: ${selectedLayout}. ${theme.image_generation_prompt}. 8k, centered background art.`;
+            const basePrompt = `High-end digital background art for a book cover. NO TEXT, NO 3D MOCKUPS, NO PHYSICAL BOOKS, NO TABLES. Simple flat 2D vertical composition. Style: ${selectedPalette}, Mood: ${theme.design_mood}. Description: ${theme.image_generation_prompt}. 8k, professional photography quality. Centered and balanced.`;
 
             const updateCard = (id: number, patch: Partial<CoverCard>) => {
                 setCovers(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
@@ -119,9 +119,9 @@ export default function Home() {
 
             const prompts = [
                 basePrompt,
-                `${basePrompt}. Cinematic lighting, detailed.`,
-                `${basePrompt}. Dramatic colors, artistic.`,
-                `${basePrompt}. Stylized composition, high contrast.`
+                `${basePrompt} Cinematic lighting.`,
+                `${basePrompt} Refined editorial illustration.`,
+                `${basePrompt} Abstract artistic composition.`
             ];
 
             // Dispara as 4 em paralelo
