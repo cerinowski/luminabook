@@ -33,6 +33,7 @@ const isValidImage = (buffer: Buffer) => {
 
 export async function POST(req: Request) {
     let currentTitle = "Capas Lumina";
+    let lastError = "Nenhum erro registrado";
     try {
         const { prompt, title, model: requestedModel } = await req.json();
         currentTitle = title || "Capas Lumina";
@@ -40,7 +41,9 @@ export async function POST(req: Request) {
         const geminiKey = (process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY)?.trim()?.replace(/["']/g, "");
         const openAIKey = process.env.OPENAI_API_KEY?.trim()?.replace(/["']/g, "");
 
-        console.log(`--- G26 IRON ENGINE [1-REQUEST-1-IMAGE] ---`);
+        console.log(`--- G26 IRON ENGINE [DEBUG] ---`);
+        console.log(`OpenAI Key: ${openAIKey ? 'Present' : 'MISSING'}`);
+        console.log(`Gemini Key: ${geminiKey ? 'Present' : 'MISSING'}`);
 
         // STAGE 1: DALL-E 3
         if (openAIKey && (requestedModel === 'dalle' || !requestedModel || requestedModel === 'auto')) {
@@ -50,10 +53,14 @@ export async function POST(req: Request) {
                     model: "dall-e-3", prompt, n: 1, size: "1024x1024", response_format: "b64_json"
                 });
                 if (response.data?.[0]?.b64_json) {
-                    console.log("[OPENAI] Success");
                     return NextResponse.json({ ok: true, image: `data:image/png;base64,${response.data[0].b64_json}`, engine: 'DALL-E 3' });
                 }
-            } catch (e: any) { console.error(`[OPENAI] ${e.message}`); }
+            } catch (e: any) {
+                lastError = `OpenAI: ${e.message}`;
+                console.error(`[OPENAI] ${e.message}`);
+            }
+        } else if (!openAIKey) {
+            lastError = "OpenAI Key Missing";
         }
 
         // STAGE 2: GEMINI
@@ -64,10 +71,14 @@ export async function POST(req: Request) {
                 const result = await model.generateContent(prompt);
                 const b64 = result.response.candidates?.[0]?.content?.parts[0]?.inlineData?.data;
                 if (b64) {
-                    console.log("[GEMINI] Success");
                     return NextResponse.json({ ok: true, image: `data:image/png;base64,${b64}`, engine: 'Gemini' });
                 }
-            } catch (e: any) { console.error(`[GEMINI] ${e.message}`); }
+            } catch (e: any) {
+                lastError = `Gemini: ${e.message}`;
+                console.error(`[GEMINI] ${e.message}`);
+            }
+        } else if (!geminiKey) {
+            lastError = lastError.includes("OpenAI") ? "Both Keys Missing" : "Gemini Key Missing";
         }
 
         // STAGE 3: POLLINATIONS (Server-Side)
@@ -77,18 +88,21 @@ export async function POST(req: Request) {
             if (res.ok) {
                 const buf = Buffer.from(await res.arrayBuffer());
                 if (isValidImage(buf)) {
-                    console.log("[POLLINATIONS] Success");
                     return NextResponse.json({ ok: true, image: `data:image/jpeg;base64,${buf.toString('base64')}`, engine: 'Server Relay' });
                 }
+            } else {
+                lastError = `Relay Status: ${res.status}`;
             }
-        } catch (e: any) { console.error(`[POLLINATIONS] ${e.message}`); }
+        } catch (e: any) {
+            lastError = `Pollinations: ${e.message}`;
+            console.error(`[POLLINATIONS] ${e.message}`);
+        }
 
         // STAGE 4: PLACEHOLDER
-        console.warn("[IRON] Returning Placeholder");
         return NextResponse.json({
             ok: true,
             image: buildPlaceholder(currentTitle),
-            engine: 'Placeholder Safety'
+            engine: `Safety: ${lastError.substring(0, 30)}`
         });
 
     } catch (error: any) {
@@ -96,7 +110,7 @@ export async function POST(req: Request) {
         return NextResponse.json({
             ok: true,
             image: buildPlaceholder(currentTitle),
-            engine: 'Fatal Placeholder'
+            engine: `Fatal: ${error.message.substring(0, 20)}`
         });
     }
 }
