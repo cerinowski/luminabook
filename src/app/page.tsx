@@ -82,16 +82,20 @@ export default function Home() {
                         body: JSON.stringify({ prompt: customPrompt, title, model: selectedModel })
                     });
                     const data = await res.json();
-                    if (data.ok && data.image) {
+
+                    // Se for uma imagem real de IA, aceita e para aqui.
+                    if (data.ok && data.image && !data.engine?.includes('Safety') && !data.engine?.includes('Placeholder')) {
                         addLog(`[Slot ${id}] OK: ${data.engine}`);
                         updateCard(id, { status: 'success', image: data.image, engine: data.engine });
                         return;
                     }
+
+                    addLog(`[Slot ${id}] Servidor em Fallback (${data.engine}). Tentando Bypass...`);
                 } catch (e: any) {
-                    addLog(`[Slot ${id}] Erro Server. Tentando Bypass...`);
+                    addLog(`[Slot ${id}] Erro Conexão. Tentando Bypass...`);
                 }
 
-                // Browser Bypass Fallback
+                // Browser Bypass Fallback (A força bruta do frontend)
                 try {
                     const seed = Math.floor(Math.random() * 999999);
                     const pollUrl = `https://pollinations.ai/p/${encodeURIComponent(customPrompt.substring(0, 400))}?width=1024&height=1024&seed=${seed}&model=flux&nologo=true`;
