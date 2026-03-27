@@ -56,8 +56,9 @@ export async function POST(req: Request) {
                     return NextResponse.json({ ok: true, image: `data:image/png;base64,${response.data[0].b64_json}`, engine: 'DALL-E 3' });
                 }
             } catch (e: any) {
-                lastError = `OpenAI: ${e.message}`;
-                console.error(`[OPENAI] ${e.message}`);
+                const errDetail = e.response?.data?.error?.message || e.message;
+                lastError = `OpenAI (${e.code || 'ERR'}): ${errDetail.substring(0, 50)}`;
+                console.error(`[OPENAI] ${errDetail}`);
             }
         } else if (!openAIKey) {
             lastError = "OpenAI Key Missing";
