@@ -16,8 +16,17 @@ export default function Home() {
     const [isLoading, setIsLoading] = useState(false);
     const [debugLogs, setDebugLogs] = useState<string[]>([]);
 
-    const [covers, setCovers] = useState<string[]>([]);
-    const [coverStatus, setCoverStatus] = useState<'idle' | 'loading' | 'done' | 'fail'>('idle');
+    type CoverCard = {
+        id: number;
+        status: 'idle' | 'loading' | 'success' | 'error';
+        image: string | null;
+        engine?: string;
+        error?: string;
+    };
+
+    const [covers, setCovers] = useState<CoverCard[]>(
+        Array.from({ length: 4 }, (_, i) => ({ id: i + 1, status: 'idle', image: null }))
+    );
     const [selectedCoverIndex, setSelectedCoverIndex] = useState<number | null>(null);
 
     const [selectedPalette, setSelectedPalette] = useState('Cyberpunk');
@@ -41,9 +50,13 @@ export default function Home() {
 
     const handleGenerateCover = async () => {
         if (!title) return alert("Título é obrigatório!");
-        setIsLoading(true); setCoverStatus('loading'); setActiveTab('gallery');
-        setCovers([]); setSelectedCoverIndex(null);
-        addLog(`G26 Quad-Engine Start...`);
+        setIsLoading(true);
+        setActiveTab('gallery');
+        setSelectedCoverIndex(null);
+
+        // Reset cards to loading
+        setCovers(Array.from({ length: 4 }, (_, i) => ({ id: i + 1, status: 'loading', image: null })));
+        addLog(`G26.2 Iron Engine Start...`);
 
         try {
             const themeRes = await fetch('/api/generate-cover-theme', {
@@ -51,30 +64,34 @@ export default function Home() {
                 body: JSON.stringify({ title, description, palette: selectedPalette, layout: selectedLayout }),
             });
             if (!themeRes.ok) throw new Error("Falha ao gerar tema da capa");
-
             const theme = await themeRes.json();
             if (!theme?.image_generation_prompt) throw new Error("Resposta do tema inválida");
-
             setApprovedTheme(theme);
 
             const basePrompt = `Professional book cover, Title: "${title.toUpperCase()}", Author: "${author || 'Lumina Studio'}". Style: ${selectedPalette}, Layout: ${selectedLayout}. ${theme.image_generation_prompt}. 8k, centered background art.`;
 
-            const generateOneWithFallback = async (slotId: number, customPrompt: string) => {
+            const updateCard = (id: number, patch: Partial<CoverCard>) => {
+                setCovers(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
+            };
+
+            const generateOne = async (id: number, customPrompt: string) => {
                 try {
-                    addLog(`[Slot ${slotId}] Iniciando...`);
+                    addLog(`[Slot ${id}] Iniciando...`);
                     const res = await fetch('/api/generate-cover', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ prompt: customPrompt, model: selectedModel })
+                        body: JSON.stringify({ prompt: customPrompt, title, model: selectedModel })
                     });
                     const data = await res.json();
-                    if (data.base64) {
-                        addLog(`[Slot ${slotId}] OK: ${data.engine}`);
-                        return data.base64;
+                    if (data.ok && data.image) {
+                        addLog(`[Slot ${id}] OK: ${data.engine}`);
+                        updateCard(id, { status: 'success', image: data.image, engine: data.engine });
+                        return;
                     }
-                } catch (e) {
-                    addLog(`[Slot ${slotId}] Erro Server. Tentando Bypass...`);
+                } catch (e: any) {
+                    addLog(`[Slot ${id}] Erro Server. Tentando Bypass...`);
                 }
 
+                // Browser Bypass Fallback
                 try {
                     const seed = Math.floor(Math.random() * 999999);
                     const pollUrl = `https://pollinations.ai/p/${encodeURIComponent(customPrompt.substring(0, 400))}?width=1024&height=1024&seed=${seed}&model=flux&nologo=true`;
@@ -85,14 +102,15 @@ export default function Home() {
                     if (proxyRes.ok) {
                         const data = await proxyRes.json();
                         if (data.base64) {
-                            addLog(`[Slot ${slotId}] Bypass OK.`);
-                            return data.base64;
+                            addLog(`[Slot ${id}] Bypass OK.`);
+                            updateCard(id, { status: 'success', image: data.base64, engine: 'Proxy-Iron' });
+                            return;
                         }
                     }
-                } catch (e) {
-                    addLog(`[Slot ${slotId}] Falha Total.`);
+                } catch (e: any) {
+                    addLog(`[Slot ${id}] Falha total.`);
                 }
-                throw new Error("Falha no slot");
+                updateCard(id, { status: 'error', error: 'Falha na geração' });
             };
 
             const prompts = [
@@ -102,31 +120,20 @@ export default function Home() {
                 `${basePrompt}. Stylized composition, high contrast.`
             ];
 
-            const results = await Promise.allSettled(prompts.map((p, i) => generateOneWithFallback(i + 1, p)));
-            const successfulCovers = results
-                .filter(r => r.status === 'fulfilled')
-                .map(r => (r as PromiseFulfilledResult<string>).value);
-
-            if (successfulCovers.length > 0) {
-                setCovers(successfulCovers);
-                setCoverStatus('done');
+            // Dispara as 4 em paralelo
+            Promise.all(prompts.map((p, i) => generateOne(i + 1, p))).then(() => {
+                setIsLoading(false);
                 setSelectedCoverIndex(0);
-                addLog(`Sucesso: ${successfulCovers.length}/4 capas.`);
-            } else {
-                addLog(`Falha Total.`);
-                setCoverStatus('fail');
-            }
+            });
+
         } catch (e: any) {
             addLog(`Erro: ${e?.message?.substring(0, 20) || 'erro desconhecido'}`);
-            setCoverStatus('fail');
-            console.error(e);
-        } finally {
             setIsLoading(false);
         }
     };
 
     const handleCreateEbook = async () => {
-        const activeCover = selectedCoverIndex !== null ? covers[selectedCoverIndex] : null;
+        const activeCover = selectedCoverIndex !== null ? covers[selectedCoverIndex]?.image : null;
         if (!content || !activeCover) return;
         setIsLoading(true); setActiveTab('export');
         addLog("Compilando Infallible G26...");
@@ -142,7 +149,7 @@ export default function Home() {
     };
 
     const downloadPDF = async () => {
-        const activeCover = selectedCoverIndex !== null ? covers[selectedCoverIndex] : null;
+        const activeCover = selectedCoverIndex !== null ? covers[selectedCoverIndex]?.image : null;
         if (!generatedEbook || !activeCover) return;
         setIsLoading(true);
         const doc = new jsPDF();
@@ -262,40 +269,40 @@ export default function Home() {
                             {activeTab === 'gallery' && (
                                 <motion.div key="gallery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-20 pb-40">
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl w-full">
-                                        {coverStatus === 'loading' ? (
-                                            [1, 2, 3, 4].map(i => (
-                                                <div key={i} className="aspect-[2.2/3.5] rounded-[60px] bg-white/[0.01] animate-pulse border border-white/10 flex flex-col items-center justify-center gap-6">
-                                                    <div className="w-12 h-12 rounded-full border-t-2 border-blue-500 animate-spin"></div>
-                                                    <span className="text-[10px] font-black uppercase tracking-[4px] text-white/20 italic">Slot {i}...</span>
-                                                </div>
-                                            ))
-                                        ) : (coverStatus === 'fail' ? (
-                                            <div className="col-span-full flex flex-col items-center justify-center p-20 text-center gap-10">
-                                                <AlertCircle className="w-20 h-20 text-pink-500/50" />
-                                                <button onClick={handleGenerateCover} className="bg-white text-black px-12 py-6 rounded-full text-base font-black uppercase tracking-[6px] shadow-2xl">Refazer Tentativa</button>
-                                            </div>
-                                        ) : (
-                                            covers.map((c, i) => (
-                                                <motion.div
-                                                    key={i}
-                                                    initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                                                    transition={{ delay: i * 0.1 }}
-                                                    className={`relative aspect-[2.2/3.5] rounded-[60px] overflow-hidden border-2 cursor-pointer transition-all ${selectedCoverIndex === i ? 'border-purple-600 shadow-[0_40px_80px_-20px_rgba(168,85,247,0.4)] scale-105 z-10' : 'border-white/5 opacity-40 hover:opacity-100 hover:border-white/20'}`}
-                                                    onClick={() => setSelectedCoverIndex(i)}
-                                                >
-                                                    <img src={c} className="w-full h-full object-cover" />
-                                                    {selectedCoverIndex === i && (
-                                                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                                                            <button onClick={() => setActiveTab('editorial')} className="bg-white text-black px-10 py-5 rounded-full font-black uppercase tracking-[4px] shadow-2xl hover:scale-110 transition-all text-[11px]">Selecionar esta Capa</button>
-                                                        </div>
-                                                    )}
-                                                </motion.div>
-                                            ))
+                                        {covers.map((c, i) => (
+                                            <motion.div
+                                                key={i}
+                                                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                                                transition={{ delay: i * 0.1 }}
+                                                className={`relative aspect-[2.2/3.5] rounded-[60px] overflow-hidden border-2 cursor-pointer transition-all ${selectedCoverIndex === i ? 'border-purple-600 shadow-[0_40px_80px_-20px_rgba(168,85,247,0.4)] scale-105 z-10' : 'border-white/5 opacity-40 hover:opacity-100 hover:border-white/20'} ${c.status === 'loading' ? 'bg-white/[0.01] animate-pulse' : ''}`}
+                                                onClick={() => c.status === 'success' && setSelectedCoverIndex(i)}
+                                            >
+                                                {c.status === 'loading' && (
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-6">
+                                                        <div className="w-12 h-12 rounded-full border-t-2 border-blue-500 animate-spin"></div>
+                                                        <span className="text-[10px] font-black uppercase tracking-[4px] text-white/20 italic">Slot {c.id}...</span>
+                                                    </div>
+                                                )}
+                                                {c.status === 'success' && c.image && (
+                                                    <>
+                                                        <img src={c.image} className="w-full h-full object-cover" />
+                                                        {selectedCoverIndex === i && (
+                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                                                                <button onClick={() => setActiveTab('editorial')} className="bg-white text-black px-10 py-5 rounded-full font-black uppercase tracking-[4px] shadow-2xl hover:scale-110 transition-all text-[11px]">Selecionar esta Capa</button>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
+                                                {c.status === 'error' && (
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center p-10 text-center gap-6">
+                                                        <AlertCircle className="w-12 h-12 text-pink-500/30" />
+                                                        <span className="text-[10px] font-black uppercase tracking-[4px] text-pink-500/50 italic">{c.error}</span>
+                                                    </div>
+                                                )}
+                                            </motion.div>
                                         ))}
                                     </div>
-                                    {covers.length > 0 && !isLoading && (
-                                        <button onClick={handleGenerateCover} className="mt-20 flex items-center gap-6 text-white/30 hover:text-white transition-all font-black uppercase tracking-[8px] text-[12px] group"><RefreshCw className="w-6 h-6 group-hover:rotate-180 transition-transform duration-700" /> Gerar Novas Opções</button>
-                                    )}
+                                    <button onClick={handleGenerateCover} className="mt-20 flex items-center gap-6 text-white/30 hover:text-white transition-all font-black uppercase tracking-[8px] text-[12px] group"><RefreshCw className="w-6 h-6 group-hover:rotate-180 transition-transform duration-700" /> Gerar Novas Opções</button>
                                 </motion.div>
                             )}
 
@@ -307,7 +314,7 @@ export default function Home() {
                                     </div>
                                     <div className="w-full xl:w-[500px] space-y-14 sticky top-12">
                                         <div className="aspect-[2.2/3.5] rounded-[80px] overflow-hidden shadow-[0_80px_150px_-30px_rgba(168,85,247,0.5)] border border-white/10 bg-black">
-                                            {selectedCoverIndex !== null && <img src={covers[selectedCoverIndex]} className="w-full h-full object-cover" />}
+                                            {selectedCoverIndex !== null && covers[selectedCoverIndex]?.image && <img src={covers[selectedCoverIndex].image} className="w-full h-full object-cover" />}
                                         </div>
                                         <button onClick={() => setActiveTab('gallery')} className="w-full py-8 bg-white/5 border border-white/10 rounded-[45px] text-[13px] font-black uppercase tracking-[6px] hover:bg-white/10 transition-all">Alterar Imagem</button>
                                     </div>
