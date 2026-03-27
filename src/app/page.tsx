@@ -152,7 +152,7 @@ export default function Home() {
                     <header className="h-24 border-b border-white/5 flex items-center justify-between px-16 bg-[#020205]/95 backdrop-blur-3xl sticky top-0 z-40">
                         <div className="flex items-center gap-3">
                             <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse shadow-[0_0_15px_rgba(59,130,246,0.6)]"></div>
-                            <span className="text-[10px] font-black uppercase tracking-[8px] text-white/30 italic">Nano-Banana G26 Infallible</span>
+                            <span className="text-[10px] font-black uppercase tracking-[8px] text-white/30 italic">Nano-Banana G26.1 INFALLIBLE 🛡️</span>
                         </div>
                         {cover && activeTab !== 'export' && (
                             <button onClick={handleCreateEbook} className="bg-white text-black px-12 py-3 rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all font-bold shadow-2xl">Compilar Obra Final</button>
