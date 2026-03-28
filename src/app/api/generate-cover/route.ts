@@ -48,16 +48,16 @@ export async function POST(req: Request) {
         // STAGE 1: DALL-E 3
         if (openAIKey && (requestedModel === 'dalle' || !requestedModel || requestedModel === 'auto')) {
             try {
-                const openai = new OpenAI({ apiKey: openAIKey, timeout: 9000 });
+                const openai = new OpenAI({ apiKey: openAIKey, timeout: 9800 });
                 const response = await openai.images.generate({
-                    model: "dall-e-3", prompt, n: 1, size: "1024x1024", response_format: "b64_json"
+                    model: "dall-e-3", prompt, n: 1, size: "1024x1024", response_format: "b64_json", quality: "standard"
                 });
                 if (response.data?.[0]?.b64_json) {
                     return NextResponse.json({ ok: true, image: `data:image/png;base64,${response.data[0].b64_json}`, engine: 'DALL-E 3' });
                 }
             } catch (e: any) {
                 const errDetail = e?.error?.message || e?.message || "Erro desconhecido";
-                lastError = `OpenAI: ${errDetail.substring(0, 50)}`;
+                lastError = `OpenAI: ${errDetail.substring(0, 80)}`;
                 console.error(`[OPENAI]`, e);
             }
         } else if (!openAIKey) {
@@ -103,7 +103,12 @@ export async function POST(req: Request) {
         return NextResponse.json({
             ok: true,
             image: buildPlaceholder(currentTitle),
-            engine: `Safety: ${lastError.substring(0, 30)}`
+            engine: `Safety: ${lastError.substring(0, 30)}`,
+            diagnostics: {
+                hasOpenAI: !!openAIKey,
+                hasGemini: !!geminiKey,
+                lastError
+            }
         });
 
     } catch (error: any) {
@@ -111,7 +116,8 @@ export async function POST(req: Request) {
         return NextResponse.json({
             ok: true,
             image: buildPlaceholder(currentTitle),
-            engine: `Fatal: ${error.message.substring(0, 20)}`
+            engine: `Fatal: ${error.message.substring(0, 20)}`,
+            diagnostics: { lastError: error.message }
         });
     }
 }

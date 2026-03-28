@@ -33,8 +33,22 @@ export default function Home() {
     const [selectedLayout, setSelectedLayout] = useState('Impact');
     const [selectedModel, setSelectedModel] = useState('auto');
 
-    const [approvedTheme, setApprovedTheme] = useState<any>(null);
-    const [generatedEbook, setGeneratedEbook] = useState<any>(null);
+    // --- ANTHOLOGY G27.1 ---
+    type AnthologyPage = {
+        type: string;
+        title: string;
+        content?: string;
+        subtitle?: string;
+        items?: string[];
+        illustration_prompt: string;
+        image?: string | null;
+        status: 'idle' | 'loading' | 'success' | 'error';
+    };
+
+    const [blueprint, setBlueprint] = useState<{
+        global_style: { primary_color: string; secondary_color: string; global_mood: string; };
+        pages: AnthologyPage[];
+    } | null>(null);
 
     const addLog = (msg: string) => {
         setDebugLogs(p => [...p.slice(-10), `[${new Date().toLocaleTimeString()}] ${msg}`]);
@@ -55,20 +69,29 @@ export default function Home() {
         setSelectedCoverIndex(null);
 
         // Reset cards to loading
-        setCovers(Array.from({ length: 4 }, (_, i) => ({ id: i + 1, status: 'loading', image: null })));
-        addLog(`G26.2 Iron Engine Start...`);
+        setCovers(Array.from({ length: 4 }, (_, i) => ({ id: i + 1, status: 'idle', image: null })));
+        addLog(`G27.1 Anthology Architecting...`);
 
         try {
-            const themeRes = await fetch('/api/generate-cover-theme', {
+            // STEP 1: ARCHITECT THE DOCUMENT (Gemini 2.0)
+            const anthoRes = await fetch('/api/generate-anthology', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, description, palette: selectedPalette, layout: selectedLayout }),
+                body: JSON.stringify({ title, description }),
             });
-            if (!themeRes.ok) throw new Error("Falha ao gerar tema da capa");
-            const theme = await themeRes.json();
-            if (!theme?.image_generation_prompt) throw new Error("Resposta do tema inválida");
-            setApprovedTheme(theme);
+            if (!anthoRes.ok) throw new Error("Falha ao arquitetar o documento");
+            const dataAntho = await anthoRes.json();
+            setBlueprint(dataAntho);
+            addLog(`Documento Arquitetado: ${dataAntho?.pages?.length || 0} páginas.`);
 
-            const basePrompt = `Vertical high-end poster design. The title "${title.toUpperCase()}" is prominently displayed in a bold, clean font at the top. The author name "${author || 'Lumina Studio'}" is elegantly integrated at the bottom. Style: ${selectedPalette}, Mood: ${theme.design_mood}. Description: ${theme.image_generation_prompt}. NO 3D MOCKUPS, NO PHYSICAL BOOKS, NO TABLES. 8k, professional graphic design, flat 2D vertical composition. Centered and balanced.`;
+            const style = dataAntho?.global_style || { global_mood: 'Luxury', primary_color: '#ffffff' };
+            const coverPage = dataAntho?.pages?.find((p: any) => p.type === 'cover');
+
+            // Início da geração das 4 opções de capa
+            setCovers(Array.from({ length: 4 }, (_, i) => ({ id: i + 1, status: 'loading', image: null })));
+
+            // Prompt restaurado e simplificado para evitar erros de interpretação
+            const illustrationPrompt = coverPage?.illustration_prompt || description || "High-end conceptual art";
+            const basePrompt = `Professional book cover art for "${title.toUpperCase()}". Style: ${selectedPalette}. Mood: ${style.global_mood}. Detail: ${illustrationPrompt}. Flat 2D digital illustration, editorial design, NO 3D MOCKUPS, NO PHYSICAL BOOKS, 8k, centered. Author: ${author || 'Lumina Studio'}.`;
 
             const updateCard = (id: number, patch: Partial<CoverCard>) => {
                 setCovers(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
@@ -85,10 +108,16 @@ export default function Home() {
                     const data = await res.json();
 
                     // Se for uma imagem real de IA, aceita e para aqui.
-                    if (data.ok && data.image && !data.engine?.includes('Safety') && !data.engine?.includes('Placeholder')) {
+                    if (data.ok && data.image && !data.engine?.includes('Safety') && !data.engine?.includes('Fatal')) {
                         addLog(`[Slot ${id}] OK: ${data.engine}`);
                         updateCard(id, { status: 'success', image: data.image, engine: data.engine });
                         return;
+                    }
+
+                    if (data.diagnostics) {
+                        const diag = data.diagnostics;
+                        if (!diag.hasOpenAI) addLog(`[Slot ${id}] ⚠️ OPENAI_API_KEY AUSENTE`);
+                        if (diag.lastError) addLog(`[Slot ${id}] DETALHE: ${diag.lastError}`);
                     }
 
                     addLog(`[Slot ${id}] Fallback (${data.engine || 'Timeout'}). Bypass...`);
@@ -137,32 +166,164 @@ export default function Home() {
         }
     };
 
-    const handleCreateEbook = async () => {
-        const activeCover = selectedCoverIndex !== null ? covers[selectedCoverIndex]?.image : null;
-        if (!content || !activeCover) return;
-        setIsLoading(true); setActiveTab('export');
-        addLog("Compilando Infallible G26...");
-        try {
-            const res = await fetch('/api/generate-ebook', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content, approvedTitle: title, approvedTheme, approvedAuthor: author, description }),
+    // --- A4 PAGE RENDERER ---
+    const A4Page = ({ page, index }: { page: AnthologyPage; index: number }) => {
+        return (
+            <div className="relative w-full aspect-[210/297] bg-black overflow-hidden shadow-2xl border border-white/5 rounded-3xl mb-20 group">
+                {page.image ? (
+                    <img src={page.image} className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-1000" />
+                ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-black to-[#050510]" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40" />
+                <div className="absolute inset-0 p-16 flex flex-col justify-between z-10">
+                    <div className="space-y-6">
+                        <span className="text-white/30 text-[10px] font-black tracking-[8px] uppercase">Page {index + 1} // {page.type}</span>
+                        <h2 className="text-5xl font-black tracking-tighter text-white italic leading-none max-w-[80%]">{page.title}</h2>
+                        {page.subtitle && <p className="text-white/60 text-lg font-medium tracking-wide">{page.subtitle}</p>}
+                    </div>
+                    <div className="space-y-8">
+                        {page.content && <p className="text-white/80 text-xl leading-relaxed font-medium">{page.content}</p>}
+                        {page.items && (
+                            <div className="grid grid-cols-1 gap-6">
+                                {page.items.map((item, i) => (
+                                    <div key={i} className="flex items-center gap-6 bg-white/5 backdrop-blur-md p-6 rounded-2xl border border-white/5">
+                                        <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_15px_rgba(168,85,247,1)]" />
+                                        <span className="text-white/90 font-bold tracking-tight">{item}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+                {page.status === 'loading' && (
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-20">
+                        <Loader2 className="w-10 h-10 text-white animate-spin" />
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const handleStartFullGeneration = async () => {
+        if (!blueprint) return;
+        setActiveTab('editorial');
+        addLog("Iniciando Geração da Antologia A4...");
+
+        blueprint.pages.forEach(async (page, idx) => {
+            if (page.type === 'cover') {
+                const activeImg = selectedCoverIndex !== null ? covers[selectedCoverIndex].image : null;
+                setBlueprint(prev => {
+                    const newPages = [...(prev?.pages || [])];
+                    newPages[idx] = { ...newPages[idx], status: 'success', image: activeImg };
+                    return { ...prev!, pages: newPages };
+                });
+                return;
+            }
+
+            setBlueprint(prev => {
+                const newPages = [...(prev?.pages || [])];
+                newPages[idx] = { ...newPages[idx], status: 'loading' };
+                return { ...prev!, pages: newPages };
             });
-            const data = await res.json();
-            setGeneratedEbook(data);
-        } catch (e) { addLog("Erro."); }
-        finally { setIsLoading(false); }
+
+            try {
+                const res = await fetch('/api/generate-cover', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: page.illustration_prompt, title: page.title, model: 'auto' }),
+                    signal: AbortSignal.timeout(15000)
+                });
+                const data = await res.json();
+
+                if (data.ok && data.image && !data.engine?.includes('Safety') && !data.engine?.includes('Fatal')) {
+                    setBlueprint(prev => {
+                        const newPages = [...(prev?.pages || [])];
+                        newPages[idx] = { ...newPages[idx], status: 'success', image: data.image };
+                        return { ...prev!, pages: newPages };
+                    });
+                } else {
+                    addLog(`[Pág ${idx + 1}] Fallback: ${data.engine}. Bypass...`);
+                    // Browser Bypass Fallback
+                    try {
+                        const seed = Math.floor(Math.random() * 999999);
+                        const pollUrl = `https://pollinations.ai/p/${encodeURIComponent(page.illustration_prompt.substring(0, 400))}?width=1024&height=1024&seed=${seed}&model=flux&nologo=true`;
+                        const proxyRes = await fetch('/api/proxy-image', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ url: pollUrl })
+                        });
+                        if (proxyRes.ok) {
+                            const proxyData = await proxyRes.json();
+                            if (proxyData.base64) {
+                                setBlueprint(prev => {
+                                    const newPages = [...(prev?.pages || [])];
+                                    newPages[idx] = { ...newPages[idx], status: 'success', image: proxyData.base64 };
+                                    return { ...prev!, pages: newPages };
+                                });
+                                return;
+                            }
+                        }
+                    } catch (e) {
+                        addLog(`[Pág ${idx + 1}] Falha no Bypass.`);
+                    }
+
+                    setBlueprint(prev => {
+                        const newPages = [...(prev?.pages || [])];
+                        newPages[idx] = { ...newPages[idx], status: 'error' };
+                        return { ...prev!, pages: newPages };
+                    });
+                }
+            } catch (e) {
+                addLog(`Erro Página ${idx + 1}`);
+                setBlueprint(prev => {
+                    const newPages = [...(prev?.pages || [])];
+                    newPages[idx] = { ...newPages[idx], status: 'error' };
+                    return { ...prev!, pages: newPages };
+                });
+            }
+        });
+    };
+
+    const handleCreateEbook = () => {
+        if (!blueprint) return;
+        setIsLoading(true);
+        setActiveTab('export');
+        addLog("Preparando Exportação...");
+        setTimeout(() => setIsLoading(false), 2000);
     };
 
     const downloadPDF = async () => {
-        const activeCover = selectedCoverIndex !== null ? covers[selectedCoverIndex]?.image : null;
-        if (!generatedEbook || !activeCover) return;
+        if (!blueprint) return;
         setIsLoading(true);
         const doc = new jsPDF();
 
-        // Detecta o tipo da imagem (Charles's Fix)
-        const imageType = activeCover.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+        blueprint.pages.forEach((page, i) => {
+            if (page.image) {
+                const imageType = page.image.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+                doc.addImage(page.image, imageType, 0, 0, 210, 297, undefined, 'FAST');
 
-        doc.addImage(activeCover, imageType, 0, 0, 210, 297, undefined, 'FAST');
+                if (page.type !== 'cover') {
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(28);
+                    doc.text(page.title.toUpperCase(), 20, 50);
+
+                    doc.setFont("helvetica", "normal");
+                    doc.setFontSize(14);
+                    if (page.content) {
+                        const splitText = doc.splitTextToSize(page.content, 170);
+                        doc.text(splitText, 20, 70);
+                    }
+                    if (page.items) {
+                        page.items.forEach((item, idx) => {
+                            doc.text(`• ${item}`, 25, 120 + (idx * 10));
+                        });
+                    }
+                }
+
+                if (i < blueprint.pages.length - 1) doc.addPage();
+            }
+        });
+
         doc.save(`${title.replace(/\s/g, '_')}.pdf`);
         setIsLoading(false);
     };
@@ -183,8 +344,8 @@ export default function Home() {
                         <TabButton icon={<Palette />} label="Design" active={activeTab === 'design'} onClick={() => setActiveTab('design')} />
                         <TabButton icon={<Cpu />} label="Motores AI" active={activeTab === 'engines'} onClick={() => setActiveTab('engines')} />
                         <TabButton icon={<BookOpen />} label="Galeria" active={activeTab === 'gallery'} onClick={() => (covers.length > 0 || isLoading) && setActiveTab('gallery')} disabled={covers.length === 0 && !isLoading} />
-                        <TabButton icon={<MessageSquare />} label="Escrita" active={activeTab === 'editorial'} onClick={() => setActiveTab('editorial')} disabled={covers.length === 0} />
-                        <TabButton icon={<Download />} label="Salvar" active={activeTab === 'export'} onClick={() => setActiveTab('export')} disabled={!generatedEbook} />
+                        <TabButton icon={<MessageSquare />} label="Escrita" active={activeTab === 'editorial'} onClick={() => setActiveTab('editorial')} disabled={!blueprint} />
+                        <TabButton icon={<Download />} label="Salvar" active={activeTab === 'export'} onClick={() => setActiveTab('export')} disabled={!blueprint} />
                     </nav>
                 </aside>
 
@@ -192,10 +353,10 @@ export default function Home() {
                     <header className="h-24 border-b border-white/5 flex items-center justify-between px-16 bg-[#020205]/95 backdrop-blur-3xl sticky top-0 z-40">
                         <div className="flex items-center gap-3">
                             <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse shadow-[0_0_15px_rgba(59,130,246,0.6)]"></div>
-                            <span className="text-[10px] font-black uppercase tracking-[8px] text-white/30 italic">Nano-Banana G26.1 INFALLIBLE 🛡️</span>
+                            <span className="text-[10px] font-black uppercase tracking-[8px] text-white/30 italic">Anthology G27.1 DYNAMIC</span>
                         </div>
-                        {covers.length > 0 && activeTab !== 'export' && (
-                            <button onClick={handleCreateEbook} className="bg-white text-black px-12 py-3 rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all font-bold shadow-2xl">Compilar Obra Final</button>
+                        {blueprint && activeTab === 'editorial' && (
+                            <button onClick={handleCreateEbook} className="bg-white text-black px-12 py-3 rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all font-bold shadow-2xl">Finalizar Documento</button>
                         )}
                     </header>
 
@@ -204,13 +365,13 @@ export default function Home() {
                             {activeTab === 'config' && (
                                 <motion.div key="config" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="max-w-3xl pb-20">
                                     <h1 className="text-8xl font-black tracking-tighter mb-8 text-gradient italic leading-none">O Infalível.</h1>
-                                    <p className="text-white/30 mb-20 text-lg max-w-sm font-medium leading-relaxed">Versão 26: A única que respeita os limites da Vercel Hobby enquanto usa o poder do seu browser para nunca permitir um timeout.</p>
+                                    <p className="text-white/30 mb-20 text-lg max-w-sm font-medium leading-relaxed">Antologia Dinâmica A4: Diagramação automática de múltiplos layouts em alta definição.</p>
 
                                     <div className="space-y-12">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                             <div className="space-y-4">
-                                                <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20 ml-2">Título do Livro</label>
-                                                <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título da Arte" className="w-full bg-white/[0.03] border border-white/10 rounded-3xl p-8 text-2xl font-bold focus:border-purple-500/50 transition-all outline-none text-white" />
+                                                <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20 ml-2">Título da Obra</label>
+                                                <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: O Futuro da IA" className="w-full bg-white/[0.03] border border-white/10 rounded-3xl p-8 text-2xl font-bold focus:border-purple-500/50 transition-all outline-none text-white" />
                                             </div>
                                             <div className="space-y-4">
                                                 <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20 ml-2">Autor</label>
@@ -218,55 +379,12 @@ export default function Home() {
                                             </div>
                                         </div>
                                         <div className="space-y-4">
-                                            <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20 ml-2">Visão do Projeto</label>
-                                            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Descreva sua estética..." rows={3} className="w-full bg-white/[0.03] border border-white/10 rounded-3xl p-8 text-xl font-medium focus:border-purple-500/50 transition-all outline-none resize-none text-white" />
+                                            <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20 ml-2">Contexto para Diagramação</label>
+                                            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Descreva os tópicos principais..." rows={3} className="w-full bg-white/[0.03] border border-white/10 rounded-3xl p-8 text-xl font-medium focus:border-purple-500/50 transition-all outline-none resize-none text-white" />
                                         </div>
                                         <button onClick={handleGenerateCover} disabled={isLoading || !title} className="group relative w-full py-10 bg-white text-black font-black uppercase tracking-[6px] rounded-[50px] hover:bg-white/90 transition-all flex items-center justify-center gap-6 shadow-2xl">
-                                            {isLoading ? <Loader2 className="animate-spin w-10 h-10" /> : <Zap className="w-10 h-10 fill-current" />} PINTAR CAPA G26
+                                            {isLoading ? <Loader2 className="animate-spin w-10 h-10" /> : <Zap className="w-10 h-10 fill-current" />} ARQUITETAR A4
                                         </button>
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            {activeTab === 'design' && (
-                                <motion.div key="design" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-4xl pb-20">
-                                    <h1 className="text-8xl font-black tracking-tighter mb-8 text-gradient italic leading-none">Estéticas.</h1>
-                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-                                        {['Cyberpunk', 'Elegant', 'Minimalist', 'Artistic', 'Vintage', 'Noir', 'Ethereal', 'Realistic'].map(p => (
-                                            <button key={p} onClick={() => setSelectedPalette(p)} className={`p-10 rounded-[50px] border transition-all text-[11px] font-black uppercase tracking-widest ${selectedPalette === p ? 'bg-blue-600 border-blue-400 text-white shadow-2xl' : 'bg-white/5 border-white/5 hover:border-white/20 text-white/40'}`}>{p}</button>
-                                        ))}
-                                    </div>
-                                    <div className="mt-20">
-                                        <label className="text-[10px] font-black uppercase tracking-[6px] text-white/20 mb-10 block">Layout Visual</label>
-                                        <div className="flex gap-8">
-                                            {['Impact', 'Classic', 'Clean', 'Dynamic'].map(l => (
-                                                <button key={l} onClick={() => setSelectedLayout(l)} className={`px-12 py-6 rounded-full border transition-all text-[11px] font-black uppercase tracking-[4px] ${selectedLayout === l ? 'bg-white text-black border-white shadow-xl' : 'bg-white/5 border-white/5 text-white/30'}`}>{l}</button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            {activeTab === 'engines' && (
-                                <motion.div key="engines" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl pb-20">
-                                    <h1 className="text-8xl font-black tracking-tighter mb-8 text-gradient italic leading-none">Motores.</h1>
-                                    <p className="text-white/30 mb-20 text-lg font-medium leading-relaxed">Configuração de Redundância Total para Vercel Hobby (10s).</p>
-                                    <div className="space-y-6">
-                                        {[
-                                            { id: 'auto', name: 'G26 Autopilot', desc: 'Sempre garante a imagem (Server 10s -> Browser Bypass)', color: 'from-blue-600 to-indigo-600' },
-                                            { id: 'dalle', name: 'DALL-E 3 (OpenAI)', desc: 'Qualidade Cinematográfica Máxima', color: 'from-purple-600 to-blue-600' },
-                                            { id: 'gemini', name: 'Gemini Imagen 3', desc: 'O Auge do Google (Imagen 3)', color: 'from-blue-600 to-emerald-600' }
-                                        ].map(m => (
-                                            <button key={m.id} onClick={() => setSelectedModel(m.id)} className={`w-full p-10 rounded-[50px] border transition-all flex items-center justify-between group ${selectedModel === m.id ? 'bg-white/10 border-white/20 shadow-2xl' : 'bg-white/5 border-white/5 hover:bg-white/[0.08]'}`}>
-                                                <div className="flex flex-col text-left space-y-2">
-                                                    <span className={`font-black uppercase tracking-[3px] text-lg ${selectedModel === m.id ? 'text-white' : 'text-white/40 group-hover:text-white'}`}>{m.name}</span>
-                                                    <span className="text-[10px] font-medium text-white/20 uppercase tracking-[4px]">{m.desc}</span>
-                                                </div>
-                                                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-tr ${m.color} flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity`}>
-                                                    {selectedModel === m.id && <CheckCircle2 className="w-6 h-6 text-white" />}
-                                                </div>
-                                            </button>
-                                        ))}
                                     </div>
                                 </motion.div>
                             )}
@@ -293,16 +411,10 @@ export default function Home() {
                                                         <img src={c.image} className="w-full h-full object-cover" />
                                                         {selectedCoverIndex === i && (
                                                             <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                                                                <button onClick={() => setActiveTab('editorial')} className="bg-white text-black px-10 py-5 rounded-full font-black uppercase tracking-[4px] shadow-2xl hover:scale-110 transition-all text-[11px]">Selecionar esta Capa</button>
+                                                                <button onClick={handleStartFullGeneration} className="bg-white text-black px-10 py-5 rounded-full font-black uppercase tracking-[4px] shadow-2xl hover:scale-110 transition-all text-[11px]">Selecionar esta Capa</button>
                                                             </div>
                                                         )}
                                                     </>
-                                                )}
-                                                {c.status === 'error' && (
-                                                    <div className="absolute inset-0 flex flex-col items-center justify-center p-10 text-center gap-6">
-                                                        <AlertCircle className="w-12 h-12 text-pink-500/30" />
-                                                        <span className="text-[10px] font-black uppercase tracking-[4px] text-pink-500/50 italic">{c.error}</span>
-                                                    </div>
                                                 )}
                                             </motion.div>
                                         ))}
@@ -312,16 +424,22 @@ export default function Home() {
                             )}
 
                             {activeTab === 'editorial' && (
-                                <motion.div key="editorial" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col xl:flex-row gap-24 pb-40">
-                                    <div className="flex-1 space-y-12">
-                                        <h1 className="text-8xl font-black tracking-tighter mb-8 text-gradient italic leading-none">Redação.</h1>
-                                        <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Aqui sua obra cria vida..." className="w-full bg-white/[0.01] border border-white/5 rounded-[80px] p-16 text-white/80 text-2xl leading-relaxed min-h-[900px] outline-none focus:border-purple-500/20 transition-all shadow-2xl custom-scrollbar" />
-                                    </div>
-                                    <div className="w-full xl:w-[500px] space-y-14 sticky top-12">
-                                        <div className="aspect-[2.2/3.5] rounded-[80px] overflow-hidden shadow-[0_80px_150px_-30px_rgba(168,85,247,0.5)] border border-white/10 bg-black">
-                                            {selectedCoverIndex !== null && covers[selectedCoverIndex]?.image && <img src={covers[selectedCoverIndex].image} className="w-full h-full object-cover" />}
+                                <motion.div key="editorial" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-12 pb-40">
+                                    <div className="max-w-4xl w-full flex justify-between items-end mb-10">
+                                        <h1 className="text-7xl font-black tracking-tighter text-gradient italic leading-none">Diagramação.</h1>
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-black uppercase tracking-[4px] text-white/20 mb-2">Sincronização Ativa</p>
+                                            <div className="flex gap-2 justify-end">
+                                                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_blue]" />
+                                                <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_purple]" />
+                                            </div>
                                         </div>
-                                        <button onClick={() => setActiveTab('gallery')} className="w-full py-8 bg-white/5 border border-white/10 rounded-[45px] text-[13px] font-black uppercase tracking-[6px] hover:bg-white/10 transition-all">Alterar Imagem</button>
+                                    </div>
+
+                                    <div className="max-w-4xl w-full space-y-20">
+                                        {blueprint?.pages.map((p, i) => (
+                                            <A4Page key={i} page={p} index={i} />
+                                        ))}
                                     </div>
                                 </motion.div>
                             )}
@@ -330,10 +448,10 @@ export default function Home() {
                                 <motion.div key="export" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-60 text-center space-y-24">
                                     <div className="w-60 h-60 bg-green-500/5 rounded-full flex items-center justify-center shadow-[0_0_150px_rgba(34,197,94,0.4)] border border-green-500/10"><CheckCircle2 className="w-32 h-32 text-green-500" /></div>
                                     <div className="space-y-6">
-                                        <h2 className="text-9xl font-black tracking-tighter italic text-gradient leading-none">Finalizado.</h2>
-                                        <p className="text-white/20 text-3xl font-medium tracking-[15px] uppercase mt-10">G26 Infallible Edition</p>
+                                        <h1 className="text-9xl font-black tracking-tighter italic text-gradient leading-none">Pronto.</h1>
+                                        <p className="text-white/20 text-3xl font-medium tracking-[15px] uppercase mt-10">G27.1 Anthology Edition</p>
                                     </div>
-                                    <button onClick={downloadPDF} className="bg-white text-black px-32 py-16 rounded-[70px] font-black uppercase text-2xl flex items-center gap-12 hover:scale-110 active:scale-95 transition-all shadow-2xl shadow-white/5"><FileDown className="w-16 h-16" /> SALVAR E-BOOK HD</button>
+                                    <button onClick={downloadPDF} className="bg-white text-black px-32 py-16 rounded-[70px] font-black uppercase text-2xl flex items-center gap-12 hover:scale-110 active:scale-95 transition-all shadow-2xl shadow-white/5"><FileDown className="w-16 h-16" /> SALVAR DOCUMENTO A4</button>
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -341,7 +459,7 @@ export default function Home() {
 
                     <div className="fixed bottom-14 right-14 w-[500px] bg-[#050510]/98 backdrop-blur-3xl border border-white/5 p-16 rounded-[80px] flex flex-col gap-12 z-50 shadow-2xl border-t border-blue-500/20">
                         <div className="flex items-center justify-between border-b border-white/5 pb-10">
-                            <span className="text-[14px] font-black uppercase tracking-[12px] text-white/30 italic">INFALLIBLE MONITOR G26</span>
+                            <span className="text-[14px] font-black uppercase tracking-[12px] text-white/30 italic">ANTHOLOGY MONITOR G27</span>
                             <div className="flex gap-3">
                                 <span className="w-3 h-3 bg-blue-500 rounded-full animate-pulse shadow-[0_0_10px_blue]"></span>
                             </div>
