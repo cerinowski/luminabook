@@ -52,11 +52,13 @@ export async function POST(req: Request) {
     } catch (error: any) {
         console.error("[G18 PROXY FAILURE]", error.message);
 
-        // ULTIMO RECURSO: Retornar um placeholder válido em vez de 500
+        // ULTIMO RECURSO: Retornar um placeholder vibrante (sem ambiguidade)
         const svg = `
           <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024">
-            <rect width="100%" height="100%" fill="#050510"/>
-            <text x="50%" y="50%" text-anchor="middle" fill="#ffffff" font-size="30" font-family="sans-serif">IMAGEM INDISPONÍVEL</text>
+            <rect width="100%" height="100%" fill="#ff0040"/>
+            <text x="50%" y="45%" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-size="60" font-weight="bold" font-family="sans-serif">FALLBACK IRON</text>
+            <text x="50%" y="55%" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-size="30" font-family="sans-serif">IMAGEM REAL NÃO FOI CARREGADA</text>
+            <text x="50%" y="62%" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-size="20" font-family="monospace" opacity="0.8">${error.message.substring(0, 50)}</text>
           </svg>
         `.trim();
         const placeholderB64 = Buffer.from(svg).toString("base64");
