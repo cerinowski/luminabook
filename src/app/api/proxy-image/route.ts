@@ -64,6 +64,7 @@ export async function POST(req: Request) {
         return NextResponse.json({
             base64: `data:image/svg+xml;base64,${placeholderB64}`,
             error: error.message,
+            isFallback: true,
             engine: 'Proxy-Fallback'
         });
     }
