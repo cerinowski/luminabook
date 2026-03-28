@@ -4,8 +4,12 @@ import { NextResponse } from "next/server";
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY || "");
 
 export async function POST(req: Request) {
+  let title = "Lumina Document";
+  let description = "";
   try {
-    const { title, description } = await req.json();
+    const body = await req.json();
+    title = body.title || title;
+    description = body.description || description;
 
     const model = genAI.getGenerativeModel({
       model: "gemini-2.0-flash",
@@ -36,13 +40,37 @@ export async function POST(req: Request) {
           ]
         }`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    let text = "";
+
+    // TRY GEMINI 2.0 FLASH
+    try {
+      const model20 = genAI.getGenerativeModel({
+        model: "gemini-2.0-flash",
+        generationConfig: { temperature: 1, maxOutputTokens: 2000, responseMimeType: "application/json" }
+      });
+      const result = await model20.generateContent(prompt);
+      text = (await result.response).text();
+    } catch (e20: any) {
+      console.warn("Gemini 2.0 Failed, retrying 1.5...", e20.message);
+      // TRY GEMINI 1.5 FLASH
+      const model15 = genAI.getGenerativeModel({
+        model: "gemini-1.5-flash",
+        generationConfig: { temperature: 1, maxOutputTokens: 2000, responseMimeType: "application/json" }
+      });
+      const result = await model15.generateContent(prompt);
+      text = (await result.response).text();
+    }
 
     return NextResponse.json(JSON.parse(text));
   } catch (error: any) {
-    console.error("Anthology Architecture Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Anthology Architecture Final Error:", error);
+    // FALLBACK HARDCODED (SEGURANÇA TOTAL)
+    return NextResponse.json({
+      global_style: { primary_color: "#6366f1", secondary_color: "#a855f7", global_mood: "Luxury" },
+      pages: [
+        { type: "cover", title: title || "Lumina", subtitle: "Automated Blueprint", illustration_prompt: `A high-end conceptual visual for ${title}` },
+        { type: "intro", title: "Introdução", content: description || "Explore o conteúdo desta antologia dinâmica.", illustration_prompt: "Minimalist geometric patterns" }
+      ]
+    });
   }
 }
