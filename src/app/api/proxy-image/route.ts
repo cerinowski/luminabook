@@ -12,57 +12,59 @@ const isValidImage = (buffer: Buffer) => {
 };
 
 export async function POST(req: Request) {
+    let currentUrl = "";
     try {
         const { url } = await req.json();
+        currentUrl = url;
 
-        if (!url) {
-            return NextResponse.json({ error: 'URL is required' }, { status: 400 });
+        if (!url || typeof url !== 'string') {
+            throw new Error("URL inválida ou ausente");
         }
 
-        try {
-            new URL(url);
-        } catch {
-            return NextResponse.json({ error: 'Invalid URL' }, { status: 400 });
-        }
-
-        console.log(`[G18 PROXY] Fetching: ${url.substring(0, 100)}...`);
+        console.log(`[G18 PROXY] Target: ${url.substring(0, 100)}...`);
 
         const res = await fetch(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0',
-                'Accept': 'image/*'
-            },
+            headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'image/*' },
             cache: 'no-store',
-            signal: AbortSignal.timeout(10000)
+            signal: AbortSignal.timeout(15000) // Aumentado para 15s
         });
 
         if (!res.ok) {
-            console.error(`[G18 PROXY] Fetch failed for ${url}: ${res.status}`);
-            return NextResponse.json({ error: 'Fetch failed' }, { status: 500 });
+            throw new Error(`Upstream returned ${res.status}`);
         }
 
         const arrayBuffer = await res.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        if (!isValidImage(buffer)) {
-            console.warn("[G18 PROXY] Rejeitado por integridade:", buffer.length);
-            return NextResponse.json({ error: 'Integrity Check Failed' }, { status: 500 });
+        if (buffer.length < 500) {
+            throw new Error("Resposta muito curta (provável erro do upstream)");
         }
 
-        let finalType = 'image/jpeg';
-        if (buffer[0] === 0x89) finalType = 'image/png';
-
+        let contentType = res.headers.get("content-type") || "image/jpeg";
         const b64 = buffer.toString('base64');
 
-        console.log(`[G18 PROXY] Success: ${Math.round(buffer.length / 1024)}KB`);
         return NextResponse.json({
-            base64: `data:${finalType};base64,${b64}`,
+            base64: `data:${contentType};base64,${b64}`,
             size: buffer.length,
-            engine: 'Proxy-Iron'
+            engine: 'Proxy-Iron (Flux)'
         });
 
     } catch (error: any) {
-        console.error("[G18 PROXY ERROR]", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("[G18 PROXY FAILURE]", error.message);
+
+        // ULTIMO RECURSO: Retornar um placeholder válido em vez de 500
+        const svg = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024">
+            <rect width="100%" height="100%" fill="#050510"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="#ffffff" font-size="30" font-family="sans-serif">IMAGEM INDISPONÍVEL</text>
+          </svg>
+        `.trim();
+        const placeholderB64 = Buffer.from(svg).toString("base64");
+
+        return NextResponse.json({
+            base64: `data:image/svg+xml;base64,${placeholderB64}`,
+            error: error.message,
+            engine: 'Proxy-Fallback'
+        });
     }
 }
