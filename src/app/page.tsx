@@ -37,8 +37,7 @@ export default function Home() {
     type AnthologyPage = {
         type: string;
         title: string;
-        content?: string;
-        subtitle?: string;
+        subtitle: string;
         items?: string[];
         illustration_prompt: string;
         image?: string | null;
@@ -183,7 +182,6 @@ export default function Home() {
                         {page.subtitle && <p className="text-white/60 text-lg font-medium tracking-wide">{page.subtitle}</p>}
                     </div>
                     <div className="space-y-8">
-                        {page.content && <p className="text-white/80 text-xl leading-relaxed font-medium">{page.content}</p>}
                         {page.items && (
                             <div className="grid grid-cols-1 gap-6">
                                 {page.items.map((item, i) => (
@@ -309,8 +307,8 @@ export default function Home() {
 
                     doc.setFont("helvetica", "normal");
                     doc.setFontSize(14);
-                    if (page.content) {
-                        const splitText = doc.splitTextToSize(page.content, 170);
+                    if (page.subtitle) {
+                        const splitText = doc.splitTextToSize(page.subtitle, 170);
                         doc.text(splitText, 20, 70);
                     }
                     if (page.items) {
