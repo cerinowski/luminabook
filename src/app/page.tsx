@@ -132,13 +132,14 @@ export default function Home() {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ url: pollUrl })
                     });
-                    if (proxyRes.ok) {
-                        const data = await proxyRes.json();
-                        if (data.base64) {
-                            addLog(`[Slot ${id}] Bypass OK.`);
-                            updateCard(id, { status: 'success', image: data.base64, engine: 'Proxy-Iron' });
-                            return;
-                        }
+
+                    const data = await proxyRes.json();
+                    console.log(`[Slot ${id}] PROXY RESPONSE:`, data);
+
+                    if (data.base64) {
+                        addLog(`[Slot ${id}] Bypass OK. ${data.isFallback ? '(FALLBACK)' : '(REAL)'}`);
+                        updateCard(id, { status: 'success', image: data.base64, engine: data.engine || 'Proxy-Iron' });
+                        return;
                     }
                 } catch (e: any) {
                     addLog(`[Slot ${id}] Falha total.`);
