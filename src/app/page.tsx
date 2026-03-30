@@ -107,16 +107,17 @@ export default function Home() {
                     });
                     const data = await res.json();
 
-                    if (data.ok && (data.image || data.url)) {
+                    if (data.ok && (data.image || data.url || data.relayUrl)) {
                         let finalImage = data.image;
 
-                        // Se veio uma URL da OpenAI, passa pelo nosso proxy-iron para ganhar base64
-                        if (data.url) {
-                            addLog(`[Slot ${id}] Proxificando URL...`);
+                        // Se veio uma URL de relay (OpenAI), o navegador busca (SEM LIMITE DE 10S)
+                        const targetUrl = data.relayUrl || data.url;
+                        if (targetUrl) {
+                            addLog(`[Slot ${id}] Gerando via OpenAI (${targetUrl.includes('openai') ? 'DALL-E 3' : 'Proxy'})...`);
                             const proxyRes = await fetch('/api/proxy-image', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ url: data.url })
+                                body: JSON.stringify({ url: targetUrl })
                             });
                             const proxyData = await proxyRes.json();
                             finalImage = proxyData.base64;

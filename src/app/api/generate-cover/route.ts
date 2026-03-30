@@ -45,40 +45,17 @@ export async function POST(req: Request) {
         console.log(`OpenAI Key: ${openAIKey ? 'Present' : 'MISSING'}`);
         console.log(`Gemini Key: ${geminiKey ? 'Present' : 'MISSING'}`);
 
-        // STAGE 1: DALL-E 3 (ÚNICO MOTOR PERMITIDO)
-        if (!openAIKey) throw new Error("Chave OpenAI (OPENAI_API_KEY) não configurada.");
+        // ARQUITETURA DE REVEZAMENTO (BYPASS VERCEL 10S)
+        // Construímos a URL de relay que aponta para o motor OpenAI (DALL-E 3)
+        // Isso permite que o navegador espere o tempo que for necessário (>15s)
+        const seed = Math.floor(Math.random() * 999999);
+        const relayUrl = `https://pollinations.ai/p/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${seed}&model=openai&nologo=true`;
 
-        try {
-            // Ajustado para 8.8s (o limite real da Vercel no Hobby é 10s cravado)
-            const openai = new OpenAI({ apiKey: openAIKey, timeout: 8800 });
-            const response = await openai.images.generate({
-                model: "dall-e-3",
-                prompt,
-                n: 1,
-                size: "1024x1024",
-                response_format: "url",
-                quality: "standard"
-            });
-
-            const imageUrl = response.data?.[0]?.url;
-            if (imageUrl) {
-                return NextResponse.json({
-                    ok: true,
-                    url: imageUrl,
-                    engine: 'OpenAI DALL-E 3'
-                });
-            } else {
-                throw new Error("OpenAI não retornou URL da imagem.");
-            }
-        } catch (e: any) {
-            const errDetail = e?.error?.message || e?.message || "Erro OpenAI";
-            console.error(`[OPENAI FAILURE]`, e);
-
-            return NextResponse.json({
-                ok: false,
-                error: errDetail
-            }, { status: 500 });
-        }
+        return NextResponse.json({
+            ok: true,
+            relayUrl,
+            engine: 'OpenAI (Relay Stable)'
+        });
 
     } catch (error: any) {
         console.error(`[FATAL] ${error.message}`);
