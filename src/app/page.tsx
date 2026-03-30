@@ -10,10 +10,10 @@ const GOOGLE_FONTS_URL = "https://fonts.googleapis.com/css2?family=Playfair+Disp
 export default function Home() {
     const [title, setTitle] = useState('');
     const [author, setAuthor] = useState('');
-    const [description, setDescription] = useState('');
-    const [content, setContent] = useState('');
+    const [coverPrompt, setCoverPrompt] = useState('');
+    const [fullContent, setFullContent] = useState('');
     const [activeTab, setActiveTab] = useState('config');
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingAntho, setIsLoadingAntho] = useState(false);
     const [debugLogs, setDebugLogs] = useState<string[]>([]);
 
     type CoverCard = {
@@ -30,7 +30,8 @@ export default function Home() {
     const [selectedCoverIndex, setSelectedCoverIndex] = useState<number | null>(null);
 
     const [selectedPalette, setSelectedPalette] = useState('Luxury');
-    const [selectedLayout, setSelectedLayout] = useState('Impact');
+    const [selectedTheme, setSelectedTheme] = useState<'light' | 'dark'>('dark');
+    const [selectedFont, setSelectedFont] = useState('Montserrat');
 
     // --- ANTHOLOGY G27.1 ---
     type AnthologyPage = {
@@ -62,33 +63,15 @@ export default function Home() {
 
     const handleGenerateCover = async () => {
         if (!title) return alert("Título é obrigatório!");
-        setIsLoading(true);
         setActiveTab('gallery');
         setSelectedCoverIndex(null);
-
-        // Estado Único e Focado G28
         setCovers([{ id: 1, status: 'loading', image: null }]);
-        addLog(`G27.1 Anthology Architecting...`);
 
         try {
-            // STEP 1: ARCHITECT THE DOCUMENT (Gemini 2.0)
-            const anthoRes = await fetch('/api/generate-anthology', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, description }),
-            });
-            if (!anthoRes.ok) throw new Error("Falha ao arquitetar o documento");
-            const dataAntho = await anthoRes.json();
-            setBlueprint(dataAntho);
-            addLog(`Arquitetura OK.`);
-
-            const style = dataAntho?.global_style || { global_mood: 'Luxury', primary_color: '#ffffff' };
-            const coverPage = dataAntho?.pages?.find((p: any) => p.type === 'cover');
-
-            // Geração Única G29 - Foco em Integridade do Texto e 2D Real
-            const illustrationPrompt = coverPage?.illustration_prompt || description || "High-end conceptual art";
+            const style = { global_mood: 'Luxury', primary_color: '#ffffff' };
             const basePrompt = `Professional book cover art for "${title.toUpperCase()}" by "${author || 'Lumina'}". 
             The words "${title.toUpperCase()}" and "${author || 'Lumina'}" MUST be clearly written and integrated into the artwork.
-            Style: ${selectedPalette}. Mood: ${style.global_mood}. Detail: ${illustrationPrompt}. 
+            Style: ${selectedPalette}. Mood: ${style.global_mood}. Detail: ${coverPrompt}. 
             FLAT 2D DIGITAL ILLUSTRATION ONLY. NO 3D MOCKUPS, NO PHYSICAL BOOKS, NO PERSPECTIVE VIEWS. 
             High contrast, 8k, centered masterpiece.`;
 
@@ -99,50 +82,30 @@ export default function Home() {
             const generateOne = async (id: number, customPrompt: string) => {
                 try {
                     addLog(`Iniciando OpenAI (Deep-Client)...`);
-
                     const keyRes = await fetch('/api/get-key');
                     const { key } = await keyRes.json();
                     if (!key) throw new Error("Chave não encontrada");
 
-                    addLog(`Gerando imagem (DALL-E 3)...`);
                     const oaiRes = await fetch('https://api.openai.com/v1/images/generations', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${key}`
-                        },
-                        body: JSON.stringify({
-                            model: "dall-e-3",
-                            prompt: customPrompt,
-                            n: 1,
-                            size: "1024x1024",
-                            quality: "standard"
-                        })
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+                        body: JSON.stringify({ model: "dall-e-3", prompt: customPrompt, n: 1, size: "1024x1024", quality: "standard" })
                     });
-
                     if (!oaiRes.ok) {
                         const err = await oaiRes.json();
                         throw new Error(err.error?.message || "Erro na OpenAI");
                     }
-
                     const oaiData = await oaiRes.json();
                     const imageUrl = oaiData.data[0].url;
 
                     if (imageUrl) {
-                        addLog(`Imagem pronta. Finalizando...`);
-
                         const proxyRes = await fetch('/api/proxy-image', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ url: imageUrl })
                         });
                         const proxyData = await proxyRes.json();
-
                         if (proxyData.base64) {
-                            addLog(`Sucesso OAI DALL-E 3.`);
                             updateCard(id, { status: 'success', image: proxyData.base64, engine: 'OpenAI' });
-                        } else {
-                            throw new Error("Erro na renderização final");
                         }
                     }
                 } catch (e: any) {
@@ -152,17 +115,36 @@ export default function Home() {
             };
 
             await generateOne(1, basePrompt);
-            setIsLoading(false);
             setSelectedCoverIndex(0);
-
         } catch (e: any) {
-            addLog(`Erro: ${e?.message?.substring(0, 20) || 'erro desconhecido'}`);
-            setIsLoading(false);
+            addLog(`Erro: ${e.message}`);
         }
     };
 
-    // --- A4 PAGE RENDERER (LP STYLE) ---
+    const handleArchitectContent = async () => {
+        if (!fullContent) return alert("Cole o conteúdo do eBook primeiro!");
+        setIsLoadingAntho(true);
+        addLog(`Arquitetando Conteúdo com Gemini...`);
+
+        try {
+            const anthoRes = await fetch('/api/generate-anthology', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, description: fullContent }),
+            });
+            if (!anthoRes.ok) throw new Error("Falha ao arquitetar o documento");
+            const dataAntho = await anthoRes.json();
+            setBlueprint(dataAntho);
+            addLog(`Diagramação Concluída.`);
+            setIsLoadingAntho(false);
+            handleStartFullGeneration(dataAntho);
+        } catch (e: any) {
+            addLog(`Erro na Diagramação: ${e.message}`);
+            setIsLoadingAntho(false);
+        }
+    };
+
     const A4Page = ({ page, index }: { page: AnthologyPage; index: number }) => {
+        const isDark = selectedTheme === 'dark';
         const updatePage = (patch: Partial<AnthologyPage>) => {
             setBlueprint(prev => {
                 if (!prev) return prev;
@@ -173,88 +155,65 @@ export default function Home() {
         };
 
         return (
-            <div className="relative w-full aspect-[210/297] bg-[#050510] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] border border-white/5 rounded-[40px] mb-32 group transition-all hover:border-purple-500/20">
+            <div
+                className={`relative w-full aspect-[210/297] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] border border-white/5 rounded-[40px] mb-32 group transition-all hover:border-purple-500/20 ${isDark ? 'bg-[#050510] text-white' : 'bg-white text-black'}`}
+                style={{ fontFamily: selectedFont }}
+            >
                 {page.image ? (
                     <img src={page.image} className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-1000" />
                 ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-[#0c0c15] to-black" />
                 )}
-
-                {/* LP Overlay Gradient */}
                 <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
-
                 <div className="absolute inset-0 p-12 md:p-20 flex flex-col justify-between z-10">
                     <div className="space-y-8">
                         <div className="flex items-center gap-4">
                             <span className="text-purple-500 text-[10px] font-black tracking-[6px] uppercase px-4 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full">Seção {index + 1}</span>
                             <span className="text-white/20 text-[9px] font-bold uppercase tracking-[4px]">{page.type}</span>
                         </div>
-
-                        <input
-                            value={page.title}
-                            onChange={(e) => updatePage({ title: e.target.value })}
-                            className="w-full bg-transparent text-6xl md:text-7xl font-black tracking-tighter text-white italic leading-[0.9] outline-none border-b border-transparent focus:border-purple-500/30 transition-all placeholder:text-white/10"
-                            placeholder="Título da Seção"
-                        />
-
-                        <textarea
-                            value={page.subtitle}
-                            onChange={(e) => updatePage({ subtitle: e.target.value })}
-                            className="w-full bg-transparent text-white/50 text-xl font-medium tracking-wide leading-relaxed outline-none resize-none border-l-2 border-transparent focus:border-purple-500/30 pl-4 transition-all placeholder:text-white/5"
-                            placeholder="Descreva o conteúdo desta seção..."
-                            rows={3}
-                        />
+                        <input value={page.title} onChange={(e) => updatePage({ title: e.target.value })} className={`w-full bg-transparent text-6xl md:text-7xl font-black tracking-tighter italic leading-[0.9] outline-none border-b border-transparent focus:border-purple-500/30 transition-all placeholder:text-white/10 ${isDark ? 'text-white' : 'text-black'}`} placeholder="Título da Seção" />
+                        <textarea value={page.subtitle} onChange={(e) => updatePage({ subtitle: e.target.value })} className={`w-full bg-transparent text-xl font-medium tracking-wide leading-relaxed outline-none resize-none border-l-2 border-transparent focus:border-purple-500/30 pl-4 transition-all placeholder:text-white/5 ${isDark ? 'text-white/50' : 'text-black/60'}`} placeholder="Descreva o conteúdo desta seção..." rows={3} />
                     </div>
-
                     <div className="space-y-6">
                         {page.items && (
                             <div className="grid grid-cols-1 gap-4 max-w-xl">
                                 {page.items.map((item, i) => (
-                                    <div key={i} className="flex items-center gap-5 bg-white/5 backdrop-blur-xl p-5 rounded-2xl border border-white/5 group/item hover:bg-white/10 transition-all">
+                                    <div key={i} className={`flex items-center gap-5 backdrop-blur-xl p-5 rounded-2xl border border-white/5 group/item transition-all ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-black/5 hover:bg-black/10'}`}>
                                         <div className="w-1.5 h-1.5 rounded-full bg-purple-400 group-hover/item:scale-150 transition-transform" />
-                                        <input
-                                            value={item}
-                                            onChange={(e) => {
-                                                const newItems = [...(page.items || [])];
-                                                newItems[i] = e.target.value;
-                                                updatePage({ items: newItems });
-                                            }}
-                                            className="bg-transparent text-white/80 font-bold tracking-tight outline-none w-full"
-                                        />
+                                        <input value={item} onChange={(e) => {
+                                            const newItems = [...(page.items || [])];
+                                            newItems[i] = e.target.value;
+                                            updatePage({ items: newItems });
+                                        }} className={`bg-transparent font-bold tracking-tight outline-none w-full ${isDark ? 'text-white/80' : 'text-black/80'}`} />
                                     </div>
                                 ))}
                             </div>
                         )}
                     </div>
                 </div>
-
                 {page.status === 'loading' && (
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center z-20">
                         <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
-                        <span className="text-[10px] font-black uppercase tracking-[8px] text-white/40">Renderizando LP Style...</span>
+                        <span className="text-[10px] font-black uppercase tracking-[8px] text-white/40">Renderizando...</span>
                     </div>
                 )}
-
-                {/* Quick Action Button */}
-                <div className="absolute top-8 right-8 opacity-0 group-hover:opacity-100 transition-opacity flex gap-3">
-                    <button onClick={() => {/* Regenerate */ }} className="p-4 bg-white/5 hover:bg-white/20 border border-white/10 rounded-full backdrop-blur-md"><RefreshCw className="w-5 h-5 text-white/60" /></button>
-                </div>
             </div>
         );
     };
 
-    const handleStartFullGeneration = async () => {
-        if (!blueprint) return;
-        setActiveTab('editorial');
-        addLog("Iniciando Geração da Antologia A4...");
+    const handleStartFullGeneration = async (currentBlueprintView?: any) => {
+        const bp = currentBlueprintView || blueprint;
+        if (!bp) return;
+        addLog("Iniciando Geração de Ilustrações...");
 
-        blueprint.pages.forEach(async (page, idx) => {
+        bp.pages.forEach(async (page: any, idx: number) => {
             if (page.type === 'cover') {
                 const activeImg = selectedCoverIndex !== null ? covers[selectedCoverIndex].image : null;
                 setBlueprint(prev => {
-                    const newPages = [...(prev?.pages || [])];
+                    if (!prev) return prev;
+                    const newPages = [...prev.pages];
                     newPages[idx] = { ...newPages[idx], status: 'success', image: activeImg };
-                    return { ...prev!, pages: newPages };
+                    return { ...prev, pages: newPages };
                 });
                 return;
             }
@@ -273,97 +232,48 @@ export default function Home() {
                 });
                 const data = await res.json();
 
-                if (data.ok && data.image && !data.engine?.includes('Safety') && !data.engine?.includes('Fatal')) {
+                if (data.ok && data.image) {
                     setBlueprint(prev => {
                         const newPages = [...(prev?.pages || [])];
                         newPages[idx] = { ...newPages[idx], status: 'success', image: data.image };
                         return { ...prev!, pages: newPages };
                     });
-                } else {
-                    addLog(`[Pág ${idx + 1}] Fallback: ${data.engine}. Bypass...`);
-                    // Browser Bypass Fallback
-                    try {
-                        const seed = Math.floor(Math.random() * 999999);
-                        const pollUrl = `https://pollinations.ai/p/${encodeURIComponent(page.illustration_prompt.substring(0, 400))}?width=1024&height=1024&seed=${seed}&model=flux&nologo=true`;
-                        const proxyRes = await fetch('/api/proxy-image', {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ url: pollUrl })
-                        });
-                        if (proxyRes.ok) {
-                            const proxyData = await proxyRes.json();
-                            if (proxyData.base64) {
-                                setBlueprint(prev => {
-                                    const newPages = [...(prev?.pages || [])];
-                                    newPages[idx] = { ...newPages[idx], status: 'success', image: proxyData.base64 };
-                                    return { ...prev!, pages: newPages };
-                                });
-                                return;
-                            }
-                        }
-                    } catch (e) {
-                        addLog(`[Pág ${idx + 1}] Falha no Bypass.`);
-                    }
-
-                    setBlueprint(prev => {
-                        const newPages = [...(prev?.pages || [])];
-                        newPages[idx] = { ...newPages[idx], status: 'error' };
-                        return { ...prev!, pages: newPages };
-                    });
                 }
             } catch (e) {
                 addLog(`Erro Página ${idx + 1}`);
-                setBlueprint(prev => {
-                    const newPages = [...(prev?.pages || [])];
-                    newPages[idx] = { ...newPages[idx], status: 'error' };
-                    return { ...prev!, pages: newPages };
-                });
             }
         });
     };
 
     const handleCreateEbook = () => {
         if (!blueprint) return;
-        setIsLoading(true);
         setActiveTab('export');
         addLog("Preparando Arquivo Final...");
-        setTimeout(() => setIsLoading(false), 2000);
     };
 
     const downloadPDF = async () => {
         if (!blueprint) return;
-        setIsLoading(true);
+        setIsLoadingAntho(true);
         const doc = new jsPDF();
-
         blueprint.pages.forEach((page, i) => {
             if (page.image) {
                 const imageType = page.image.startsWith('data:image/png') ? 'PNG' : 'JPEG';
                 doc.addImage(page.image, imageType, 0, 0, 210, 297, undefined, 'FAST');
-
                 if (page.type !== 'cover') {
-                    doc.setTextColor(255, 255, 255);
-                    doc.setFont("helvetica", "bold");
-                    doc.setFontSize(28);
+                    doc.setTextColor(selectedTheme === 'dark' ? 255 : 0, selectedTheme === 'dark' ? 255 : 0, selectedTheme === 'dark' ? 255 : 0);
+                    doc.setFont("helvetica", "bold"); doc.setFontSize(28);
                     doc.text(page.title.toUpperCase(), 20, 50);
-
-                    doc.setFont("helvetica", "normal");
-                    doc.setFontSize(14);
+                    doc.setFont("helvetica", "normal"); doc.setFontSize(14);
                     if (page.subtitle) {
                         const splitText = doc.splitTextToSize(page.subtitle, 170);
                         doc.text(splitText, 20, 70);
                     }
-                    if (page.items) {
-                        page.items.forEach((item, idx) => {
-                            doc.text(`• ${item}`, 25, 120 + (idx * 10));
-                        });
-                    }
                 }
-
                 if (i < blueprint.pages.length - 1) doc.addPage();
             }
         });
-
         doc.save(`${title.replace(/\s/g, '_')}.pdf`);
-        setIsLoading(false);
+        setIsLoadingAntho(false);
     };
 
     return (
@@ -379,8 +289,8 @@ export default function Home() {
 
                     <nav className="flex-1 px-8 space-y-4">
                         <TabButton icon={<Sparkles />} label="Capa" active={activeTab === 'config'} onClick={() => setActiveTab('config')} />
-                        <TabButton icon={<Palette />} label="Design" active={activeTab === 'gallery'} onClick={() => (covers.length > 0 || isLoading) && setActiveTab('gallery')} disabled={covers.length === 0 && !isLoading} />
-                        <TabButton icon={<Type />} label="Escrita" active={activeTab === 'editorial'} onClick={() => setActiveTab('editorial')} disabled={!blueprint} />
+                        <TabButton icon={<Palette />} label="Design" active={activeTab === 'gallery'} onClick={() => setActiveTab('gallery')} />
+                        <TabButton icon={<Type />} label="Escrita" active={activeTab === 'editorial'} onClick={() => setActiveTab('editorial')} />
                         <TabButton icon={<Download />} label="Salvar" active={activeTab === 'export'} onClick={() => setActiveTab('export')} disabled={!blueprint} />
                     </nav>
                 </aside>
@@ -402,7 +312,6 @@ export default function Home() {
                                 <motion.div key="config" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="max-w-3xl pb-20">
                                     <h1 className="text-8xl font-black tracking-tighter mb-8 text-gradient italic leading-none text-white">Sua Obra.</h1>
                                     <p className="text-white/30 mb-20 text-lg max-w-sm font-medium leading-relaxed uppercase tracking-widest">Defina a identidade visual e o propósito do seu eBook.</p>
-
                                     <div className="space-y-12">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                             <div className="space-y-4">
@@ -415,68 +324,98 @@ export default function Home() {
                                             </div>
                                         </div>
                                         <div className="space-y-4">
-                                            <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20 ml-2">Contexto para Diagramação</label>
-                                            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Descreva os tópicos principais..." rows={3} className="w-full bg-white/[0.03] border border-white/10 rounded-3xl p-8 text-xl font-medium focus:border-purple-500/50 transition-all outline-none resize-none text-white" />
+                                            <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20 ml-2">Inspiração para a Capa</label>
+                                            <textarea value={coverPrompt} onChange={e => setCoverPrompt(e.target.value)} placeholder="Ex: Uma cidade futurista flutuante com luzes neon azul e roxo, estilo digital painting..." rows={3} className="w-full bg-white/[0.03] border border-white/10 rounded-3xl p-8 text-xl font-medium focus:border-purple-500/50 transition-all outline-none resize-none text-white" />
                                         </div>
-                                        <button onClick={handleGenerateCover} disabled={isLoading || !title} className="group relative w-full py-10 bg-white text-black font-black uppercase tracking-[6px] rounded-[50px] hover:bg-white/90 transition-all flex items-center justify-center gap-6 shadow-2xl">
-                                            {isLoading ? <Loader2 className="animate-spin w-10 h-10" /> : <Zap className="w-10 h-10 fill-current" />} ARQUITETAR A4
+                                        <button onClick={handleGenerateCover} disabled={covers[0]?.status === 'loading'} className="group relative w-full py-10 bg-white text-black font-black uppercase tracking-[6px] rounded-[50px] hover:bg-white/90 transition-all flex items-center justify-center gap-6 shadow-2xl">
+                                            {covers[0]?.status === 'loading' ? <Loader2 className="animate-spin w-10 h-10" /> : <Zap className="w-10 h-10 fill-current" />} GERAR ARTE DA CAPA
                                         </button>
                                     </div>
                                 </motion.div>
                             )}
 
                             {activeTab === 'gallery' && (
-                                <motion.div key="gallery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-20 pb-40">
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl w-full">
-                                        {covers.map((c, i) => (
-                                            <motion.div
-                                                key={i}
-                                                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                                                transition={{ delay: i * 0.1 }}
-                                                className={`relative aspect-[2.2/3.5] rounded-[60px] overflow-hidden border-2 cursor-pointer transition-all ${selectedCoverIndex === i ? 'border-purple-600 shadow-[0_40px_80px_-20px_rgba(168,85,247,0.4)] scale-105 z-10' : 'border-white/5 opacity-40 hover:opacity-100 hover:border-white/20'} ${c.status === 'loading' ? 'bg-white/[0.01] animate-pulse' : ''}`}
-                                                onClick={() => c.status === 'success' && setSelectedCoverIndex(i)}
-                                            >
-                                                {c.status === 'loading' && (
-                                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-6">
-                                                        <div className="w-12 h-12 rounded-full border-t-2 border-blue-500 animate-spin"></div>
-                                                        <span className="text-[10px] font-black uppercase tracking-[4px] text-white/20 italic">Slot {c.id}...</span>
-                                                    </div>
-                                                )}
-                                                {c.status === 'success' && c.image && (
-                                                    <>
-                                                        <img src={c.image} className="w-full h-full object-cover" />
-                                                        {selectedCoverIndex === i && (
-                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                                                                <button onClick={handleStartFullGeneration} className="bg-white text-black px-10 py-5 rounded-full font-black uppercase tracking-[4px] shadow-2xl hover:scale-110 transition-all text-[11px]">Selecionar esta Capa</button>
-                                                            </div>
-                                                        )}
-                                                    </>
-                                                )}
-                                            </motion.div>
-                                        ))}
+                                <motion.div key="gallery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex h-full gap-10">
+                                    <div className="flex-1 flex flex-col items-center justify-center py-20 pb-40 overflow-y-auto">
+                                        <div className="w-full max-w-md">
+                                            {covers.map((c, i) => (
+                                                <motion.div
+                                                    key={i}
+                                                    initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                                                    className={`relative aspect-[1/1.4] rounded-[50px] overflow-hidden border-4 transition-all ${selectedCoverIndex === i ? 'border-purple-600 shadow-[0_40px_80px_-20px_rgba(168,85,247,0.4)]' : 'border-white/5 opacity-80 hover:opacity-100 hover:border-white/20'}`}
+                                                    onClick={() => c.status === 'success' && setSelectedCoverIndex(i)}
+                                                >
+                                                    {c.status === 'loading' && (
+                                                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-6">
+                                                            <div className="w-12 h-12 rounded-full border-t-2 border-blue-500 animate-spin"></div>
+                                                            <span className="text-[10px] font-black uppercase tracking-[4px] text-white/20 italic">Criando Arte...</span>
+                                                        </div>
+                                                    )}
+                                                    {c.status === 'success' && c.image && <img src={c.image} className="w-full h-full object-cover" />}
+                                                </motion.div>
+                                            ))}
+                                            <button onClick={handleGenerateCover} className="mt-10 w-full flex justify-center items-center gap-6 text-white/30 hover:text-white transition-all font-black uppercase tracking-[8px] text-[10px] group"><RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-700" /> Tentar Nova Arte</button>
+                                        </div>
                                     </div>
-                                    <button onClick={handleGenerateCover} className="mt-20 flex items-center gap-6 text-white/30 hover:text-white transition-all font-black uppercase tracking-[8px] text-[12px] group"><RefreshCw className="w-6 h-6 group-hover:rotate-180 transition-transform duration-700" /> Gerar Novas Opções</button>
+
+                                    {/* Sidebar de Design */}
+                                    <div className="w-96 bg-white/[0.02] border-l border-white/5 p-12 space-y-12 overflow-y-auto">
+                                        <div className="space-y-4">
+                                            <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20">Paleta de Cores</label>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                {['Luxury', 'Cyber', 'Minimal', 'Nature'].map(p => (
+                                                    <button key={p} onClick={() => setSelectedPalette(p)} className={`py-4 rounded-2xl text-[10px] font-bold tracking-widest uppercase transition-all ${selectedPalette === p ? 'bg-white text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>{p}</button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20">Tema do Conteúdo</label>
+                                            <div className="flex gap-4">
+                                                <button onClick={() => setSelectedTheme('light')} className={`flex-1 py-4 rounded-2xl text-[10px] font-bold tracking-widest uppercase transition-all ${selectedTheme === 'light' ? 'bg-white text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>Light</button>
+                                                <button onClick={() => setSelectedTheme('dark')} className={`flex-1 py-4 rounded-2xl text-[10px] font-bold tracking-widest uppercase transition-all ${selectedTheme === 'dark' ? 'bg-white text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>Dark</button>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20">Fonte do Texto</label>
+                                            <div className="grid grid-cols-1 gap-4">
+                                                {['Montserrat', 'Playfair Display', 'Roboto', 'Inter'].map(f => (
+                                                    <button key={f} onClick={() => setSelectedFont(f)} className={`py-4 rounded-2xl text-[10px] font-bold tracking-widest uppercase transition-all text-left px-6 ${selectedFont === f ? 'bg-white text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`} style={{ fontFamily: f }}>{f}</button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <button onClick={() => setActiveTab('editorial')} className="w-full py-8 bg-purple-600 text-white font-black uppercase tracking-[4px] rounded-3xl hover:bg-purple-500 transition-all shadow-xl shadow-purple-900/20 text-[10px]">Ir para Escrita <ChevronLeft className="inline w-4 h-4 rotate-180" /></button>
+                                    </div>
                                 </motion.div>
                             )}
 
                             {activeTab === 'editorial' && (
                                 <motion.div key="editorial" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-12 pb-40">
-                                    <div className="max-w-4xl w-full flex justify-between items-end mb-10">
-                                        <h1 className="text-7xl font-black tracking-tighter text-gradient italic leading-none">Diagramação.</h1>
-                                        <div className="text-right">
-                                            <p className="text-[10px] font-black uppercase tracking-[4px] text-white/20 mb-2">Sincronização Ativa</p>
-                                            <div className="flex gap-2 justify-end">
-                                                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_blue]" />
-                                                <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_purple]" />
-                                            </div>
-                                        </div>
+                                    <div className="max-w-4xl w-full mb-10">
+                                        <h1 className="text-7xl font-black tracking-tighter text-gradient italic leading-none mb-4">Escrita.</h1>
+                                        <p className="text-white/30 text-lg font-medium tracking-wide leading-relaxed">Cole o conteúdo real do seu eBook abaixo. A IA irá diagramar as páginas automaticamente usando o design que você escolheu.</p>
                                     </div>
 
-                                    <div className="max-w-4xl w-full space-y-20">
-                                        {blueprint?.pages.map((p, i) => (
-                                            <A4Page key={i} page={p} index={i} />
-                                        ))}
-                                    </div>
+                                    {!blueprint ? (
+                                        <div className="max-w-4xl w-full space-y-10">
+                                            <textarea value={fullContent} onChange={e => setFullContent(e.target.value)} placeholder="Cole aqui o texto completo do seu eBook..." rows={15} className="w-full bg-white/[0.03] border border-white/10 rounded-[40px] p-12 text-xl font-medium focus:border-purple-500/50 transition-all outline-none resize-none text-white leading-relaxed" />
+                                            <button onClick={handleArchitectContent} disabled={isLoadingAntho || !fullContent} className="group relative w-full py-10 bg-white text-black font-black uppercase tracking-[6px] rounded-[50px] hover:bg-white/90 transition-all flex items-center justify-center gap-6 shadow-2xl">
+                                                {isLoadingAntho ? <Loader2 className="animate-spin w-10 h-10" /> : <Sparkles className="w-8 h-8" />} GERAR DIAGRAMAÇÃO PROFISSIONAL
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="max-w-4xl w-full space-y-20">
+                                            <div className="flex justify-between items-center mb-10 bg-white/5 p-8 rounded-[30px] border border-white/5">
+                                                <div className="flex items-center gap-4">
+                                                    <CheckCircle2 className="text-green-500 w-8 h-8" />
+                                                    <span className="text-[10px] font-black uppercase tracking-[4px] text-white/40">Conteúdo Diagramado</span>
+                                                </div>
+                                                <button onClick={() => setBlueprint(null)} className="text-[10px] font-black uppercase tracking-[4px] text-white/20 hover:text-red-500 transition-colors">Reiniciar</button>
+                                            </div>
+                                            {blueprint.pages.map((p, i) => (
+                                                <A4Page key={i} page={p} index={i} />
+                                            ))}
+                                        </div>
+                                    )}
                                 </motion.div>
                             )}
 
