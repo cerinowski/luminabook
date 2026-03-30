@@ -29,9 +29,8 @@ export default function Home() {
     );
     const [selectedCoverIndex, setSelectedCoverIndex] = useState<number | null>(null);
 
-    const [selectedPalette, setSelectedPalette] = useState('Cyberpunk');
+    const [selectedPalette, setSelectedPalette] = useState('Luxury');
     const [selectedLayout, setSelectedLayout] = useState('Impact');
-    const [selectedModel, setSelectedModel] = useState('auto');
 
     // --- ANTHOLOGY G27.1 ---
     type AnthologyPage = {
@@ -85,9 +84,13 @@ export default function Home() {
             const style = dataAntho?.global_style || { global_mood: 'Luxury', primary_color: '#ffffff' };
             const coverPage = dataAntho?.pages?.find((p: any) => p.type === 'cover');
 
-            // Geração Única G28
+            // Geração Única G29 - Foco em Integridade do Texto e 2D Real
             const illustrationPrompt = coverPage?.illustration_prompt || description || "High-end conceptual art";
-            const basePrompt = `Professional book cover art for "${title.toUpperCase()}". Style: ${selectedPalette}. Mood: ${style.global_mood}. Detail: ${illustrationPrompt}. Flat 2D digital illustration, editorial design, NO 3D MOCKUPS, NO PHYSICAL BOOKS, 8k, centered. Author: ${author || 'Lumina Studio'}.`;
+            const basePrompt = `Professional book cover art for "${title.toUpperCase()}" by "${author || 'Lumina'}". 
+            The words "${title.toUpperCase()}" and "${author || 'Lumina'}" MUST be clearly written and integrated into the artwork.
+            Style: ${selectedPalette}. Mood: ${style.global_mood}. Detail: ${illustrationPrompt}. 
+            FLAT 2D DIGITAL ILLUSTRATION ONLY. NO 3D MOCKUPS, NO PHYSICAL BOOKS, NO PERSPECTIVE VIEWS. 
+            High contrast, 8k, centered masterpiece.`;
 
             const updateCard = (id: number, patch: Partial<CoverCard>) => {
                 setCovers(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
@@ -158,40 +161,84 @@ export default function Home() {
         }
     };
 
-    // --- A4 PAGE RENDERER ---
+    // --- A4 PAGE RENDERER (LP STYLE) ---
     const A4Page = ({ page, index }: { page: AnthologyPage; index: number }) => {
+        const updatePage = (patch: Partial<AnthologyPage>) => {
+            setBlueprint(prev => {
+                if (!prev) return prev;
+                const newPages = [...prev.pages];
+                newPages[index] = { ...newPages[index], ...patch };
+                return { ...prev, pages: newPages };
+            });
+        };
+
         return (
-            <div className="relative w-full aspect-[210/297] bg-black overflow-hidden shadow-2xl border border-white/5 rounded-3xl mb-20 group">
+            <div className="relative w-full aspect-[210/297] bg-[#050510] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] border border-white/5 rounded-[40px] mb-32 group transition-all hover:border-purple-500/20">
                 {page.image ? (
-                    <img src={page.image} className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-1000" />
+                    <img src={page.image} className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-1000" />
                 ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-black to-[#050510]" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#0c0c15] to-black" />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40" />
-                <div className="absolute inset-0 p-16 flex flex-col justify-between z-10">
-                    <div className="space-y-6">
-                        <span className="text-white/30 text-[10px] font-black tracking-[8px] uppercase">Page {index + 1} // {page.type}</span>
-                        <h2 className="text-5xl font-black tracking-tighter text-white italic leading-none max-w-[80%]">{page.title}</h2>
-                        {page.subtitle && <p className="text-white/60 text-lg font-medium tracking-wide">{page.subtitle}</p>}
-                    </div>
+
+                {/* LP Overlay Gradient */}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
+
+                <div className="absolute inset-0 p-12 md:p-20 flex flex-col justify-between z-10">
                     <div className="space-y-8">
+                        <div className="flex items-center gap-4">
+                            <span className="text-purple-500 text-[10px] font-black tracking-[6px] uppercase px-4 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full">Seção {index + 1}</span>
+                            <span className="text-white/20 text-[9px] font-bold uppercase tracking-[4px]">{page.type}</span>
+                        </div>
+
+                        <input
+                            value={page.title}
+                            onChange={(e) => updatePage({ title: e.target.value })}
+                            className="w-full bg-transparent text-6xl md:text-7xl font-black tracking-tighter text-white italic leading-[0.9] outline-none border-b border-transparent focus:border-purple-500/30 transition-all placeholder:text-white/10"
+                            placeholder="Título da Seção"
+                        />
+
+                        <textarea
+                            value={page.subtitle}
+                            onChange={(e) => updatePage({ subtitle: e.target.value })}
+                            className="w-full bg-transparent text-white/50 text-xl font-medium tracking-wide leading-relaxed outline-none resize-none border-l-2 border-transparent focus:border-purple-500/30 pl-4 transition-all placeholder:text-white/5"
+                            placeholder="Descreva o conteúdo desta seção..."
+                            rows={3}
+                        />
+                    </div>
+
+                    <div className="space-y-6">
                         {page.items && (
-                            <div className="grid grid-cols-1 gap-6">
+                            <div className="grid grid-cols-1 gap-4 max-w-xl">
                                 {page.items.map((item, i) => (
-                                    <div key={i} className="flex items-center gap-6 bg-white/5 backdrop-blur-md p-6 rounded-2xl border border-white/5">
-                                        <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_15px_rgba(168,85,247,1)]" />
-                                        <span className="text-white/90 font-bold tracking-tight">{item}</span>
+                                    <div key={i} className="flex items-center gap-5 bg-white/5 backdrop-blur-xl p-5 rounded-2xl border border-white/5 group/item hover:bg-white/10 transition-all">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-purple-400 group-hover/item:scale-150 transition-transform" />
+                                        <input
+                                            value={item}
+                                            onChange={(e) => {
+                                                const newItems = [...(page.items || [])];
+                                                newItems[i] = e.target.value;
+                                                updatePage({ items: newItems });
+                                            }}
+                                            className="bg-transparent text-white/80 font-bold tracking-tight outline-none w-full"
+                                        />
                                     </div>
                                 ))}
                             </div>
                         )}
                     </div>
                 </div>
+
                 {page.status === 'loading' && (
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-20">
-                        <Loader2 className="w-10 h-10 text-white animate-spin" />
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center z-20">
+                        <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
+                        <span className="text-[10px] font-black uppercase tracking-[8px] text-white/40">Renderizando LP Style...</span>
                     </div>
                 )}
+
+                {/* Quick Action Button */}
+                <div className="absolute top-8 right-8 opacity-0 group-hover:opacity-100 transition-opacity flex gap-3">
+                    <button onClick={() => {/* Regenerate */ }} className="p-4 bg-white/5 hover:bg-white/20 border border-white/10 rounded-full backdrop-blur-md"><RefreshCw className="w-5 h-5 text-white/60" /></button>
+                </div>
             </div>
         );
     };
@@ -278,7 +325,7 @@ export default function Home() {
         if (!blueprint) return;
         setIsLoading(true);
         setActiveTab('export');
-        addLog("Preparando Exportação...");
+        addLog("Preparando Arquivo Final...");
         setTimeout(() => setIsLoading(false), 2000);
     };
 
@@ -331,11 +378,9 @@ export default function Home() {
                     </div>
 
                     <nav className="flex-1 px-8 space-y-4">
-                        <TabButton icon={<LayoutDashboard />} label="Workshop" active={activeTab === 'config'} onClick={() => setActiveTab('config')} />
-                        <TabButton icon={<Palette />} label="Design" active={activeTab === 'design'} onClick={() => setActiveTab('design')} />
-                        <TabButton icon={<Cpu />} label="Motores AI" active={activeTab === 'engines'} onClick={() => setActiveTab('engines')} />
-                        <TabButton icon={<BookOpen />} label="Galeria" active={activeTab === 'gallery'} onClick={() => (covers.length > 0 || isLoading) && setActiveTab('gallery')} disabled={covers.length === 0 && !isLoading} />
-                        <TabButton icon={<MessageSquare />} label="Escrita" active={activeTab === 'editorial'} onClick={() => setActiveTab('editorial')} disabled={!blueprint} />
+                        <TabButton icon={<Sparkles />} label="Capa" active={activeTab === 'config'} onClick={() => setActiveTab('config')} />
+                        <TabButton icon={<Palette />} label="Design" active={activeTab === 'gallery'} onClick={() => (covers.length > 0 || isLoading) && setActiveTab('gallery')} disabled={covers.length === 0 && !isLoading} />
+                        <TabButton icon={<Type />} label="Escrita" active={activeTab === 'editorial'} onClick={() => setActiveTab('editorial')} disabled={!blueprint} />
                         <TabButton icon={<Download />} label="Salvar" active={activeTab === 'export'} onClick={() => setActiveTab('export')} disabled={!blueprint} />
                     </nav>
                 </aside>
@@ -344,10 +389,10 @@ export default function Home() {
                     <header className="h-24 border-b border-white/5 flex items-center justify-between px-16 bg-[#020205]/95 backdrop-blur-3xl sticky top-0 z-40">
                         <div className="flex items-center gap-3">
                             <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse shadow-[0_0_15px_rgba(59,130,246,0.6)]"></div>
-                            <span className="text-[10px] font-black uppercase tracking-[8px] text-white/30 italic">Anthology G27.1 DYNAMIC</span>
+                            <span className="text-[10px] font-black uppercase tracking-[8px] text-white/30 italic">LuminaBook Engine v2.0 // Active</span>
                         </div>
                         {blueprint && activeTab === 'editorial' && (
-                            <button onClick={handleCreateEbook} className="bg-white text-black px-12 py-3 rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all font-bold shadow-2xl">Finalizar Documento</button>
+                            <button onClick={handleCreateEbook} className="bg-white text-black px-12 py-3 rounded-full text-[11px] font-black uppercase tracking-widest hover:scale-105 transition-all font-bold shadow-2xl">Visualizar Exportação</button>
                         )}
                     </header>
 
@@ -355,8 +400,8 @@ export default function Home() {
                         <AnimatePresence mode="wait">
                             {activeTab === 'config' && (
                                 <motion.div key="config" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="max-w-3xl pb-20">
-                                    <h1 className="text-8xl font-black tracking-tighter mb-8 text-gradient italic leading-none">O Infalível.</h1>
-                                    <p className="text-white/30 mb-20 text-lg max-w-sm font-medium leading-relaxed">Antologia Dinâmica A4: Diagramação automática de múltiplos layouts em alta definição.</p>
+                                    <h1 className="text-8xl font-black tracking-tighter mb-8 text-gradient italic leading-none text-white">Sua Obra.</h1>
+                                    <p className="text-white/30 mb-20 text-lg max-w-sm font-medium leading-relaxed uppercase tracking-widest">Defina a identidade visual e o propósito do seu eBook.</p>
 
                                     <div className="space-y-12">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -440,25 +485,14 @@ export default function Home() {
                                     <div className="w-60 h-60 bg-green-500/5 rounded-full flex items-center justify-center shadow-[0_0_150px_rgba(34,197,94,0.4)] border border-green-500/10"><CheckCircle2 className="w-32 h-32 text-green-500" /></div>
                                     <div className="space-y-6">
                                         <h1 className="text-9xl font-black tracking-tighter italic text-gradient leading-none">Pronto.</h1>
-                                        <p className="text-white/20 text-3xl font-medium tracking-[15px] uppercase mt-10">G27.1 Anthology Edition</p>
+                                        <p className="text-white/20 text-3xl font-medium tracking-[15px] uppercase mt-10 text-white">LuminaBook Professional PDF</p>
                                     </div>
-                                    <button onClick={downloadPDF} className="bg-white text-black px-32 py-16 rounded-[70px] font-black uppercase text-2xl flex items-center gap-12 hover:scale-110 active:scale-95 transition-all shadow-2xl shadow-white/5"><FileDown className="w-16 h-16" /> SALVAR DOCUMENTO A4</button>
+                                    <button onClick={downloadPDF} className="bg-white text-black px-24 py-10 rounded-[50px] font-black uppercase text-xl flex items-center gap-8 hover:scale-110 active:scale-95 transition-all shadow-2xl shadow-white/5"><FileDown className="w-10 h-10" /> BAIXAR EBOOK PDF</button>
                                 </motion.div>
                             )}
                         </AnimatePresence>
                     </div>
 
-                    <div className="fixed bottom-14 right-14 w-[500px] bg-[#050510]/98 backdrop-blur-3xl border border-white/5 p-16 rounded-[80px] flex flex-col gap-12 z-50 shadow-2xl border-t border-blue-500/20">
-                        <div className="flex items-center justify-between border-b border-white/5 pb-10">
-                            <span className="text-[14px] font-black uppercase tracking-[12px] text-white/30 italic">ANTHOLOGY MONITOR G27</span>
-                            <div className="flex gap-3">
-                                <span className="w-3 h-3 bg-blue-500 rounded-full animate-pulse shadow-[0_0_10px_blue]"></span>
-                            </div>
-                        </div>
-                        <div className="space-y-8">
-                            {debugLogs.map((l, i) => <div key={i} className="text-[14px] font-bold text-white/30 font-mono flex gap-10 leading-none select-none hover:text-white transition-colors cursor-default tracking-wide"><span className="text-blue-600/70">»</span> {l}</div>)}
-                        </div>
-                    </div>
                 </section>
             </div>
         </main>
