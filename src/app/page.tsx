@@ -239,9 +239,16 @@ export default function Home() {
                         newPages[idx] = { ...newPages[idx], status: 'success', image: data.image };
                         return { ...prev!, pages: newPages };
                     });
+                } else {
+                    throw new Error("Erro na API de imagem");
                 }
             } catch (e) {
                 addLog(`Erro Página ${idx + 1}`);
+                setBlueprint(prev => {
+                    const newPages = [...(prev?.pages || [])];
+                    newPages[idx] = { ...newPages[idx], status: 'error' };
+                    return { ...prev!, pages: newPages };
+                });
             }
         });
     };
@@ -262,29 +269,30 @@ export default function Home() {
                 doc.addImage(page.image, imageType, 0, 0, 210, 297, undefined, 'FAST');
 
                 if (i === 0) { // CAPA G31
-                    // Overlay superior
-                    doc.setFillColor(0, 0, 0);
-                    doc.setGState(new (doc as any).GState({ opacity: 0.6 }));
-                    doc.rect(0, 0, 210, 80, 'F');
+                    // Gradiente inferior suave G32
+                    for (let step = 0; step < 50; step++) {
+                        const opacity = step / 50;
+                        doc.setFillColor(0, 0, 0);
+                        doc.setGState(new (doc as any).GState({ opacity: opacity * 0.8 }));
+                        doc.rect(0, 297 - (step * 2), 210, 2, 'F');
+                    }
+                    doc.setGState(new (doc as any).GState({ opacity: 1 }));
 
                     doc.setGState(new (doc as any).GState({ opacity: 1 }));
                     doc.setTextColor(255, 255, 255);
                     doc.setFont("helvetica", "bold");
                     doc.setFontSize(36);
                     const titleLines = doc.splitTextToSize(title.toUpperCase(), 170);
-                    doc.text(titleLines, 105, 40, { align: 'center' });
+                    doc.text(titleLines, 105, 230, { align: 'center' });
 
                     if (subtitle) {
                         doc.setFont("helvetica", "normal");
                         doc.setFontSize(16);
                         const subLines = doc.splitTextToSize(subtitle.toUpperCase(), 170);
-                        doc.text(subLines, 105, 65, { align: 'center' });
+                        doc.text(subLines, 105, 250, { align: 'center' });
                     }
 
-                    // Overlay inferior (Autor)
-                    doc.setGState(new (doc as any).GState({ opacity: 0.6 }));
-                    doc.rect(0, 260, 210, 37, 'F');
-                    doc.setGState(new (doc as any).GState({ opacity: 1 }));
+                    // G32: Autor posicionado no gradiente
                     doc.setFont("helvetica", "bold");
                     doc.setFontSize(12);
                     doc.text(author.toUpperCase(), 105, 280, { align: 'center' });
@@ -387,14 +395,14 @@ export default function Home() {
                                                     {c.status === 'success' && c.image && (
                                                         <div className="relative w-full h-full">
                                                             <img src={c.image} className="w-full h-full object-cover" />
-                                                            {/* G31 Typography Overlay */}
-                                                            <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black/80 flex flex-col items-center justify-between py-12 px-6 text-center pointer-events-none">
-                                                                <div className="mt-8 space-y-2">
+                                                            {/* G32 Typography Overlay - Bottom Aligned */}
+                                                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col items-center justify-end py-16 px-6 text-center pointer-events-none">
+                                                                <div className="space-y-3">
                                                                     <h2 className="text-white font-black leading-tight uppercase tracking-tighter" style={{ fontSize: 'clamp(1rem, 5vw, 2.5rem)', fontFamily: selectedFont }}>{title}</h2>
                                                                     {subtitle && <p className="text-white/80 font-medium tracking-widest text-[10px] uppercase">{subtitle}</p>}
-                                                                </div>
-                                                                <div className="mb-4">
-                                                                    <p className="text-white/40 font-bold tracking-[8px] text-[8px] uppercase">{author}</p>
+                                                                    <div className="pt-6">
+                                                                        <p className="text-white/40 font-bold tracking-[8px] text-[8px] uppercase">{author}</p>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
