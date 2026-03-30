@@ -268,17 +268,24 @@ export default function Home() {
                 const imageType = page.image.startsWith('data:image/png') ? 'PNG' : 'JPEG';
                 doc.addImage(page.image, imageType, 0, 0, 210, 297, undefined, 'FAST');
 
-                if (i === 0) { // CAPA G32.1 - HIGH FIDELITY
-                    // 1. Semi-transparent base overlay (darker at bottom)
-                    doc.setFillColor(0, 0, 0);
-                    doc.setGState(new (doc as any).GState({ opacity: 0.8 }));
-                    doc.rect(0, 180, 210, 117, 'F'); // Solid dark base
+                if (i === 0) { // CAPA G32.3 - PERFECT GRADIENT
+                    // Generate a flawless native gradient via Canvas
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 2; // Keep width very small
+                    canvas.height = 1000; // High resolution for Y axis
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        const grad = ctx.createLinearGradient(0, 0, 0, 1000);
+                        grad.addColorStop(0, 'rgba(0,0,0,0)');     // 0% at top
+                        grad.addColorStop(0.4, 'rgba(0,0,0,0.6)'); // 60% at slightly above center
+                        grad.addColorStop(1, 'rgba(0,0,0,0.95)');  // 95% at very bottom
+                        ctx.fillStyle = grad;
+                        ctx.fillRect(0, 0, 2, 1000);
+                        const gradUrl = canvas.toDataURL('image/png');
 
-                    // 2. Smoother gradient transition (150mm to 180mm)
-                    for (let step = 0; step < 30; step++) {
-                        const opacity = (step / 30) * 0.8;
-                        doc.setGState(new (doc as any).GState({ opacity: opacity }));
-                        doc.rect(0, 180 - step, 210, 1.1, 'F');
+                        // We will overlay the gradient exactly on the lower portion of the A4 page (297mm height)
+                        // Covering the bottom ~150mm.
+                        doc.addImage(gradUrl, 'PNG', 0, 140, 210, 157, undefined, 'FAST');
                     }
 
                     doc.setGState(new (doc as any).GState({ opacity: 1 }));
