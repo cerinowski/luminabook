@@ -463,7 +463,7 @@ export default function Home() {
 
             {/* Hidden PDF Render Container guarantees 1:1 perfect WYSIWYG export */}
             {blueprint && (
-                <div id="pdf-render-container" className="fixed top-0 left-[-9999px] w-[794px] pointer-events-none z-0">
+                <div id="pdf-render-container" className="absolute top-0 left-0 w-[794px] opacity-0 pointer-events-none -z-50">
                     {blueprint.pages.map((page, idx) => {
                         const isDark = selectedTheme === 'dark';
 
