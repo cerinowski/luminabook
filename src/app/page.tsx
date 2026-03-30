@@ -262,93 +262,25 @@ export default function Home() {
     const downloadPDF = async () => {
         if (!blueprint) return;
         setIsLoadingAntho(true);
-        const doc = new jsPDF();
-        blueprint.pages.forEach((page, i) => {
-            if (page.image) {
-                const imageType = page.image.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-                doc.addImage(page.image, imageType, 0, 0, 210, 297, undefined, 'FAST');
+        addLog("Capturando layouts WYSIWYG...");
+        try {
+            const { default: html2canvas } = await import('html2canvas');
+            const doc = new jsPDF({ format: 'a4', unit: 'mm' });
 
-                if (i === 0) { // CAPA G32.3 - PERFECT GRADIENT
-                    // Generate a flawless native gradient via Canvas
-                    const canvas = document.createElement('canvas');
-                    canvas.width = 2; // Keep width very small
-                    canvas.height = 1000; // High resolution for Y axis
-                    const ctx = canvas.getContext('2d');
-                    if (ctx) {
-                        const grad = ctx.createLinearGradient(0, 0, 0, 1000);
-                        grad.addColorStop(0, 'rgba(0,0,0,0)');     // 0% at top
-                        grad.addColorStop(0.4, 'rgba(0,0,0,0.6)'); // 60% at slightly above center
-                        grad.addColorStop(1, 'rgba(0,0,0,0.95)');  // 95% at very bottom
-                        ctx.fillStyle = grad;
-                        ctx.fillRect(0, 0, 2, 1000);
-                        const gradUrl = canvas.toDataURL('image/png');
-
-                        // We will overlay the gradient exactly on the lower portion of the A4 page (297mm height)
-                        // Covering the bottom ~150mm.
-                        doc.addImage(gradUrl, 'PNG', 0, 140, 210, 157, undefined, 'FAST');
-                    }
-
-                    doc.setGState(new (doc as any).GState({ opacity: 1 }));
-                    doc.setTextColor(255, 255, 255);
-
-                    // 3. Title with Dynamic Centering & Shadow
-                    doc.setFont("helvetica", "bold");
-                    doc.setFontSize(32);
-                    const titleLines = doc.splitTextToSize(title.toUpperCase(), 160);
-                    const lineHeightTitle = 12;
-                    const totalTitleHeight = titleLines.length * lineHeightTitle;
-                    let currentY = 230 - (totalTitleHeight / 2);
-
-                    // Shadow effect
-                    doc.setTextColor(0, 0, 0);
-                    doc.text(titleLines, 105.5, currentY + 0.5, { align: 'center' });
-                    doc.setTextColor(255, 255, 255);
-                    doc.text(titleLines, 105, currentY, { align: 'center' });
-
-                    currentY += totalTitleHeight + 10;
-
-                    if (subtitle) {
-                        doc.setFont("helvetica", "normal");
-                        doc.setFontSize(14);
-                        const subLines = doc.splitTextToSize(subtitle.toUpperCase(), 160);
-                        doc.text(subLines, 105, currentY, { align: 'center' });
-                        currentY += (subLines.length * 7) + 5;
-                    }
-
-                    // 4. Author at the very bottom
-                    doc.setFont("helvetica", "bold");
-                    doc.setFontSize(10);
-                    doc.setTextColor(200, 200, 200);
-                    doc.text(author.toUpperCase(), 105, 280, { align: 'center', charSpace: 2 });
-                } else if (page.type !== 'cover') {
-                    // Internal Page Theme Integration
-                    const isDark = selectedTheme === 'dark';
-                    const mainColor = isDark ? 255 : 30;
-                    const subColor = isDark ? 180 : 80;
-
-                    doc.setTextColor(mainColor, mainColor, mainColor);
-                    doc.setFont("helvetica", "bold"); doc.setFontSize(26);
-                    const pTitleLines = doc.splitTextToSize(page.title.toUpperCase(), 170);
-                    doc.text(pTitleLines, 20, 45);
-
-                    doc.setTextColor(subColor, subColor, subColor);
-                    doc.setFont("helvetica", "normal"); doc.setFontSize(13);
-                    if (page.subtitle) {
-                        const splitSub = doc.splitTextToSize(page.subtitle, 165);
-                        doc.text(splitSub, 20, 65);
-                    }
-
-                    if (page.items) {
-                        doc.setFontSize(11);
-                        page.items.forEach((item, idx) => {
-                            doc.text("• " + item, 25, 110 + (idx * 8));
-                        });
-                    }
+            for (let i = 0; i < blueprint.pages.length; i++) {
+                const el = document.getElementById(`pdf-page-${i}`);
+                if (el) {
+                    const canvas = await html2canvas(el, { scale: 2, useCORS: true, allowTaint: true, logging: false });
+                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                    if (i > 0) doc.addPage();
+                    doc.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
                 }
-                if (i < blueprint.pages.length - 1) doc.addPage();
             }
-        });
-        doc.save(`${title.replace(/\s/g, '_')}.pdf`);
+            doc.save(`${title.replace(/\s/g, '_')}.pdf`);
+            addLog("PDF exportado com sucesso.");
+        } catch (e: any) {
+            addLog(`Erro ao gerar PDF: ${e.message}`);
+        }
         setIsLoadingAntho(false);
     };
 
@@ -528,6 +460,73 @@ export default function Home() {
 
                 </section>
             </div>
+
+            {/* Hidden PDF Render Container guarantees 1:1 perfect WYSIWYG export */}
+            {blueprint && (
+                <div id="pdf-render-container" className="fixed top-0 left-[-9999px] w-[794px] pointer-events-none z-0">
+                    {blueprint.pages.map((page, idx) => {
+                        const isDark = selectedTheme === 'dark';
+
+                        // COVER PAGE
+                        if (idx === 0) {
+                            return (
+                                <div key={idx} id={`pdf-page-${idx}`} className="w-[794px] h-[1123px] relative bg-black overflow-hidden" style={{ fontFamily: selectedFont }}>
+                                    {page.image && (
+                                        <div className="relative w-full h-full">
+                                            <img src={page.image} className="w-full h-full object-cover" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col items-center justify-end py-16 px-6 text-center">
+                                                <div className="space-y-4">
+                                                    <h2 className="text-white font-black leading-tight uppercase tracking-tighter" style={{ fontSize: '3.5rem' }}>{title}</h2>
+                                                    {subtitle && <p className="text-white/80 font-medium tracking-widest text-lg uppercase">{subtitle}</p>}
+                                                    <div className="pt-10 pb-8">
+                                                        <p className="text-white/40 font-bold tracking-[8px] text-xs uppercase">{author}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        }
+
+                        // CONTENT PAGES
+                        return (
+                            <div key={idx} id={`pdf-page-${idx}`} className="w-[794px] h-[1123px] relative bg-black overflow-hidden border border-white/5" style={{ fontFamily: selectedFont }}>
+                                <div className={`w-full h-full ${isDark ? 'bg-[#050510] text-white' : 'bg-white text-black'}`}>
+                                    {page.image ? (
+                                        <img src={page.image} className="absolute inset-0 w-full h-full object-cover opacity-40" />
+                                    ) : (
+                                        <div className="absolute inset-0 bg-gradient-to-br from-[#0c0c15] to-black" />
+                                    )}
+                                    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
+                                    <div className="absolute inset-0 p-[72px] flex flex-col justify-between z-10">
+                                        <div className="space-y-12">
+                                            <div className="flex items-center gap-6">
+                                                <span className="text-purple-500 text-sm font-black tracking-[8px] uppercase px-8 py-3 bg-purple-500/10 border border-purple-500/20 rounded-full">Seção {idx + 1}</span>
+                                                <span className="text-white/20 text-sm font-bold uppercase tracking-[6px]">{page.type}</span>
+                                            </div>
+                                            <div className={`w-full bg-transparent text-[80px] font-black tracking-tighter italic leading-[0.9] ${isDark ? 'text-white' : 'text-black'}`}>{page.title}</div>
+                                            <div className={`w-full bg-transparent text-2xl font-medium tracking-wide leading-relaxed mt-10 border-l-4 border-purple-500/30 pl-8 ${isDark ? 'text-white/50' : 'text-black/60'}`}>{page.subtitle}</div>
+                                        </div>
+                                        <div className="space-y-8 pb-10">
+                                            {page.items && (
+                                                <div className="grid grid-cols-1 gap-6 max-w-2xl">
+                                                    {page.items.map((item, i) => (
+                                                        <div key={i} className={`flex items-center gap-6 backdrop-blur-xl p-8 rounded-[30px] border border-white/5 ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
+                                                            <div className="w-2 h-2 rounded-full bg-purple-400" />
+                                                            <div className={`text-xl font-bold tracking-tight leading-snug w-full ${isDark ? 'text-white/80' : 'text-black/80'}`}>{item}</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </main>
     );
 }
