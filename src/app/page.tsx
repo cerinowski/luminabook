@@ -8,8 +8,9 @@ import jsPDF from 'jspdf';
 const GOOGLE_FONTS_URL = "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Montserrat:wght@400;700;900&display=swap";
 
 export default function Home() {
-    const [title, setTitle] = useState('');
-    const [author, setAuthor] = useState('');
+    const [title, setTitle] = useState('Título da Obra');
+    const [subtitle, setSubtitle] = useState('');
+    const [author, setAuthor] = useState('Autor');
     const [coverPrompt, setCoverPrompt] = useState('');
     const [fullContent, setFullContent] = useState('');
     const [activeTab, setActiveTab] = useState('config');
@@ -69,11 +70,11 @@ export default function Home() {
 
         try {
             const style = { global_mood: 'Luxury', primary_color: '#ffffff' };
-            const basePrompt = `Professional book cover art for "${title.toUpperCase()}" by "${author || 'Lumina'}". 
-            The words "${title.toUpperCase()}" and "${author || 'Lumina'}" MUST be clearly written and integrated into the artwork.
-            Style: ${selectedPalette}. Mood: ${style.global_mood}. Detail: ${coverPrompt}. 
-            FLAT 2D DIGITAL ILLUSTRATION ONLY. NO 3D MOCKUPS, NO PHYSICAL BOOKS, NO PERSPECTIVE VIEWS. 
-            High contrast, 8k, centered masterpiece.`;
+            const basePrompt = `Professional A4 Digital Illustration for an eBook cover: ${coverPrompt}. 
+            STRICT RULES: 
+            1. NO TEXT, NO LETTERS, NO WORDS, NO NUMBERS. 
+            2. FLAT 2D STYLE, NO 3D MOCKUPS, NO PHYSICAL BOOKS. 
+            3. CINEMATIC LIGHTING, HIGH CONTRAST, 8K.`;
 
             const updateCard = (id: number, patch: Partial<CoverCard>) => {
                 setCovers(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
@@ -259,7 +260,35 @@ export default function Home() {
             if (page.image) {
                 const imageType = page.image.startsWith('data:image/png') ? 'PNG' : 'JPEG';
                 doc.addImage(page.image, imageType, 0, 0, 210, 297, undefined, 'FAST');
-                if (page.type !== 'cover') {
+
+                if (i === 0) { // CAPA G31
+                    // Overlay superior
+                    doc.setFillColor(0, 0, 0);
+                    doc.setGState(new (doc as any).GState({ opacity: 0.6 }));
+                    doc.rect(0, 0, 210, 80, 'F');
+
+                    doc.setGState(new (doc as any).GState({ opacity: 1 }));
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(36);
+                    const titleLines = doc.splitTextToSize(title.toUpperCase(), 170);
+                    doc.text(titleLines, 105, 40, { align: 'center' });
+
+                    if (subtitle) {
+                        doc.setFont("helvetica", "normal");
+                        doc.setFontSize(16);
+                        const subLines = doc.splitTextToSize(subtitle.toUpperCase(), 170);
+                        doc.text(subLines, 105, 65, { align: 'center' });
+                    }
+
+                    // Overlay inferior (Autor)
+                    doc.setGState(new (doc as any).GState({ opacity: 0.6 }));
+                    doc.rect(0, 260, 210, 37, 'F');
+                    doc.setGState(new (doc as any).GState({ opacity: 1 }));
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(12);
+                    doc.text(author.toUpperCase(), 105, 280, { align: 'center' });
+                } else if (page.type !== 'cover') {
                     doc.setTextColor(selectedTheme === 'dark' ? 255 : 0, selectedTheme === 'dark' ? 255 : 0, selectedTheme === 'dark' ? 255 : 0);
                     doc.setFont("helvetica", "bold"); doc.setFontSize(28);
                     doc.text(page.title.toUpperCase(), 20, 50);
@@ -319,6 +348,10 @@ export default function Home() {
                                                 <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: O Futuro da IA" className="w-full bg-white/[0.03] border border-white/10 rounded-3xl p-8 text-2xl font-bold focus:border-purple-500/50 transition-all outline-none text-white" />
                                             </div>
                                             <div className="space-y-4">
+                                                <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20 ml-2">Subtítulo (Opcional)</label>
+                                                <input value={subtitle} onChange={e => setSubtitle(e.target.value)} placeholder="Ex: Guia Completo 2026" className="w-full bg-white/[0.03] border border-white/10 rounded-3xl p-8 text-2xl font-bold focus:border-purple-500/50 transition-all outline-none text-white" />
+                                            </div>
+                                            <div className="space-y-4">
                                                 <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20 ml-2">Autor</label>
                                                 <input value={author} onChange={e => setAuthor(e.target.value)} placeholder="Seu Nome" className="w-full bg-white/[0.03] border border-white/10 rounded-3xl p-8 text-2xl font-bold focus:border-purple-500/50 transition-all outline-none text-white" />
                                             </div>
@@ -351,7 +384,21 @@ export default function Home() {
                                                             <span className="text-[10px] font-black uppercase tracking-[4px] text-white/20 italic">Criando Arte...</span>
                                                         </div>
                                                     )}
-                                                    {c.status === 'success' && c.image && <img src={c.image} className="w-full h-full object-cover" />}
+                                                    {c.status === 'success' && c.image && (
+                                                        <div className="relative w-full h-full">
+                                                            <img src={c.image} className="w-full h-full object-cover" />
+                                                            {/* G31 Typography Overlay */}
+                                                            <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black/80 flex flex-col items-center justify-between py-12 px-6 text-center pointer-events-none">
+                                                                <div className="mt-8 space-y-2">
+                                                                    <h2 className="text-white font-black leading-tight uppercase tracking-tighter" style={{ fontSize: 'clamp(1rem, 5vw, 2.5rem)', fontFamily: selectedFont }}>{title}</h2>
+                                                                    {subtitle && <p className="text-white/80 font-medium tracking-widest text-[10px] uppercase">{subtitle}</p>}
+                                                                </div>
+                                                                <div className="mb-4">
+                                                                    <p className="text-white/40 font-bold tracking-[8px] text-[8px] uppercase">{author}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </motion.div>
                                             ))}
                                             <button onClick={handleGenerateCover} className="mt-10 w-full flex justify-center items-center gap-6 text-white/30 hover:text-white transition-all font-black uppercase tracking-[8px] text-[10px] group"><RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-700" /> Tentar Nova Arte</button>
