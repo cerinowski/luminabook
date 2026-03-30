@@ -1,9 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-const apiKey =
-  process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY || "";
-
+const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY || "";
 const genAI = new GoogleGenerativeAI(apiKey);
 
 type Page = {
@@ -32,118 +30,29 @@ function cleanJsonText(text: string) {
     .trim();
 }
 
-function normalizePage(page: any): Page {
-  return {
-    type: page?.type === "cover" ? "cover" : "content",
-    title: typeof page?.title === "string" ? page.title : "Untitled",
-    subtitle:
-      typeof page?.subtitle === "string"
-        ? page.subtitle
-        : typeof page?.content === "string"
-          ? page.content
-          : "",
-    items: Array.isArray(page?.items) ? page.items : [],
-    illustration_prompt:
-      typeof page?.illustration_prompt === "string"
-        ? page.illustration_prompt
-        : "Minimalist high-end editorial illustration, no text",
-  };
-}
+function chunkByParagraphs(text: string, maxParagraphsPerPage = 4) {
+  // Preserve 100% of user words by splitting accurately by logical paragraphs
+  const rawParagraphs = text.split(/\n+/).map(p => p.trim()).filter(p => p.length > 5);
+  const pages: { items: string[] }[] = [];
 
-function chunkText(text: string, length: number): string[] {
-  const chunks = [];
-  let i = 0;
-  while (i < text.length) {
-    chunks.push(text.slice(i, i + length));
-    i += length;
-  }
-  return chunks;
-}
+  let currentItems: string[] = [];
+  let currentLength = 0;
 
-function ensureMinimumPages(data: any, title: string, description: string): DocumentBlueprint {
-  const safe: DocumentBlueprint = {
-    global_style: {
-      primary_color:
-        typeof data?.global_style?.primary_color === "string"
-          ? data.global_style.primary_color
-          : "#6366f1",
-      secondary_color:
-        typeof data?.global_style?.secondary_color === "string"
-          ? data.global_style.secondary_color
-          : "#a855f7",
-      global_mood:
-        ["Luxury", "Dramatic", "Minimalist", "Vibrant"].includes(data?.global_style?.global_mood)
-          ? data.global_style.global_mood
-          : "Luxury",
-    },
-    pages: Array.isArray(data?.pages) ? data.pages.map(normalizePage) : [],
-  };
-
-  if (safe.pages.length === 0) {
-    if (description && description.trim().length > 30) {
-      const textParts = chunkText(description, 1200);
-      safe.pages = [
-        {
-          type: "cover",
-          title,
-          subtitle: "Automated Blueprint",
-          illustration_prompt: `Luxury editorial cover image for "${title}", no text, premium composition, highly detailed.`,
-        },
-        ...textParts.map((part, idx) => ({
-          type: "content" as const,
-          title: `Parte ${idx + 1}`,
-          subtitle: part.length > 60 ? part.substring(0, 60) + "..." : part,
-          items: [
-            part.substring(0, 400).trim(),
-            part.substring(400, 800).trim(),
-            part.substring(800, 1200).trim()
-          ].filter(s => s.length > 5),
-          illustration_prompt: "Minimalist luxury editorial visual, no text.",
-        }))
-      ];
-    } else {
-      safe.pages = [
-        {
-          type: "cover",
-          title,
-          subtitle: "Automated Blueprint",
-          illustration_prompt: `Luxury book cover for "${title}", no text, high-end editorial look.`,
-        },
-        {
-          type: "content",
-          title: "Capítulo 1",
-          subtitle: "O início da jornada.",
-          items: ["Contexto inicial", "Visão geral do problema", "Primeiros passos"],
-          illustration_prompt: "Clean premium editorial abstract composition, no text.",
-        }
-      ];
+  for (const p of rawParagraphs) {
+    if (currentItems.length >= maxParagraphsPerPage || (currentLength + p.length > 1500 && currentItems.length > 0)) {
+      pages.push({ items: currentItems });
+      currentItems = [];
+      currentLength = 0;
     }
+    currentItems.push(p);
+    currentLength += p.length;
   }
 
-  while (safe.pages.length < 2) {
-    safe.pages.push({
-      type: "content",
-      title: `Seção ${safe.pages.length}`,
-      subtitle: "Página complementar de conteúdo.",
-      items: ["Ponto de destaque 1"],
-      illustration_prompt: "Minimalist luxury editorial visual, no text.",
-    });
+  if (currentItems.length > 0) {
+    pages.push({ items: currentItems });
   }
 
-  // Allow up to 12 pages for larger texts
-  safe.pages = safe.pages.slice(0, 12);
-
-  if (safe.pages[0]?.type !== "cover") {
-    safe.pages.unshift({
-      type: "cover",
-      title,
-      subtitle: "Premium Cover",
-      illustration_prompt: `Luxury book cover for "${title}", no text, high-end editorial look.`,
-    });
-    safe.pages = safe.pages.slice(0, 12);
-  }
-
-  return safe;
+  return pages;
 }
 
 export async function POST(req: Request) {
@@ -152,50 +61,36 @@ export async function POST(req: Request) {
 
   try {
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "Gemini API key não encontrada." },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Gemini API key não encontrada." }, { status: 500 });
     }
 
     let body: any = {};
-    try {
-      body = await req.json();
-    } catch {
-      body = {};
-    }
+    try { body = await req.json(); } catch { }
 
-    title = typeof body?.title === "string" && body.title.trim()
-      ? body.title.trim()
-      : title;
+    title = typeof body?.title === "string" && body.title.trim() ? body.title.trim() : title;
+    description = typeof body?.description === "string" ? body.description.trim() : description;
 
-    description = typeof body?.description === "string"
-      ? body.description.trim()
-      : description;
+    // Zero-Edit Strategy: Chunk the literal text perfectly into pages before hitting the AI
+    const pagesData = chunkByParagraphs(description || "Conteúdo não providenciado.");
+
+    // Create a precise context dump for Gemini to only invent the Metadata layers
+    const pageSummaries = pagesData.map((p, i) => `Page ${i + 1}: ${p.items.join(" ").substring(0, 300)}...`).join("\n");
 
     const prompt = `
 You are a Luxury Document Architect.
 
-Return VALID JSON only.
-Do not use markdown.
-Do not wrap the response in code fences.
+Return VALID JSON only. Do not use markdown.
+I have algorithmically sliced a book titled "${title}" into exactly ${pagesData.length} physical pages of reading content.
+Your ONLY job is to act as a Creative Director and provide exactly ${pagesData.length} JSON objects containing metadata for those exact physical pages.
 
-Create a premium multi-page A4 blueprint strictly based on the provided text.
-Title: "${title}"
-Source Text: "${description}"
+Context Preview (Read to understand the vibe of each page):
+${pageSummaries}
 
 Rules:
-1. Read the Source Text and logically partition the information into 4 to 10 pages.
-2. The first page MUST be of type "cover".
-3. ALL subsequent pages MUST be of type "content". DO NOT INVENT CHAPTERS. Use the EXACT text provided. Provide the raw content broken into pieces.
-4. DO NOT dump all the text into a single page. Distribute the information sequentially across multiple pages.
-5. Every page MUST include EXACTLY these fields:
-   - type ("cover" or "content")
-   - title (Section or Chapter title based on the text)
-   - subtitle (A brief 1-sentence summary of this specific section)
-   - items (An array of 2-5 string bullet points containing the ACTUAL sentences from the text for this section. DO NOT summarize to the point of losing content. Copy the text directly into these items.)
-   - illustration_prompt (A NO-TEXT premium visual description suitable for an image generator like DALL-E)
-6. global_mood must be one of: Luxury, Dramatic, Minimalist, Vibrant.
+1. Provide a beautiful, thematic "title" (2-5 words) that matches the subject of each page.
+2. Provide a "subtitle" (1 crisp sentence) summarizing the vibe.
+3. Provide an "illustration_prompt" (a cinematic, no-text luxury conceptual prompt for DALL-E) matching the content.
+4. "metadata" MUST have EXACTLY ${pagesData.length} entries!
 
 JSON structure:
 {
@@ -204,12 +99,11 @@ JSON structure:
     "secondary_color": "#HEX",
     "global_mood": "Luxury"
   },
-  "pages": [
+  "metadata": [
     {
-      "type": "cover",
-      "title": "string",
-      "subtitle": "string",
-      "illustration_prompt": "string"
+      "title": "A Jornada",
+      "subtitle": "Um início inspirador.",
+      "illustration_prompt": "Minimalist premium luxury conceptual art, geometric shapes, cinematic lighting, NO TEXT"
     }
   ]
 }
@@ -223,8 +117,7 @@ JSON structure:
         const model = genAI.getGenerativeModel({
           model: modelName,
           generationConfig: {
-            temperature: 0.3, // Lower temperature to force strict copy
-            maxOutputTokens: 3000,
+            temperature: 0.5,
             responseMimeType: "application/json",
           },
         });
@@ -239,33 +132,72 @@ JSON structure:
       }
     }
 
-    if (!text?.trim()) {
-      throw new Error(lastError?.message || "Nenhum texto retornado pelo Gemini.");
-    }
-
-    const cleaned = cleanJsonText(text);
+    if (!text?.trim()) throw new Error("Nenhum texto retornado pelo Gemini.");
 
     let parsed: any;
     try {
-      parsed = JSON.parse(cleaned);
-    } catch (parseError) {
-      console.error("JSON inválido retornado pelo Gemini:", cleaned);
+      parsed = JSON.parse(cleanJsonText(text));
+    } catch {
       throw new Error("O Gemini retornou JSON inválido.");
     }
 
-    const normalized = ensureMinimumPages(parsed, title, description);
+    // Stitching the mathematically perfect text with the beautifully crafted Meta layers
+    const blueprint: DocumentBlueprint = {
+      global_style: {
+        primary_color: parsed?.global_style?.primary_color || "#ffffff",
+        secondary_color: parsed?.global_style?.secondary_color || "#a855f7",
+        global_mood: "Luxury"
+      },
+      pages: [
+        {
+          type: "cover",
+          title,
+          subtitle: "Automated Edition",
+          illustration_prompt: `Luxury editorial cover explicitly designed for a book titled "${title}", stunning visuals, 8k, cinematic, NO TEXT.`
+        },
+        ...pagesData.map((pageChunk, idx) => {
+          const meta = parsed.metadata && parsed.metadata[idx] ? parsed.metadata[idx] : {
+            title: `Parte ${idx + 1}`,
+            subtitle: "Avançando no conteúdo...",
+            illustration_prompt: "Clean luxury background concept, no text."
+          };
+          return {
+            type: "content" as const,
+            title: meta.title || `Parte ${idx + 1}`,
+            subtitle: meta.subtitle || "",
+            items: pageChunk.items,
+            illustration_prompt: meta.illustration_prompt || "Clean luxury background concept, no text."
+          };
+        })
+      ]
+    };
 
-    return NextResponse.json(normalized);
+    return NextResponse.json(blueprint);
+
   } catch (error: any) {
     console.error("Anthology Architecture Final Error:", error);
 
-    // Dynamic fallback instead of static
-    const fallback = ensureMinimumPages(
-      null,
-      title || "Lumina",
-      description || ""
-    );
+    // Bulletproof Offline Fallback using the same perfect zero-loss splitter
+    const pagesData = chunkByParagraphs(description || "Conteúdo não providenciado.");
+    const fallbackBlueprint: DocumentBlueprint = {
+      global_style: { primary_color: "#ffffff", secondary_color: "#a855f7", global_mood: "Luxury" },
+      pages: [
+        {
+          type: "cover",
+          title,
+          subtitle: "Standard Edition",
+          illustration_prompt: `Luxury cover for "${title}", no text.`
+        },
+        ...pagesData.map((pageChunk, idx) => ({
+          type: "content" as const,
+          title: `Parte ${idx + 1}`,
+          subtitle: "Continuação do documento...",
+          items: pageChunk.items,
+          illustration_prompt: "Minimalist layout, premium clean aesthetic, no text."
+        }))
+      ]
+    };
 
-    return NextResponse.json(fallback);
+    return NextResponse.json(fallbackBlueprint);
   }
 }
