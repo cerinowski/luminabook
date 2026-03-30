@@ -45,16 +45,70 @@ export async function POST(req: Request) {
         console.log(`OpenAI Key: ${openAIKey ? 'Present' : 'MISSING'}`);
         console.log(`Gemini Key: ${geminiKey ? 'Present' : 'MISSING'}`);
 
-        // ARQUITETURA DE REVEZAMENTO (BYPASS VERCEL 10S)
-        // Construímos a URL de relay que aponta para o motor OpenAI (DALL-E 3)
-        // Isso permite que o navegador espere o tempo que for necessário (>15s)
-        const seed = Math.floor(Math.random() * 999999);
-        const relayUrl = `https://pollinations.ai/p/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${seed}&model=openai&nologo=true`;
+        // STAGE 1: DALL-E 3
+        if (openAIKey && (requestedModel === 'dalle' || !requestedModel || requestedModel === 'auto')) {
+            try {
+                const openai = new OpenAI({ apiKey: openAIKey, timeout: 9800 });
+                const response = await openai.images.generate({
+                    model: "dall-e-3", prompt, n: 1, size: "1024x1024", response_format: "b64_json", quality: "standard"
+                });
+                if (response.data?.[0]?.b64_json) {
+                    return NextResponse.json({ ok: true, image: `data:image/png;base64,${response.data[0].b64_json}`, engine: 'DALL-E 3' });
+                }
+            } catch (e: any) {
+                const errDetail = e?.error?.message || e?.message || "Erro desconhecido";
+                lastError = `OpenAI: ${errDetail.substring(0, 80)}`;
+                console.error(`[OPENAI]`, e);
+            }
+        } else if (!openAIKey) {
+            lastError = "OpenAI Key Missing";
+        }
 
+        // STAGE 2: GEMINI
+        if (geminiKey && (requestedModel === 'gemini' || !requestedModel || requestedModel === 'auto')) {
+            try {
+                const genAI = new GoogleGenerativeAI(geminiKey);
+                const model = genAI.getGenerativeModel({ model: "imagen-3.0-generate-001" });
+                const result = await model.generateContent(prompt);
+                const b64 = result.response.candidates?.[0]?.content?.parts[0]?.inlineData?.data;
+                if (b64) {
+                    return NextResponse.json({ ok: true, image: `data:image/png;base64,${b64}`, engine: 'Gemini' });
+                }
+            } catch (e: any) {
+                lastError = `Gemini: ${e.message}`;
+                console.error(`[GEMINI] ${e.message}`);
+            }
+        } else if (!geminiKey) {
+            lastError = lastError.includes("OpenAI") ? "Both Keys Missing" : "Gemini Key Missing";
+        }
+
+        // STAGE 3: POLLINATIONS (Server-Side)
+        try {
+            const url = `https://pollinations.ai/p/${encodeURIComponent(prompt.substring(0, 300))}?width=1024&height=1024&seed=${Math.floor(Math.random() * 999999)}&model=flux&nologo=true`;
+            const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+            if (res.ok) {
+                const buf = Buffer.from(await res.arrayBuffer());
+                if (isValidImage(buf)) {
+                    return NextResponse.json({ ok: true, image: `data:image/jpeg;base64,${buf.toString('base64')}`, engine: 'Server Relay' });
+                }
+            } else {
+                lastError = `Relay Status: ${res.status}`;
+            }
+        } catch (e: any) {
+            lastError = `Pollinations: ${e.message}`;
+            console.error(`[POLLINATIONS] ${e.message}`);
+        }
+
+        // STAGE 4: PLACEHOLDER
         return NextResponse.json({
             ok: true,
-            relayUrl,
-            engine: 'OpenAI (Relay Stable)'
+            image: buildPlaceholder(currentTitle),
+            engine: `Safety: ${lastError.substring(0, 30)}`,
+            diagnostics: {
+                hasOpenAI: !!openAIKey,
+                hasGemini: !!geminiKey,
+                lastError
+            }
         });
 
     } catch (error: any) {

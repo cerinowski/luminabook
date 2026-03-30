@@ -98,44 +98,52 @@ export default function Home() {
 
             const generateOne = async (id: number, customPrompt: string) => {
                 try {
-                    addLog(`[Slot ${id}] Iniciando OpenAI...`);
+                    addLog(`[Slot ${id}] Iniciando...`);
                     const res = await fetch('/api/generate-cover', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ prompt: customPrompt, title, model: 'dalle' }),
-                        signal: AbortSignal.timeout(15000)
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt: customPrompt, title, model: selectedModel }),
+                        signal: AbortSignal.timeout(10000) // LIMITE DE 10s PARA EVITAR 504
                     });
                     const data = await res.json();
 
-                    if (data.ok && (data.image || data.url || data.relayUrl)) {
-                        let finalImage = data.image;
+                    // Se for uma imagem real de IA, aceita e para aqui.
+                    if (data.ok && data.image && !data.engine?.includes('Safety') && !data.engine?.includes('Fatal')) {
+                        addLog(`[Slot ${id}] OK: ${data.engine}`);
+                        updateCard(id, { status: 'success', image: data.image, engine: data.engine });
+                        return;
+                    }
 
-                        // Se veio uma URL de relay (OpenAI), o navegador busca (SEM LIMITE DE 10S)
-                        const targetUrl = data.relayUrl || data.url;
-                        if (targetUrl) {
-                            addLog(`[Slot ${id}] Gerando via OpenAI (${targetUrl.includes('openai') ? 'DALL-E 3' : 'Proxy'})...`);
-                            const proxyRes = await fetch('/api/proxy-image', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ url: targetUrl })
-                            });
-                            const proxyData = await proxyRes.json();
-                            finalImage = proxyData.base64;
-                        }
+                    if (data.diagnostics) {
+                        const diag = data.diagnostics;
+                        if (!diag.hasOpenAI) addLog(`[Slot ${id}] ⚠️ OPENAI_API_KEY AUSENTE`);
+                        if (diag.lastError) addLog(`[Slot ${id}] DETALHE: ${diag.lastError}`);
+                    }
 
-                        if (finalImage) {
-                            addLog(`[Slot ${id}] Sucesso DALL-E 3`);
-                            updateCard(id, { status: 'success', image: finalImage, engine: data.engine });
-                        } else {
-                            throw new Error("Falha ao processar imagem final");
+                    addLog(`[Slot ${id}] Fallback (${data.engine || 'Timeout'}). Bypass...`);
+                } catch (e: any) {
+                    addLog(`[Slot ${id}] Timeout/Erro (10s). Bypass...`);
+                }
+
+                // Browser Bypass Fallback (A força bruta do frontend)
+                try {
+                    const seed = Math.floor(Math.random() * 999999);
+                    const pollUrl = `https://pollinations.ai/p/${encodeURIComponent(customPrompt.substring(0, 400))}?width=1024&height=1024&seed=${seed}&model=flux&nologo=true`;
+                    const proxyRes = await fetch('/api/proxy-image', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: pollUrl })
+                    });
+                    if (proxyRes.ok) {
+                        const data = await proxyRes.json();
+                        if (data.base64) {
+                            addLog(`[Slot ${id}] Bypass OK.`);
+                            updateCard(id, { status: 'success', image: data.base64, engine: 'Proxy-Iron' });
+                            return;
                         }
-                    } else {
-                        throw new Error(data.error || "Falha na OpenAI");
                     }
                 } catch (e: any) {
-                    addLog(`[Slot ${id}] Erro: ${e.message}`);
-                    updateCard(id, { status: 'error', error: e.message || 'Falha na geração' });
+                    addLog(`[Slot ${id}] Falha total.`);
                 }
+                updateCard(id, { status: 'error', error: 'Falha na geração' });
             };
 
             const prompts = [
@@ -145,15 +153,11 @@ export default function Home() {
                 `${basePrompt} Abstract artistic composition.`
             ];
 
-            // Dispara as 4 sequencialmente para não sobrecarregar o worker/timeout da Vercel
-            const runSequential = async () => {
-                for (let i = 0; i < prompts.length; i++) {
-                    await generateOne(i + 1, prompts[i]);
-                }
+            // Dispara as 4 em paralelo
+            Promise.all(prompts.map((p, i) => generateOne(i + 1, p))).then(() => {
                 setIsLoading(false);
                 setSelectedCoverIndex(0);
-            };
-            runSequential();
+            });
 
         } catch (e: any) {
             addLog(`Erro: ${e?.message?.substring(0, 20) || 'erro desconhecido'}`);
@@ -409,13 +413,6 @@ export default function Home() {
                                                             </div>
                                                         )}
                                                     </>
-                                                )}
-                                                {c.status === 'error' && (
-                                                    <div className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-red-500/5 text-center">
-                                                        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-                                                        <span className="text-[10px] font-black uppercase tracking-[2px] text-red-500/60 mb-2">Falha na Geração</span>
-                                                        <p className="text-white/40 text-[10px] font-medium leading-tight">{c.error || 'Erro desconhecido'}</p>
-                                                    </div>
                                                 )}
                                             </motion.div>
                                         ))}
