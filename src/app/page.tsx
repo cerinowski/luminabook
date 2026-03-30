@@ -67,8 +67,8 @@ export default function Home() {
         setActiveTab('gallery');
         setSelectedCoverIndex(null);
 
-        // Reset card to loading (Apenas 1 agora para estabilidade máxima)
-        setCovers([{ id: 1, status: 'idle', image: null }]);
+        // Estado Único e Focado G28
+        setCovers([{ id: 1, status: 'loading', image: null }]);
         addLog(`G27.1 Anthology Architecting...`);
 
         try {
@@ -80,15 +80,12 @@ export default function Home() {
             if (!anthoRes.ok) throw new Error("Falha ao arquitetar o documento");
             const dataAntho = await anthoRes.json();
             setBlueprint(dataAntho);
-            addLog(`Documento Arquitetado: ${dataAntho?.pages?.length || 0} páginas.`);
+            addLog(`Arquitetura OK.`);
 
             const style = dataAntho?.global_style || { global_mood: 'Luxury', primary_color: '#ffffff' };
             const coverPage = dataAntho?.pages?.find((p: any) => p.type === 'cover');
 
-            // Início da geração das 4 opções de capa
-            setCovers(Array.from({ length: 4 }, (_, i) => ({ id: i + 1, status: 'loading', image: null })));
-
-            // Prompt restaurado e simplificado para evitar erros de interpretação
+            // Geração Única G28
             const illustrationPrompt = coverPage?.illustration_prompt || description || "High-end conceptual art";
             const basePrompt = `Professional book cover art for "${title.toUpperCase()}". Style: ${selectedPalette}. Mood: ${style.global_mood}. Detail: ${illustrationPrompt}. Flat 2D digital illustration, editorial design, NO 3D MOCKUPS, NO PHYSICAL BOOKS, 8k, centered. Author: ${author || 'Lumina Studio'}.`;
 
@@ -98,56 +95,39 @@ export default function Home() {
 
             const generateOne = async (id: number, customPrompt: string) => {
                 try {
-                    addLog(`[Slot ${id}] Iniciando...`);
+                    addLog(`Gerando via OpenAI...`);
                     const res = await fetch('/api/generate-cover', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ prompt: customPrompt, title, model: selectedModel }),
-                        signal: AbortSignal.timeout(10000) // LIMITE DE 10s PARA EVITAR 504
+                        body: JSON.stringify({ prompt: customPrompt, title }),
                     });
                     const data = await res.json();
 
-                    // Se for uma imagem real de IA, aceita e para aqui.
-                    if (data.ok && data.image && !data.engine?.includes('Safety') && !data.engine?.includes('Fatal')) {
-                        addLog(`[Slot ${id}] OK: ${data.engine}`);
-                        updateCard(id, { status: 'success', image: data.image, engine: data.engine });
-                        return;
-                    }
+                    if (data.ok && data.relayUrl) {
+                        addLog(`OpenAI iniciada. Aguardando arte...`);
 
-                    if (data.diagnostics) {
-                        const diag = data.diagnostics;
-                        if (!diag.hasOpenAI) addLog(`[Slot ${id}] ⚠️ OPENAI_API_KEY AUSENTE`);
-                        if (diag.lastError) addLog(`[Slot ${id}] DETALHE: ${diag.lastError}`);
-                    }
+                        // Busca a imagem do Relay (SEM LIMITE DE 10S)
+                        const proxyRes = await fetch('/api/proxy-image', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ url: data.relayUrl })
+                        });
+                        const proxyData = await proxyRes.json();
 
-                    addLog(`[Slot ${id}] Fallback (${data.engine || 'Timeout'}). Bypass...`);
-                } catch (e: any) {
-                    addLog(`[Slot ${id}] Timeout/Erro (10s). Bypass...`);
-                }
-
-                // Browser Bypass Fallback (A força bruta do frontend)
-                try {
-                    const seed = Math.floor(Math.random() * 999999);
-                    const pollUrl = `https://pollinations.ai/p/${encodeURIComponent(customPrompt.substring(0, 400))}?width=1024&height=1024&seed=${seed}&model=flux&nologo=true`;
-                    const proxyRes = await fetch('/api/proxy-image', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ url: pollUrl })
-                    });
-                    if (proxyRes.ok) {
-                        const data = await proxyRes.json();
-                        if (data.base64) {
-                            addLog(`[Slot ${id}] Bypass OK.`);
-                            updateCard(id, { status: 'success', image: data.base64, engine: 'Proxy-Iron' });
-                            return;
+                        if (proxyData.base64) {
+                            addLog(`Sucesso OpenAI DALL-E 3.`);
+                            updateCard(id, { status: 'success', image: proxyData.base64, engine: 'OpenAI' });
+                        } else {
+                            throw new Error("Falha na renderização");
                         }
+                    } else {
+                        throw new Error(data.error || "Erro na OpenAI");
                     }
                 } catch (e: any) {
-                    addLog(`[Slot ${id}] Falha total.`);
+                    addLog(`Erro: ${e.message}`);
+                    updateCard(id, { status: 'error', error: e.message });
                 }
-                updateCard(id, { status: 'error', error: 'Falha na geração' });
             };
 
-            // Geração única e focada para evitar timeouts na Vercel
-            setCovers([{ id: 1, status: 'loading', image: null }]);
             await generateOne(1, basePrompt);
             setIsLoading(false);
             setSelectedCoverIndex(0);
