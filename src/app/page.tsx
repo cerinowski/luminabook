@@ -105,19 +105,17 @@ export default function Home() {
                     if (data.ok && data.relayUrl) {
                         addLog(`OpenAI iniciada. Aguardando arte...`);
 
-                        // Busca a imagem do Relay (SEM LIMITE DE 10S)
-                        const proxyRes = await fetch('/api/proxy-image', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ url: data.relayUrl })
-                        });
-                        const proxyData = await proxyRes.json();
+                        // Busca a imagem direto no navegador (SEM LIMITE DE 10S)
+                        const imgRes = await fetch(data.relayUrl);
+                        if (!imgRes.ok) throw new Error("Erro no download da imagem");
+                        const blob = await imgRes.blob();
+                        const b64 = await blobToBase64(blob);
 
-                        if (proxyData.base64) {
+                        if (b64) {
                             addLog(`Sucesso OpenAI DALL-E 3.`);
-                            updateCard(id, { status: 'success', image: proxyData.base64, engine: 'OpenAI' });
+                            updateCard(id, { status: 'success', image: b64, engine: 'OpenAI' });
                         } else {
-                            throw new Error("Falha na renderização");
+                            throw new Error("Falha na conversão");
                         }
                     } else {
                         throw new Error(data.error || "Erro na OpenAI");
