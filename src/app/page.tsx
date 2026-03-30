@@ -387,6 +387,13 @@ export default function Home() {
                                                         )}
                                                     </>
                                                 )}
+                                                {c.status === 'error' && (
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-red-500/5 text-center">
+                                                        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+                                                        <span className="text-[10px] font-black uppercase tracking-[2px] text-red-500/60 mb-2">Falha na Geração</span>
+                                                        <p className="text-white/40 text-[10px] font-medium leading-tight">{c.error || 'Erro desconhecido'}</p>
+                                                    </div>
+                                                )}
                                             </motion.div>
                                         ))}
                                     </div>
