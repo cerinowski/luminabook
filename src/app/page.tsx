@@ -25,7 +25,7 @@ export default function Home() {
     };
 
     const [covers, setCovers] = useState<CoverCard[]>(
-        Array.from({ length: 4 }, (_, i) => ({ id: i + 1, status: 'idle', image: null }))
+        Array.from({ length: 1 }, (_, i) => ({ id: i + 1, status: 'idle', image: null }))
     );
     const [selectedCoverIndex, setSelectedCoverIndex] = useState<number | null>(null);
 
@@ -67,8 +67,8 @@ export default function Home() {
         setActiveTab('gallery');
         setSelectedCoverIndex(null);
 
-        // Reset cards to loading
-        setCovers(Array.from({ length: 4 }, (_, i) => ({ id: i + 1, status: 'idle', image: null })));
+        // Reset card to loading (Apenas 1 agora para estabilidade máxima)
+        setCovers([{ id: 1, status: 'idle', image: null }]);
         addLog(`G27.1 Anthology Architecting...`);
 
         try {
@@ -146,18 +146,11 @@ export default function Home() {
                 updateCard(id, { status: 'error', error: 'Falha na geração' });
             };
 
-            const prompts = [
-                basePrompt,
-                `${basePrompt} Cinematic lighting.`,
-                `${basePrompt} Refined editorial illustration.`,
-                `${basePrompt} Abstract artistic composition.`
-            ];
-
-            // Dispara as 4 em paralelo
-            Promise.all(prompts.map((p, i) => generateOne(i + 1, p))).then(() => {
-                setIsLoading(false);
-                setSelectedCoverIndex(0);
-            });
+            // Geração única e focada para evitar timeouts na Vercel
+            setCovers([{ id: 1, status: 'loading', image: null }]);
+            await generateOne(1, basePrompt);
+            setIsLoading(false);
+            setSelectedCoverIndex(0);
 
         } catch (e: any) {
             addLog(`Erro: ${e?.message?.substring(0, 20) || 'erro desconhecido'}`);
