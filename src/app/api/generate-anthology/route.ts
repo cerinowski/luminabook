@@ -34,10 +34,9 @@ function cleanJsonText(text: string) {
 
 function normalizePage(page: any): Page {
   return {
-    return {
-      type: page?.type === "cover" ? "cover" : "content",
-      title: typeof page?.title === "string" ? page.title : "Untitled",
-      subtitle:
+    type: page?.type === "cover" ? "cover" : "content",
+    title: typeof page?.title === "string" ? page.title : "Untitled",
+    subtitle:
         typeof page?.subtitle === "string"
           ? page.subtitle
           : typeof page?.content === "string"
