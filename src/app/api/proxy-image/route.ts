@@ -36,11 +36,11 @@ export async function POST(req: Request) {
         const arrayBuffer = await res.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        if (buffer.length < 500) {
-            throw new Error("Resposta muito curta (provável erro do upstream)");
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.startsWith("image/")) {
+            throw new Error(`Upstream não retornou imagem (tipo: ${contentType})`);
         }
 
-        let contentType = res.headers.get("content-type") || "image/jpeg";
         const b64 = buffer.toString('base64');
 
         return NextResponse.json({
