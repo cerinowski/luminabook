@@ -95,30 +95,52 @@ export default function Home() {
 
             const generateOne = async (id: number, customPrompt: string) => {
                 try {
-                    addLog(`Gerando via OpenAI...`);
-                    const res = await fetch('/api/generate-cover', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ prompt: customPrompt, title }),
+                    addLog(`Iniciando OpenAI (Deep-Client)...`);
+
+                    const keyRes = await fetch('/api/get-key');
+                    const { key } = await keyRes.json();
+                    if (!key) throw new Error("Chave não encontrada");
+
+                    addLog(`Gerando imagem (DALL-E 3)...`);
+                    const oaiRes = await fetch('https://api.openai.com/v1/images/generations', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${key}`
+                        },
+                        body: JSON.stringify({
+                            model: "dall-e-3",
+                            prompt: customPrompt,
+                            n: 1,
+                            size: "1024x1024",
+                            quality: "standard"
+                        })
                     });
-                    const data = await res.json();
 
-                    if (data.ok && data.relayUrl) {
-                        addLog(`OpenAI iniciada. Aguardando arte...`);
+                    if (!oaiRes.ok) {
+                        const err = await oaiRes.json();
+                        throw new Error(err.error?.message || "Erro na OpenAI");
+                    }
 
-                        // Busca a imagem direto no navegador (SEM LIMITE DE 10S)
-                        const imgRes = await fetch(data.relayUrl);
-                        if (!imgRes.ok) throw new Error("Erro no download da imagem");
-                        const blob = await imgRes.blob();
-                        const b64 = await blobToBase64(blob);
+                    const oaiData = await oaiRes.json();
+                    const imageUrl = oaiData.data[0].url;
 
-                        if (b64) {
-                            addLog(`Sucesso OpenAI DALL-E 3.`);
-                            updateCard(id, { status: 'success', image: b64, engine: 'OpenAI' });
+                    if (imageUrl) {
+                        addLog(`Imagem pronta. Finalizando...`);
+
+                        const proxyRes = await fetch('/api/proxy-image', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ url: imageUrl })
+                        });
+                        const proxyData = await proxyRes.json();
+
+                        if (proxyData.base64) {
+                            addLog(`Sucesso OAI DALL-E 3.`);
+                            updateCard(id, { status: 'success', image: proxyData.base64, engine: 'OpenAI' });
                         } else {
-                            throw new Error("Falha na conversão");
+                            throw new Error("Erro na renderização final");
                         }
-                    } else {
-                        throw new Error(data.error || "Erro na OpenAI");
                     }
                 } catch (e: any) {
                     addLog(`Erro: ${e.message}`);
