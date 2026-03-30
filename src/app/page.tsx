@@ -107,9 +107,27 @@ export default function Home() {
                     });
                     const data = await res.json();
 
-                    if (data.ok && data.image) {
-                        addLog(`[Slot ${id}] Sucesso DALL-E 3`);
-                        updateCard(id, { status: 'success', image: data.image, engine: data.engine });
+                    if (data.ok && (data.image || data.url)) {
+                        let finalImage = data.image;
+
+                        // Se veio uma URL da OpenAI, passa pelo nosso proxy-iron para ganhar base64
+                        if (data.url) {
+                            addLog(`[Slot ${id}] Proxificando URL...`);
+                            const proxyRes = await fetch('/api/proxy-image', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ url: data.url })
+                            });
+                            const proxyData = await proxyRes.json();
+                            finalImage = proxyData.base64;
+                        }
+
+                        if (finalImage) {
+                            addLog(`[Slot ${id}] Sucesso DALL-E 3`);
+                            updateCard(id, { status: 'success', image: finalImage, engine: data.engine });
+                        } else {
+                            throw new Error("Falha ao processar imagem final");
+                        }
                     } else {
                         throw new Error(data.error || "Falha na OpenAI");
                     }
@@ -126,11 +144,15 @@ export default function Home() {
                 `${basePrompt} Abstract artistic composition.`
             ];
 
-            // Dispara as 4 em paralelo
-            Promise.all(prompts.map((p, i) => generateOne(i + 1, p))).then(() => {
+            // Dispara as 4 sequencialmente para não sobrecarregar o worker/timeout da Vercel
+            const runSequential = async () => {
+                for (let i = 0; i < prompts.length; i++) {
+                    await generateOne(i + 1, prompts[i]);
+                }
                 setIsLoading(false);
                 setSelectedCoverIndex(0);
-            });
+            };
+            runSequential();
 
         } catch (e: any) {
             addLog(`Erro: ${e?.message?.substring(0, 20) || 'erro desconhecido'}`);

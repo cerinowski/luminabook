@@ -49,34 +49,34 @@ export async function POST(req: Request) {
         if (!openAIKey) throw new Error("Chave OpenAI (OPENAI_API_KEY) não configurada.");
 
         try {
-            const openai = new OpenAI({ apiKey: openAIKey, timeout: 9500 });
+            // Ajustado para 8.8s (o limite real da Vercel no Hobby é 10s cravado)
+            const openai = new OpenAI({ apiKey: openAIKey, timeout: 8800 });
             const response = await openai.images.generate({
                 model: "dall-e-3",
                 prompt,
                 n: 1,
                 size: "1024x1024",
-                response_format: "b64_json",
+                response_format: "url",
                 quality: "standard"
             });
 
-            if (response.data?.[0]?.b64_json) {
+            const imageUrl = response.data?.[0]?.url;
+            if (imageUrl) {
                 return NextResponse.json({
                     ok: true,
-                    image: `data:image/png;base64,${response.data[0].b64_json}`,
+                    url: imageUrl,
                     engine: 'OpenAI DALL-E 3'
                 });
             } else {
-                throw new Error("DALL-E 3 não retornou dados de imagem.");
+                throw new Error("OpenAI não retornou URL da imagem.");
             }
         } catch (e: any) {
-            const errDetail = e?.error?.message || e?.message || "Erro desconhecido na OpenAI";
+            const errDetail = e?.error?.message || e?.message || "Erro OpenAI";
             console.error(`[OPENAI FAILURE]`, e);
 
-            // Retorno de erro explícito para o front
             return NextResponse.json({
                 ok: false,
-                error: errDetail,
-                diagnostics: { lastError: errDetail }
+                error: errDetail
             }, { status: 500 });
         }
 
