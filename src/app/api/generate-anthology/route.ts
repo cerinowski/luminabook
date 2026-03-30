@@ -10,6 +10,7 @@ type Page = {
   type: "cover" | "intro" | "features" | "content" | "quote" | "closing";
   title: string;
   subtitle: string;
+  items?: string[];
   illustration_prompt: string;
 };
 
@@ -43,6 +44,7 @@ function normalizePage(page: any): Page {
         : typeof page?.content === "string"
           ? page.content
           : "",
+    items: Array.isArray(page?.items) ? page.items : [],
     illustration_prompt:
       typeof page?.illustration_prompt === "string"
         ? page.illustration_prompt
@@ -168,6 +170,7 @@ Rules:
    - type
    - title
    - subtitle
+   - items (Array of strings, e.g. bullet points of actual content. Critical for non-cover pages)
    - illustration_prompt
 5. illustration_prompt must describe a NO-TEXT premium visual suitable for an image generator.
 6. global_mood must be one of: Luxury, Dramatic, Minimalist, Vibrant.

@@ -268,42 +268,74 @@ export default function Home() {
                 const imageType = page.image.startsWith('data:image/png') ? 'PNG' : 'JPEG';
                 doc.addImage(page.image, imageType, 0, 0, 210, 297, undefined, 'FAST');
 
-                if (i === 0) { // CAPA G31
-                    // Gradiente inferior suave G32
-                    for (let step = 0; step < 50; step++) {
-                        const opacity = step / 50;
-                        doc.setFillColor(0, 0, 0);
-                        doc.setGState(new (doc as any).GState({ opacity: opacity * 0.8 }));
-                        doc.rect(0, 297 - (step * 2), 210, 2, 'F');
+                if (i === 0) { // CAPA G32.1 - HIGH FIDELITY
+                    // 1. Semi-transparent base overlay (darker at bottom)
+                    doc.setFillColor(0, 0, 0);
+                    doc.setGState(new (doc as any).GState({ opacity: 0.8 }));
+                    doc.rect(0, 180, 210, 117, 'F'); // Solid dark base
+
+                    // 2. Smoother gradient transition (150mm to 180mm)
+                    for (let step = 0; step < 30; step++) {
+                        const opacity = (step / 30) * 0.8;
+                        doc.setGState(new (doc as any).GState({ opacity: opacity }));
+                        doc.rect(0, 180 - step, 210, 1.1, 'F');
                     }
-                    doc.setGState(new (doc as any).GState({ opacity: 1 }));
 
                     doc.setGState(new (doc as any).GState({ opacity: 1 }));
                     doc.setTextColor(255, 255, 255);
+
+                    // 3. Title with Dynamic Centering & Shadow
                     doc.setFont("helvetica", "bold");
-                    doc.setFontSize(36);
-                    const titleLines = doc.splitTextToSize(title.toUpperCase(), 170);
-                    doc.text(titleLines, 105, 230, { align: 'center' });
+                    doc.setFontSize(32);
+                    const titleLines = doc.splitTextToSize(title.toUpperCase(), 160);
+                    const lineHeightTitle = 12;
+                    const totalTitleHeight = titleLines.length * lineHeightTitle;
+                    let currentY = 230 - (totalTitleHeight / 2);
+
+                    // Shadow effect
+                    doc.setTextColor(0, 0, 0);
+                    doc.text(titleLines, 105.5, currentY + 0.5, { align: 'center' });
+                    doc.setTextColor(255, 255, 255);
+                    doc.text(titleLines, 105, currentY, { align: 'center' });
+
+                    currentY += totalTitleHeight + 10;
 
                     if (subtitle) {
                         doc.setFont("helvetica", "normal");
-                        doc.setFontSize(16);
-                        const subLines = doc.splitTextToSize(subtitle.toUpperCase(), 170);
-                        doc.text(subLines, 105, 250, { align: 'center' });
+                        doc.setFontSize(14);
+                        const subLines = doc.splitTextToSize(subtitle.toUpperCase(), 160);
+                        doc.text(subLines, 105, currentY, { align: 'center' });
+                        currentY += (subLines.length * 7) + 5;
                     }
 
-                    // G32: Autor posicionado no gradiente
+                    // 4. Author at the very bottom
                     doc.setFont("helvetica", "bold");
-                    doc.setFontSize(12);
-                    doc.text(author.toUpperCase(), 105, 280, { align: 'center' });
+                    doc.setFontSize(10);
+                    doc.setTextColor(200, 200, 200);
+                    doc.text(author.toUpperCase(), 105, 280, { align: 'center', charSpace: 2 });
                 } else if (page.type !== 'cover') {
-                    doc.setTextColor(selectedTheme === 'dark' ? 255 : 0, selectedTheme === 'dark' ? 255 : 0, selectedTheme === 'dark' ? 255 : 0);
-                    doc.setFont("helvetica", "bold"); doc.setFontSize(28);
-                    doc.text(page.title.toUpperCase(), 20, 50);
-                    doc.setFont("helvetica", "normal"); doc.setFontSize(14);
+                    // Internal Page Theme Integration
+                    const isDark = selectedTheme === 'dark';
+                    const mainColor = isDark ? 255 : 30;
+                    const subColor = isDark ? 180 : 80;
+
+                    doc.setTextColor(mainColor, mainColor, mainColor);
+                    doc.setFont("helvetica", "bold"); doc.setFontSize(26);
+                    const pTitleLines = doc.splitTextToSize(page.title.toUpperCase(), 170);
+                    doc.text(pTitleLines, 20, 45);
+
+                    doc.setTextColor(subColor, subColor, subColor);
+                    doc.setFont("helvetica", "normal"); doc.setFontSize(13);
                     if (page.subtitle) {
-                        const splitText = doc.splitTextToSize(page.subtitle, 170);
-                        doc.text(splitText, 20, 70);
+                        const splitSub = doc.splitTextToSize(page.subtitle, 165);
+                        doc.text(splitSub, 20, 65);
+                    }
+
+                    if (page.items) {
+                        doc.setFontSize(11);
+                        page.items.forEach((item, idx) => {
+                            doc.text("• " + item, 25, 110 + (idx * 8));
+                        });
                     }
                 }
                 if (i < blueprint.pages.length - 1) doc.addPage();
