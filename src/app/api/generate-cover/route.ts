@@ -5,7 +5,7 @@ import OpenAI from "openai";
 export const maxDuration = 30;
 
 function buildPlaceholder(title: string) {
-    const svg = `
+  const svg = `
       <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024">
         <defs>
           <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -20,37 +20,38 @@ function buildPlaceholder(title: string) {
         <rect x="256" y="650" width="512" height="4" fill="#ffffff" opacity="0.1" rx="2" />
       </svg>
     `.trim();
-    const b64 = Buffer.from(svg).toString("base64");
-    return `data:image/svg+xml;base64,${b64}`;
+  const b64 = Buffer.from(svg).toString("base64");
+  return `data:image/svg+xml;base64,${b64}`;
 }
 
 const isValidImage = (buffer: Buffer) => {
-    if (!buffer || buffer.length < 1000) return false;
-    const isPng = buffer[0] === 0x89 && buffer[1] === 0x50;
-    const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8;
-    return isPng || isJpeg;
+  if (!buffer || buffer.length < 1000) return false;
+  const isPng = buffer[0] === 0x89 && buffer[1] === 0x50;
+  const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8;
+  return isPng || isJpeg;
 };
 
 export async function POST(req: Request) {
-    let currentTitle = "Capas Lumina";
-    let lastError = "Nenhum erro registrado";
-    try {
-        const { prompt, title, model: requestedModel } = await req.json();
-        currentTitle = title || "Capas Lumina";
+  let currentTitle = "Capas Lumina";
+  let lastError = "Nenhum erro registrado";
+  try {
+    const { prompt, title, model: requestedModel } = await req.json();
+    currentTitle = title || "Capas Lumina";
 
-        // ARQUITETURA DE REVEZAMENTO EXCLUSIVA OPENAI (BYPASS VERCEL 10S)
-        // Isso permite que o navegador espere o tempo que for necessário (>15s)
-        const seed = Math.floor(Math.random() * 999999);
-        const relayUrl = `https://pollinations.ai/p/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${seed}&model=openai&nologo=true`;
+    // ARQUITETURA DE REVEZAMENTO EXCLUSIVA OPENAI (BYPASS VERCEL 10S)
+    // Isso permite que o navegador espere o tempo que for necessário (>15s)
+    const seed = Math.floor(Math.random() * 999999);
+    const relayUrl = `https://pollinations.ai/p/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${seed}&model=openai&nologo=true`;
 
-        return NextResponse.json({
-            ok: true,
-            relayUrl,
-            engine: 'OpenAI (Relay Stable)'
-        });
+    return NextResponse.json({
+      ok: true,
+      relayUrl,
+      image: relayUrl,
+      engine: 'OpenAI (Relay Stable)'
+    });
 
-    } catch (error: any) {
-        console.error(`[FATAL] ${error.message}`);
-        return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-    }
+  } catch (error: any) {
+    console.error(`[FATAL] ${error.message}`);
+    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  }
 }

@@ -101,9 +101,9 @@ JSON structure:
   },
   "metadata": [
     {
-      "title": "A Jornada",
-      "subtitle": "Um início inspirador.",
-      "illustration_prompt": "Minimalist premium luxury conceptual art, geometric shapes, cinematic lighting, NO TEXT"
+      "title": "[Insert a fitting 2-5 word section title here based on the page's exact content]",
+      "subtitle": "[Insert a matching 1-sentence subtitle describing this specific page content]",
+      "illustration_prompt": "[Insert cinematic NO-TEXT visual prompt fitting this exact page, e.g. Minimalist premium luxury abstract shape...]"
     }
   ]
 }

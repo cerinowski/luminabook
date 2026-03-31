@@ -161,32 +161,35 @@ export default function Home() {
                 style={{ fontFamily: selectedFont }}
             >
                 {page.image ? (
-                    <img src={page.image} className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-1000" />
+                    <img src={page.image} className="absolute inset-0 w-full h-full object-cover opacity-10 group-hover:scale-105 transition-transform duration-1000" />
                 ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-[#0c0c15] to-black" />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
-                <div className="absolute inset-0 p-12 md:p-20 flex flex-col justify-between z-10">
-                    <div className="space-y-8">
+                <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-black/90" />
+                <div className="absolute inset-0 p-12 md:p-20 flex flex-col z-10">
+                    <div className="space-y-6 mb-10">
                         <div className="flex items-center gap-4">
-                            <span className="text-purple-500 text-[10px] font-black tracking-[6px] uppercase px-4 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full">Seção {index + 1}</span>
+                            <span className="text-purple-500 text-[10px] font-black tracking-[6px] uppercase px-4 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full">Página {index + 1}</span>
                             <span className="text-white/20 text-[9px] font-bold uppercase tracking-[4px]">{page.type}</span>
                         </div>
-                        <input value={page.title} onChange={(e) => updatePage({ title: e.target.value })} className={`w-full bg-transparent text-6xl md:text-7xl font-black tracking-tighter italic leading-[0.9] outline-none border-b border-transparent focus:border-purple-500/30 transition-all placeholder:text-white/10 ${isDark ? 'text-white' : 'text-black'}`} placeholder="Título da Seção" />
-                        <textarea value={page.subtitle} onChange={(e) => updatePage({ subtitle: e.target.value })} className={`w-full bg-transparent text-xl font-medium tracking-wide leading-relaxed outline-none resize-none border-l-2 border-transparent focus:border-purple-500/30 pl-4 transition-all placeholder:text-white/5 ${isDark ? 'text-white/50' : 'text-black/60'}`} placeholder="Descreva o conteúdo desta seção..." rows={3} />
+                        {page.title && (
+                            <h2 className={`w-full bg-transparent text-5xl md:text-6xl font-black tracking-tighter italic leading-tight outline-none border-none ${isDark ? 'text-white' : 'text-black'}`}>
+                                {page.title}
+                            </h2>
+                        )}
+                        {page.subtitle && (
+                            <p className={`w-full bg-transparent text-lg font-medium tracking-wide leading-relaxed outline-none border-l-2 border-purple-500/50 pl-4 ${isDark ? 'text-white/70' : 'text-black/80'}`}>
+                                {page.subtitle}
+                            </p>
+                        )}
                     </div>
-                    <div className="space-y-6">
+                    <div className="flex-1 overflow-hidden space-y-6">
                         {page.items && (
-                            <div className="grid grid-cols-1 gap-4 max-w-xl">
+                            <div className="flex flex-col gap-6 w-full text-justify">
                                 {page.items.map((item, i) => (
-                                    <div key={i} className={`flex items-center gap-5 backdrop-blur-xl p-5 rounded-2xl border border-white/5 group/item transition-all ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-black/5 hover:bg-black/10'}`}>
-                                        <div className="w-1.5 h-1.5 rounded-full bg-purple-400 group-hover/item:scale-150 transition-transform" />
-                                        <input value={item} onChange={(e) => {
-                                            const newItems = [...(page.items || [])];
-                                            newItems[i] = e.target.value;
-                                            updatePage({ items: newItems });
-                                        }} className={`bg-transparent font-bold tracking-tight outline-none w-full ${isDark ? 'text-white/80' : 'text-black/80'}`} />
-                                    </div>
+                                    <p key={i} className={`text-base md:text-lg font-medium leading-relaxed tracking-wide ${isDark ? 'text-white/80' : 'text-black/80'}`}>
+                                        {item}
+                                    </p>
                                 ))}
                             </div>
                         )}
@@ -270,7 +273,7 @@ export default function Home() {
             for (let i = 0; i < blueprint.pages.length; i++) {
                 const el = document.getElementById(`pdf-page-${i}`);
                 if (el) {
-                    const canvas = await html2canvas(el, { scale: 2, useCORS: true, allowTaint: true, logging: false });
+                    const canvas = await html2canvas(el, { scale: 2, useCORS: true, logging: false });
                     const imgData = canvas.toDataURL('image/jpeg', 0.95);
                     if (i > 0) doc.addPage();
                     doc.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
@@ -463,68 +466,73 @@ export default function Home() {
 
             {/* Hidden PDF Render Container guarantees 1:1 perfect WYSIWYG export */}
             {blueprint && (
-                <div id="pdf-render-container" className="absolute top-0 left-0 w-[794px] opacity-0 pointer-events-none -z-50">
-                    {blueprint.pages.map((page, idx) => {
-                        const isDark = selectedTheme === 'dark';
+                <div style={{ position: 'absolute', top: '-20000px', left: '-20000px' }}>
+                    <div id="pdf-render-container" className="w-[794px]">
+                        {blueprint.pages.map((page, idx) => {
+                            const isDark = selectedTheme === 'dark';
 
-                        // COVER PAGE
-                        if (idx === 0) {
-                            return (
-                                <div key={idx} id={`pdf-page-${idx}`} className="w-[794px] h-[1123px] relative bg-black overflow-hidden" style={{ fontFamily: selectedFont }}>
-                                    {page.image && (
-                                        <div className="relative w-full h-full">
-                                            <img src={page.image} className="w-full h-full object-cover" />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col items-center justify-end py-16 px-6 text-center">
-                                                <div className="space-y-4">
-                                                    <h2 className="text-white font-black leading-tight uppercase tracking-tighter" style={{ fontSize: '3.5rem' }}>{title}</h2>
-                                                    {subtitle && <p className="text-white/80 font-medium tracking-widest text-lg uppercase">{subtitle}</p>}
-                                                    <div className="pt-10 pb-8">
-                                                        <p className="text-white/40 font-bold tracking-[8px] text-xs uppercase">{author}</p>
+                            // COVER PAGE
+                            if (idx === 0) {
+                                return (
+                                    <div key={idx} id={`pdf-page-${idx}`} className="w-[794px] h-[1123px] relative bg-black overflow-hidden" style={{ fontFamily: selectedFont }}>
+                                        {page.image && (
+                                            <div className="relative w-full h-full">
+                                                <img src={page.image} crossOrigin="anonymous" className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col items-center justify-end py-16 px-6 text-center">
+                                                    <div className="space-y-4">
+                                                        <h2 className="text-white font-black leading-tight uppercase tracking-tighter" style={{ fontSize: '3.5rem' }}>{title}</h2>
+                                                        {subtitle && <p className="text-white/80 font-medium tracking-widest text-lg uppercase">{subtitle}</p>}
+                                                        <div className="pt-10 pb-8">
+                                                            <p className="text-white/40 font-bold tracking-[8px] text-xs uppercase">{author}</p>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        }
+                                        )}
+                                    </div>
+                                );
+                            }
 
-                        // CONTENT PAGES
-                        return (
-                            <div key={idx} id={`pdf-page-${idx}`} className="w-[794px] h-[1123px] relative bg-black overflow-hidden border border-white/5" style={{ fontFamily: selectedFont }}>
-                                <div className={`w-full h-full ${isDark ? 'bg-[#050510] text-white' : 'bg-white text-black'}`}>
-                                    {page.image ? (
-                                        <img src={page.image} className="absolute inset-0 w-full h-full object-cover opacity-40" />
-                                    ) : (
-                                        <div className="absolute inset-0 bg-gradient-to-br from-[#0c0c15] to-black" />
-                                    )}
-                                    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
-                                    <div className="absolute inset-0 p-[72px] flex flex-col justify-between z-10">
-                                        <div className="space-y-12">
-                                            <div className="flex items-center gap-6">
-                                                <span className="text-purple-500 text-sm font-black tracking-[8px] uppercase px-8 py-3 bg-purple-500/10 border border-purple-500/20 rounded-full">Seção {idx + 1}</span>
-                                                <span className="text-white/20 text-sm font-bold uppercase tracking-[6px]">{page.type}</span>
-                                            </div>
-                                            <div className={`w-full bg-transparent text-[80px] font-black tracking-tighter italic leading-[0.9] ${isDark ? 'text-white' : 'text-black'}`}>{page.title}</div>
-                                            <div className={`w-full bg-transparent text-2xl font-medium tracking-wide leading-relaxed mt-10 border-l-4 border-purple-500/30 pl-8 ${isDark ? 'text-white/50' : 'text-black/60'}`}>{page.subtitle}</div>
-                                        </div>
-                                        <div className="space-y-8 pb-10">
-                                            {page.items && (
-                                                <div className="grid grid-cols-1 gap-6 max-w-2xl">
-                                                    {page.items.map((item, i) => (
-                                                        <div key={i} className={`flex items-center gap-6 backdrop-blur-xl p-8 rounded-[30px] border border-white/5 ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
-                                                            <div className="w-2 h-2 rounded-full bg-purple-400" />
-                                                            <div className={`text-xl font-bold tracking-tight leading-snug w-full ${isDark ? 'text-white/80' : 'text-black/80'}`}>{item}</div>
-                                                        </div>
-                                                    ))}
+                            // CONTENT PAGES
+                            return (
+                                <div key={idx} id={`pdf-page-${idx}`} className="w-[794px] h-[1123px] relative bg-black overflow-hidden border border-white/5" style={{ fontFamily: selectedFont }}>
+                                    <div className={`w-full h-full ${isDark ? 'bg-[#050510] text-white' : 'bg-white text-black'}`}>
+                                        {page.image ? (
+                                            <img src={page.image} crossOrigin="anonymous" className="absolute inset-0 w-full h-full object-cover opacity-10" />
+                                        ) : (
+                                            <div className="absolute inset-0 bg-gradient-to-br from-[#0c0c15] to-black" />
+                                        )}
+                                        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-black/90" />
+                                        <div className="absolute inset-0 p-[72px] flex flex-col z-10">
+                                            <div className="space-y-8 mb-16">
+                                                <div className="flex items-center gap-6">
+                                                    <span className="text-purple-500 text-sm font-black tracking-[8px] uppercase px-8 py-3 bg-purple-500/10 border border-purple-500/20 rounded-full">Página {idx + 1}</span>
+                                                    <span className="text-white/20 text-sm font-bold uppercase tracking-[6px]">{page.type}</span>
                                                 </div>
-                                            )}
+                                                {page.title && (
+                                                    <h2 className={`w-full bg-transparent text-[60px] font-black tracking-tighter italic leading-tight ${isDark ? 'text-white' : 'text-black'}`}>{page.title}</h2>
+                                                )}
+                                                {page.subtitle && (
+                                                    <div className={`w-full bg-transparent text-2xl font-medium tracking-wide leading-relaxed border-l-4 border-purple-500/50 pl-8 ${isDark ? 'text-white/70' : 'text-black/80'}`}>{page.subtitle}</div>
+                                                )}
+                                            </div>
+                                            <div className="flex-1 space-y-10 text-justify">
+                                                {page.items && (
+                                                    <div className="flex flex-col gap-8 w-full">
+                                                        {page.items.map((item, i) => (
+                                                            <p key={i} className={`text-2xl font-medium tracking-wide leading-[1.8] ${isDark ? 'text-white/90' : 'text-black/90'}`}>
+                                                                {item}
+                                                            </p>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
             )}
         </main>
