@@ -33,26 +33,55 @@ function cleanJsonText(text: string) {
 function chunkByParagraphs(text: string, maxParagraphsPerPage = 4) {
   // Preserve 100% of user words by splitting accurately by logical paragraphs
   const rawParagraphs = text.split(/\n+/).map(p => p.trim()).filter(p => p.length > 5);
-  const pages: { items: string[] }[] = [];
+  const pages: { chapterTitle: string; items: string[] }[] = [];
 
   let currentItems: string[] = [];
   let currentLength = 0;
+  let currentChapterTitle = "";
 
-  for (const p of rawParagraphs) {
+  for (let i = 0; i < rawParagraphs.length; i++) {
+    const p = rawParagraphs[i];
+
+    const isHeader =
+      p.length < 150 &&
+      !/[.?!]$/.test(p) &&
+      (
+        /^(cap[ií]tulo|chapter|parte|se[çc][ãa]o|introdu[çc][ãa]o|conclus[ãa]o|\d+[\.\-])\s/i.test(p) ||
+        p === p.toUpperCase() ||
+        i === 0
+      );
+
+    if (isHeader) {
+      if (currentItems.length > 0) {
+        pages.push({ chapterTitle: currentChapterTitle, items: currentItems });
+        currentItems = [];
+        currentLength = 0;
+      }
+      currentChapterTitle = p;
+      continue; // Do not include title inside the normal text body items
+    }
+
     if (currentItems.length >= maxParagraphsPerPage || (currentLength + p.length > 1500 && currentItems.length > 0)) {
-      pages.push({ items: currentItems });
+      pages.push({ chapterTitle: currentChapterTitle, items: currentItems });
       currentItems = [];
       currentLength = 0;
     }
+
     currentItems.push(p);
     currentLength += p.length;
   }
 
-  if (currentItems.length > 0) {
-    pages.push({ items: currentItems });
+  if (currentItems.length > 0 && currentItems.some(i => i.trim())) {
+    pages.push({ chapterTitle: currentChapterTitle, items: currentItems });
   }
 
-  return pages;
+  let lastValidTitle = "Parte 1";
+  return pages.map((page, idx) => {
+    let finalTitle = page.chapterTitle;
+    if (!finalTitle) finalTitle = lastValidTitle;
+    else lastValidTitle = finalTitle;
+    return { ...page, chapterTitle: finalTitle };
+  });
 }
 
 export async function POST(req: Request) {
@@ -87,10 +116,9 @@ Context Preview (Read to understand the vibe of each page):
 ${pageSummaries}
 
 Rules:
-1. Provide a beautiful, thematic "title" (2-5 words) that matches the subject of each page.
-2. Provide a "subtitle" (1 crisp sentence) summarizing the vibe.
-3. Provide an "illustration_prompt" (a cinematic, no-text luxury conceptual prompt for DALL-E) matching the content.
-4. "metadata" MUST have EXACTLY ${pagesData.length} entries!
+1. Provide a "subtitle" (1 crisp sentence) summarizing the vibe.
+2. Provide an "illustration_prompt" (a cinematic, no-text luxury conceptual prompt for DALL-E) matching the content.
+3. "metadata" MUST have EXACTLY ${pagesData.length} entries!
 
 JSON structure:
 {
@@ -101,7 +129,6 @@ JSON structure:
   },
   "metadata": [
     {
-      "title": "[Insert a fitting 2-5 word section title here based on the page's exact content]",
       "subtitle": "[Insert a matching 1-sentence subtitle describing this specific page content]",
       "illustration_prompt": "[Insert cinematic NO-TEXT visual prompt fitting this exact page, e.g. Minimalist premium luxury abstract shape...]"
     }
@@ -157,13 +184,12 @@ JSON structure:
         },
         ...pagesData.map((pageChunk, idx) => {
           const meta = parsed.metadata && parsed.metadata[idx] ? parsed.metadata[idx] : {
-            title: `Parte ${idx + 1}`,
             subtitle: "Avançando no conteúdo...",
             illustration_prompt: "Clean luxury background concept, no text."
           };
           return {
             type: "content" as const,
-            title: meta.title || `Parte ${idx + 1}`,
+            title: pageChunk.chapterTitle,
             subtitle: meta.subtitle || "",
             items: pageChunk.items,
             illustration_prompt: meta.illustration_prompt || "Clean luxury background concept, no text."
@@ -190,7 +216,7 @@ JSON structure:
         },
         ...pagesData.map((pageChunk, idx) => ({
           type: "content" as const,
-          title: `Parte ${idx + 1}`,
+          title: pageChunk.chapterTitle,
           subtitle: "Continuação do documento...",
           items: pageChunk.items,
           illustration_prompt: "Minimalist layout, premium clean aesthetic, no text."
