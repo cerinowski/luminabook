@@ -32,7 +32,29 @@ function cleanJsonText(text: string) {
 
 function chunkByParagraphs(text: string) {
   // Preserve 100% of user words by splitting accurately by logical paragraphs
-  const rawParagraphs = text.split(/\n+/).map(p => p.trim()).filter(p => p.length > 5);
+  const initialParagraphs = text.split(/\n+/).map(p => p.trim()).filter(p => p.length > 5);
+  const rawParagraphs: string[] = [];
+
+  for (const p of initialParagraphs) {
+    if (p.length > 600) {
+      let temp = "";
+      const parts = p.split(/([.?!]+[\s]*)/);
+      for (let i = 0; i < parts.length; i += 2) {
+        const sentence = parts[i] + (parts[i + 1] || "");
+        if (!sentence.trim()) continue;
+        if (temp.length + sentence.length > 500 && temp.length > 100) {
+          rawParagraphs.push(temp.trim());
+          temp = sentence;
+        } else {
+          temp += sentence;
+        }
+      }
+      if (temp.trim()) rawParagraphs.push(temp.trim());
+    } else {
+      rawParagraphs.push(p);
+    }
+  }
+
   const pages: { chapterTitle: string; items: string[]; isFirstPage: boolean }[] = [];
 
   let currentItems: string[] = [];
