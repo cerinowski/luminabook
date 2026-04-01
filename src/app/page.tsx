@@ -291,7 +291,7 @@ export default function Home() {
 
     return (
         <main className="min-h-screen bg-[#020205] text-[#eef2f7]">
-            <style jsx global>{` @import url('${GOOGLE_FONTS_URL}'); body { background: #020205; font-family: 'Montserrat', sans-serif; overflow: hidden; } .text-gradient { background: linear-gradient(135deg, #fff 0%, #a855f7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; } `}</style>
+            <style jsx global>{` @import url('${GOOGLE_FONTS_URL}'); body { background: #020205; font-family: 'Montserrat', sans-serif; overflow: hidden; } .text-gradient { background: linear-gradient(135deg, #fff 0%, #a855f7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; } ::-webkit-scrollbar { display: none; width: 0; background: transparent; } * { -ms-overflow-style: none; scrollbar-width: none; } `}</style>
 
             <div className="flex flex-col md:flex-row h-screen">
                 <aside className="w-full md:w-80 lg:w-96 bg-[#050510] border-b md:border-b-0 md:border-r border-white/5 flex flex-row md:flex-col py-0 md:py-12 z-50 shrink-0 overflow-x-auto md:overflow-x-visible items-center md:items-stretch">
