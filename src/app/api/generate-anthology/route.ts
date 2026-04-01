@@ -48,8 +48,7 @@ function chunkByParagraphs(text: string) {
       p.length < 150 &&
       !/[.?!]$/.test(p) &&
       (
-        /^(cap[ií]tulo|chapter|parte|se[çc][ãa]o|introdu[çc][ãa]o|conclus[ãa]o|\d+[\.\-])\s/i.test(p) ||
-        p === p.toUpperCase() ||
+        /^(cap[ií]tulo|chapter|parte|se[çc][ãa]o|introdu[çc][ãa]o|conclus[ãa]o|m[oó]dulo)\s/i.test(p) ||
         i === 0
       );
 
