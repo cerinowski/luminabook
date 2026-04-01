@@ -216,9 +216,21 @@ JSON structure:
             subtitle: "Avançando no conteúdo...",
             illustration_prompt: "Clean luxury background concept, no text."
           };
+
+          let prefix = "";
+          let mainTitle = pageChunk.chapterTitle;
+          const match = mainTitle.match(/^(Cap[ií]tulo \d+|M[oó]dulo \d+|Parte \d+|Se[çc][ãa]o \d+)\s*[-—:]\s*(.*)$/i);
+          if (match) {
+            prefix = match[1];
+            mainTitle = match[2];
+          } else if (/^(Cap[ií]tulo \d+|M[oó]dulo \d+|Parte \d+|Se[çc][ãa]o \d+)$/i.test(mainTitle)) {
+            prefix = mainTitle;
+          }
+
           return {
             type: "content" as const,
-            title: pageChunk.isFirstPage ? pageChunk.chapterTitle : "",
+            prefix: prefix,
+            title: pageChunk.isFirstPage ? mainTitle : "",
             subtitle: meta.subtitle || "",
             items: pageChunk.items,
             illustration_prompt: meta.illustration_prompt || "Clean luxury background concept, no text."
@@ -243,13 +255,25 @@ JSON structure:
           subtitle: "Standard Edition",
           illustration_prompt: `Luxury cover for "${title}", no text.`
         },
-        ...pagesData.map((pageChunk, idx) => ({
-          type: "content" as const,
-          title: pageChunk.isFirstPage ? pageChunk.chapterTitle : "",
-          subtitle: "Continuação do documento...",
-          items: pageChunk.items,
-          illustration_prompt: "Minimalist layout, premium clean aesthetic, no text."
-        }))
+        ...pagesData.map((pageChunk, idx) => {
+          let prefix = "";
+          let mainTitle = pageChunk.chapterTitle;
+          const match = mainTitle.match(/^(Cap[ií]tulo \d+|M[oó]dulo \d+|Parte \d+|Se[çc][ãa]o \d+)\s*[-—:]\s*(.*)$/i);
+          if (match) {
+            prefix = match[1];
+            mainTitle = match[2];
+          } else if (/^(Cap[ií]tulo \d+|M[oó]dulo \d+|Parte \d+|Se[çc][ãa]o \d+)$/i.test(mainTitle)) {
+            prefix = mainTitle;
+          }
+          return {
+            type: "content" as const,
+            prefix: prefix,
+            title: pageChunk.isFirstPage ? mainTitle : "",
+            subtitle: "Continuação do documento...",
+            items: pageChunk.items,
+            illustration_prompt: "Minimalist layout, premium clean aesthetic, no text."
+          };
+        })
       ]
     };
 

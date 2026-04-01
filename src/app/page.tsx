@@ -57,6 +57,7 @@ export default function Home() {
     // --- ANTHOLOGY G27.1 ---
     type AnthologyPage = {
         type: string;
+        prefix?: string;
         title: string;
         subtitle: string;
         items?: string[];
@@ -607,6 +608,9 @@ export default function Home() {
                                             <div className="space-y-6 mb-12">
                                                 <div className="flex items-center gap-6">
                                                     <span className="text-sm font-black tracking-[8px] uppercase px-8 py-3 rounded-full border" style={{ color: selectedPalette, backgroundColor: `${selectedPalette}1A`, borderColor: `${selectedPalette}33` }}>Página {idx + 1}</span>
+                                                    {page.prefix && (
+                                                        <span className="text-sm font-normal tracking-[6px] uppercase" style={{ color: selectedPalette }}>{page.prefix}</span>
+                                                    )}
                                                 </div>
                                                 {page.title && (
                                                     <h2 className={`w-full bg-transparent text-[42px] font-black tracking-tighter italic leading-tight ${isDark ? 'text-white' : 'text-black'}`}>{page.title}</h2>
