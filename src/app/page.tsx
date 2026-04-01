@@ -34,6 +34,10 @@ export default function Home() {
     const [selectedPalette, setSelectedPalette] = useState('#A855F7');
     const [selectedTheme, setSelectedTheme] = useState<'light' | 'dark'>('dark');
     const [selectedFont, setSelectedFont] = useState('Montserrat');
+    const [titleSize, setTitleSize] = useState(100);
+    const [titleColor, setTitleColor] = useState('#ffffff');
+    const [subtitleSize, setSubtitleSize] = useState(100);
+    const [subtitleColor, setSubtitleColor] = useState('#e2e8f0');
 
     // --- ANTHOLOGY G27.1 ---
     type AnthologyPage = {
@@ -381,8 +385,8 @@ export default function Home() {
                                                             {/* G32 Typography Overlay - Bottom Aligned */}
                                                             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col items-center justify-end py-16 px-6 text-center pointer-events-none">
                                                                 <div className="space-y-3">
-                                                                    <h2 className="text-white font-black leading-tight uppercase tracking-tighter" style={{ fontSize: 'clamp(1rem, 5vw, 2.5rem)', fontFamily: selectedFont }}>{title}</h2>
-                                                                    {subtitle && <p className="text-white/80 font-medium tracking-widest text-[10px] uppercase">{subtitle}</p>}
+                                                                    <h2 className="font-black leading-tight uppercase tracking-tighter" style={{ fontSize: `calc(clamp(1rem, 5vw, 2.5rem) * ${titleSize / 100})`, fontFamily: selectedFont, color: titleColor }}>{title}</h2>
+                                                                    {subtitle && <p className="font-medium tracking-widest uppercase" style={{ fontSize: `calc(10px * ${subtitleSize / 100})`, color: subtitleColor }}>{subtitle}</p>}
                                                                     <div className="pt-6">
                                                                         <p className="text-white/40 font-bold tracking-[8px] text-[8px] uppercase">{author}</p>
                                                                     </div>
@@ -423,6 +427,38 @@ export default function Home() {
                                                 {['Montserrat', 'Playfair Display', 'Roboto', 'Inter'].map(f => (
                                                     <button key={f} onClick={() => setSelectedFont(f)} className={`py-4 rounded-2xl text-[10px] font-bold tracking-widest uppercase transition-all text-left px-6 ${selectedFont === f ? 'bg-white text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`} style={{ fontFamily: f }}>{f}</button>
                                                 ))}
+                                            </div>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20">Ajustes do Título</label>
+                                            <div className="space-y-6 bg-white/5 p-6 rounded-3xl border border-white/5">
+                                                <div className="flex flex-col gap-3">
+                                                    <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Tamanho ({titleSize}%)</span></div>
+                                                    <input type="range" min="50" max="150" value={titleSize} onChange={e => setTitleSize(Number(e.target.value))} className="w-full accent-purple-500" />
+                                                </div>
+                                                <div className="flex flex-col gap-3">
+                                                    <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Cor</span>
+                                                    <div className="flex items-center gap-3">
+                                                        <input type="color" value={titleColor} onChange={e => setTitleColor(e.target.value)} className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 p-0" />
+                                                        <span className="text-white/80 text-[10px] font-bold uppercase tracking-widest">{titleColor}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20">Ajustes do Subtítulo</label>
+                                            <div className="space-y-6 bg-white/5 p-6 rounded-3xl border border-white/5">
+                                                <div className="flex flex-col gap-3">
+                                                    <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Tamanho ({subtitleSize}%)</span></div>
+                                                    <input type="range" min="50" max="150" value={subtitleSize} onChange={e => setSubtitleSize(Number(e.target.value))} className="w-full accent-purple-500" />
+                                                </div>
+                                                <div className="flex flex-col gap-3">
+                                                    <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Cor</span>
+                                                    <div className="flex items-center gap-3">
+                                                        <input type="color" value={subtitleColor} onChange={e => setSubtitleColor(e.target.value)} className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 p-0" />
+                                                        <span className="text-white/80 text-[10px] font-bold uppercase tracking-widest">{subtitleColor}</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                         <button onClick={() => setActiveTab('editorial')} className="w-full py-8 bg-purple-600 text-white font-black uppercase tracking-[4px] rounded-3xl hover:bg-purple-500 transition-all shadow-xl shadow-purple-900/20 text-[10px]">Ir para Escrita <ChevronLeft className="inline w-4 h-4 rotate-180" /></button>
@@ -493,8 +529,8 @@ export default function Home() {
                                                 <img src={page.image} crossOrigin="anonymous" className="w-full h-full object-cover" />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col items-center justify-end py-16 px-6 text-center">
                                                     <div className="space-y-4">
-                                                        <h2 className="text-white font-black leading-tight uppercase tracking-tighter" style={{ fontSize: '3.5rem' }}>{title}</h2>
-                                                        {subtitle && <p className="text-white/80 font-medium tracking-widest text-lg uppercase">{subtitle}</p>}
+                                                        <h2 className="font-black leading-tight uppercase tracking-tighter" style={{ fontSize: `calc(3.5rem * ${titleSize / 100})`, color: titleColor }}>{title}</h2>
+                                                        {subtitle && <p className="font-medium tracking-widest uppercase" style={{ fontSize: `calc(1.125rem * ${subtitleSize / 100})`, color: subtitleColor }}>{subtitle}</p>}
                                                         <div className="pt-10 pb-4">
                                                             <p className="text-white/40 font-bold tracking-[8px] text-xs uppercase">{author}</p>
                                                         </div>
