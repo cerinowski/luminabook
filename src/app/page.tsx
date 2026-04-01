@@ -168,68 +168,7 @@ export default function Home() {
         }
     };
 
-    const A4Page = ({ page, index }: { page: AnthologyPage; index: number }) => {
-        const isDark = selectedTheme === 'dark';
-        const updatePage = (patch: Partial<AnthologyPage>) => {
-            setBlueprint(prev => {
-                if (!prev) return prev;
-                const newPages = [...prev.pages];
-                newPages[index] = { ...newPages[index], ...patch };
-                return { ...prev, pages: newPages };
-            });
-        };
 
-        return (
-            <div
-                className={`relative w-full aspect-[210/297] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] border border-white/5 rounded-[40px] mb-32 group transition-all hover:border-purple-500/20 ${isDark ? 'bg-[#050510] text-white' : 'bg-white text-black'}`}
-                style={{ fontFamily: selectedFont }}
-            >
-                {page.image ? (
-                    <img src={page.image} className={`absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000 ${isDark ? 'opacity-10' : 'opacity-5'}`} />
-                ) : (
-                    <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-br from-[#0c0c15] to-black' : 'bg-white'}`} />
-                )}
-                {page.image && (
-                    <div className={`absolute inset-0 bg-gradient-to-b ${isDark ? 'from-black/80 via-black/40 to-black/90' : 'from-white/90 via-white/60 to-white/90'}`} />
-                )}
-                <div className="absolute inset-0 p-12 md:p-20 pb-20 md:pb-28 flex flex-col z-10">
-                    <div className="space-y-6 mb-8">
-                        <div className="flex items-center gap-4">
-                            <span className="text-[10px] font-black tracking-[6px] uppercase px-4 py-1 rounded-full border" style={{ color: selectedPalette, backgroundColor: `${selectedPalette}1A`, borderColor: `${selectedPalette}33` }}>Página {index + 1}</span>
-                            {page.prefix && (
-                                <span className="text-[10px] font-normal tracking-[4px] uppercase" style={{ color: selectedPalette }}>{page.prefix}</span>
-                            )}
-                        </div>
-                        {page.title && (
-                            <h2 className="w-full bg-transparent text-3xl md:text-4xl font-black tracking-tighter italic leading-tight outline-none border-none" style={{ color: chapterTitleColor || (isDark ? '#ffffff' : '#000000') }}>
-                                {page.title}
-                            </h2>
-                        )}
-                    </div>
-                    <div className="flex-1 overflow-hidden space-y-4">
-                        {page.items && (
-                            <div className="flex flex-col gap-4 w-full text-justify">
-                                {page.items.map((item, i) => {
-                                    const isSubtitle = item.length < 120 && !/[.?!]$/.test(item.trim()) && item.split(' ').length <= 15;
-                                    return (
-                                        <p key={i} className={`text-sm md:text-base leading-normal tracking-wide ${isSubtitle ? 'font-bold mt-4 mb-2' : 'font-medium'}`} style={{ color: bodyTextColor || (isDark ? (isSubtitle ? '#ffffff' : 'rgba(255,255,255,0.8)') : (isSubtitle ? '#000000' : 'rgba(0,0,0,0.8)')) }}>
-                                            {item}
-                                        </p>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-                </div>
-                {page.status === 'loading' && (
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center z-20">
-                        <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
-                        <span className="text-[10px] font-black uppercase tracking-[8px] text-white/40">Renderizando...</span>
-                    </div>
-                )}
-            </div>
-        );
-    };
 
     const handleStartFullGeneration = async (currentBlueprintView?: any) => {
         const bp = currentBlueprintView || blueprint;
@@ -554,7 +493,18 @@ export default function Home() {
                                                 <button onClick={() => setBlueprint(null)} className="text-[10px] font-black uppercase tracking-[4px] text-white/20 hover:text-red-500 transition-colors">Reiniciar</button>
                                             </div>
                                             {blueprint.pages.map((p, i) => (
-                                                <A4Page key={i} page={p} index={i} />
+                                                <A4Page
+                                                    key={i}
+                                                    page={p}
+                                                    index={i}
+                                                    selectedTheme={selectedTheme}
+                                                    selectedFont={selectedFont}
+                                                    selectedPalette={selectedPalette}
+                                                    chapterTitleColor={chapterTitleColor}
+                                                    bodyTextColor={bodyTextColor}
+                                                    covers={covers}
+                                                    selectedCoverIndex={selectedCoverIndex}
+                                                />
                                             ))}
                                         </div>
                                     )}
@@ -586,11 +536,12 @@ export default function Home() {
 
                             // COVER PAGE
                             if (idx === 0) {
+                                const liveCoverImage = selectedCoverIndex !== null && covers[selectedCoverIndex] ? covers[selectedCoverIndex].image : page.image;
                                 return (
                                     <div key={idx} id={`pdf-page-${idx}`} className="w-[794px] h-[1123px] relative bg-black overflow-hidden" style={{ fontFamily: selectedFont }}>
-                                        {page.image && (
+                                        {liveCoverImage && (
                                             <div className="relative w-full h-full">
-                                                <img src={page.image} crossOrigin="anonymous" className="w-full h-full object-cover" />
+                                                <img src={liveCoverImage} crossOrigin="anonymous" className="w-full h-full object-cover" />
                                                 <div className="absolute inset-0 flex flex-col items-center justify-end py-16 px-6 text-center" style={{ background: `linear-gradient(to top, ${hexToRgba(coverOverlayColor, coverOverlayOpacity / 100)} 0%, ${hexToRgba(coverOverlayColor, (coverOverlayOpacity / 100) * 0.5)} 50%, transparent 100%)` }}>
                                                     <div className="space-y-4">
                                                         <h2 className="font-black leading-tight uppercase tracking-tighter" style={{ fontSize: `calc(3.5rem * ${titleSize / 100})`, color: titleColor, opacity: titleOpacity / 100, textShadow: titleShadow ? '0px 10px 50px rgba(0,0,0,0.8)' : 'none' }}>{title}</h2>
@@ -627,8 +578,10 @@ export default function Home() {
                                             <div className="space-y-6 mb-12">
                                                 <div className="flex items-center gap-6">
                                                     <span className="text-sm font-black tracking-[8px] uppercase px-8 py-3 rounded-full border" style={{ color: selectedPalette, backgroundColor: `${selectedPalette}1A`, borderColor: `${selectedPalette}33` }}>Página {idx + 1}</span>
-                                                    {page.prefix && (
-                                                        <span className="text-sm font-normal tracking-[6px] uppercase" style={{ color: selectedPalette }}>{page.prefix}</span>
+                                                    {(page.prefix || (page.title && page.title.startsWith('Capítulo'))) && (
+                                                        <span className="text-sm font-normal tracking-[6px] uppercase" style={{ color: selectedPalette }}>
+                                                            {page.prefix || (page.title && page.title.split(' - ')[0])}
+                                                        </span>
                                                     )}
                                                 </div>
                                                 {page.title && (
@@ -658,6 +611,79 @@ export default function Home() {
                 </div>
             )}
         </main>
+    );
+}
+
+function A4Page({ page, index, selectedTheme, selectedFont, selectedPalette, chapterTitleColor, bodyTextColor, covers, selectedCoverIndex }: {
+    page: any;
+    index: number;
+    selectedTheme: string;
+    selectedFont: string;
+    selectedPalette: string;
+    chapterTitleColor: string;
+    bodyTextColor: string;
+    covers: any[];
+    selectedCoverIndex: number | null;
+}) {
+    const isDark = selectedTheme === 'dark';
+
+    // Live Cover Logic - Always prioritize the active selection if it's the cover page
+    const liveCoverImage = index === 0 && selectedCoverIndex !== null && covers[selectedCoverIndex]
+        ? covers[selectedCoverIndex].image
+        : page.image;
+
+    return (
+        <div
+            className={`relative w-full aspect-[210/297] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] border border-white/5 rounded-[40px] mb-32 group transition-all hover:border-purple-500/20 ${isDark ? 'bg-[#050510]' : 'bg-white'}`}
+            style={{ fontFamily: selectedFont }}
+        >
+            {liveCoverImage ? (
+                <img src={liveCoverImage} className={`absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000 ${isDark ? 'opacity-10' : 'opacity-5'}`} />
+            ) : (
+                <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-br from-[#0c0c15] to-black' : 'bg-white'}`} />
+            )}
+            {liveCoverImage && (
+                <div className={`absolute inset-0 bg-gradient-to-b ${isDark ? 'from-black/80 via-black/40 to-black/90' : 'from-white/90 via-white/60 to-white/90'}`} />
+            )}
+            <div className="absolute inset-0 p-12 md:p-20 pb-20 md:pb-28 flex flex-col z-10">
+                <div className="space-y-6 mb-8">
+                    <div className="flex items-center gap-4">
+                        <span className="text-[10px] font-black tracking-[6px] uppercase px-4 py-1 rounded-full border" style={{ color: selectedPalette, backgroundColor: `${selectedPalette}1A`, borderColor: `${selectedPalette}33` }}>Página {index + 1}</span>
+                        {/* Fallback to parse prefix if state is stale */}
+                        {(page.prefix || (page.title && page.title.startsWith('Capítulo'))) && (
+                            <span className="text-[10px] font-normal tracking-[4px] uppercase" style={{ color: selectedPalette }}>
+                                {page.prefix || page.title.split(' - ')[0]}
+                            </span>
+                        )}
+                    </div>
+                    {page.title && (
+                        <h2 className="w-full bg-transparent text-3xl md:text-4xl font-black tracking-tighter italic leading-tight outline-none border-none" style={{ color: chapterTitleColor || (isDark ? '#ffffff' : '#000000') }}>
+                            {page.title}
+                        </h2>
+                    )}
+                </div>
+                <div className="flex-1 overflow-hidden space-y-4">
+                    {page.items && (
+                        <div className="flex flex-col gap-4 w-full text-justify">
+                            {page.items.map((item: string, i: number) => {
+                                const isSubtitle = item.length < 120 && !/[.?!]$/.test(item.trim()) && item.split(' ').length <= 15;
+                                return (
+                                    <p key={i} className={`text-sm md:text-base leading-normal tracking-wide ${isSubtitle ? 'font-bold mt-4 mb-2' : 'font-medium'}`} style={{ color: bodyTextColor || (isDark ? (isSubtitle ? '#ffffff' : 'rgba(255,255,255,0.8)') : (isSubtitle ? '#000000' : 'rgba(0,0,0,0.8)')) }}>
+                                        {item}
+                                    </p>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            </div>
+            {page.status === 'loading' && (
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center z-20">
+                    <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
+                    <span className="text-[10px] font-black uppercase tracking-[8px] text-white/40">Renderizando...</span>
+                </div>
+            )}
+        </div>
     );
 }
 
