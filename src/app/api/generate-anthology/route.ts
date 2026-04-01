@@ -33,11 +33,12 @@ function cleanJsonText(text: string) {
 function chunkByParagraphs(text: string) {
   // Preserve 100% of user words by splitting accurately by logical paragraphs
   const rawParagraphs = text.split(/\n+/).map(p => p.trim()).filter(p => p.length > 5);
-  const pages: { chapterTitle: string; items: string[] }[] = [];
+  const pages: { chapterTitle: string; items: string[]; isFirstPage: boolean }[] = [];
 
   let currentItems: string[] = [];
   let currentSlots = 0;
   let currentChapterTitle = "";
+  let isFirstPage = true;
 
   const isSubtitle = (p: string) => p.length < 120 && !/[.?!]$/.test(p.trim()) && p.split(' ').length <= 15;
 
@@ -54,20 +55,23 @@ function chunkByParagraphs(text: string) {
 
     if (isHeader) {
       if (currentItems.length > 0) {
-        pages.push({ chapterTitle: currentChapterTitle, items: currentItems });
+        pages.push({ chapterTitle: currentChapterTitle, items: currentItems, isFirstPage });
         currentItems = [];
         currentSlots = 0;
       }
       currentChapterTitle = p;
+      isFirstPage = true;
       continue; // Do not include title inside the normal text body items
     }
 
     const itemSlots = isSubtitle(p) ? 3 : Math.ceil(p.length / 85) + 1.5;
+    const capacity = isFirstPage ? 18 : 28; // Title takes massive space on first page, continuation gets full volume
 
-    if (currentSlots + itemSlots > 22 && currentItems.length > 0) {
-      pages.push({ chapterTitle: currentChapterTitle, items: currentItems });
+    if (currentSlots + itemSlots > capacity && currentItems.length > 0) {
+      pages.push({ chapterTitle: currentChapterTitle, items: currentItems, isFirstPage });
       currentItems = [];
       currentSlots = 0;
+      isFirstPage = false;
     }
 
     currentItems.push(p);
@@ -75,7 +79,7 @@ function chunkByParagraphs(text: string) {
   }
 
   if (currentItems.length > 0 && currentItems.some(i => i.trim())) {
-    pages.push({ chapterTitle: currentChapterTitle, items: currentItems });
+    pages.push({ chapterTitle: currentChapterTitle, items: currentItems, isFirstPage });
   }
 
   let lastValidTitle = "Parte 1";
@@ -192,7 +196,7 @@ JSON structure:
           };
           return {
             type: "content" as const,
-            title: pageChunk.chapterTitle,
+            title: pageChunk.isFirstPage ? pageChunk.chapterTitle : "",
             subtitle: meta.subtitle || "",
             items: pageChunk.items,
             illustration_prompt: meta.illustration_prompt || "Clean luxury background concept, no text."
@@ -219,7 +223,7 @@ JSON structure:
         },
         ...pagesData.map((pageChunk, idx) => ({
           type: "content" as const,
-          title: pageChunk.chapterTitle,
+          title: pageChunk.isFirstPage ? pageChunk.chapterTitle : "",
           subtitle: "Continuação do documento...",
           items: pageChunk.items,
           illustration_prompt: "Minimalist layout, premium clean aesthetic, no text."
