@@ -30,14 +30,16 @@ function cleanJsonText(text: string) {
     .trim();
 }
 
-function chunkByParagraphs(text: string, maxParagraphsPerPage = 99) {
+function chunkByParagraphs(text: string) {
   // Preserve 100% of user words by splitting accurately by logical paragraphs
   const rawParagraphs = text.split(/\n+/).map(p => p.trim()).filter(p => p.length > 5);
   const pages: { chapterTitle: string; items: string[] }[] = [];
 
   let currentItems: string[] = [];
-  let currentLength = 0;
+  let currentSlots = 0;
   let currentChapterTitle = "";
+
+  const isSubtitle = (p: string) => p.length < 120 && !/[.?!]$/.test(p.trim()) && p.split(' ').length <= 15;
 
   for (let i = 0; i < rawParagraphs.length; i++) {
     const p = rawParagraphs[i];
@@ -55,20 +57,22 @@ function chunkByParagraphs(text: string, maxParagraphsPerPage = 99) {
       if (currentItems.length > 0) {
         pages.push({ chapterTitle: currentChapterTitle, items: currentItems });
         currentItems = [];
-        currentLength = 0;
+        currentSlots = 0;
       }
       currentChapterTitle = p;
       continue; // Do not include title inside the normal text body items
     }
 
-    if (currentItems.length >= maxParagraphsPerPage || (currentLength + p.length > 1800 && currentItems.length > 0)) {
+    const itemSlots = isSubtitle(p) ? 3 : Math.ceil(p.length / 85) + 1.5;
+
+    if (currentSlots + itemSlots > 22 && currentItems.length > 0) {
       pages.push({ chapterTitle: currentChapterTitle, items: currentItems });
       currentItems = [];
-      currentLength = 0;
+      currentSlots = 0;
     }
 
     currentItems.push(p);
-    currentLength += p.length;
+    currentSlots += itemSlots;
   }
 
   if (currentItems.length > 0 && currentItems.some(i => i.trim())) {
