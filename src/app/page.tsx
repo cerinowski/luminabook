@@ -30,7 +30,7 @@ export default function Home() {
     );
     const [selectedCoverIndex, setSelectedCoverIndex] = useState<number | null>(null);
 
-    const [selectedPalette, setSelectedPalette] = useState('Luxury');
+    const [selectedPalette, setSelectedPalette] = useState('#A855F7');
     const [selectedTheme, setSelectedTheme] = useState<'light' | 'dark'>('dark');
     const [selectedFont, setSelectedFont] = useState('Montserrat');
 
@@ -161,15 +161,17 @@ export default function Home() {
                 style={{ fontFamily: selectedFont }}
             >
                 {page.image ? (
-                    <img src={page.image} className="absolute inset-0 w-full h-full object-cover opacity-10 group-hover:scale-105 transition-transform duration-1000" />
+                    <img src={page.image} className={`absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000 ${isDark ? 'opacity-10' : 'opacity-5'}`} />
                 ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#0c0c15] to-black" />
+                    <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-br from-[#0c0c15] to-black' : 'bg-white'}`} />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-black/90" />
+                {page.image && (
+                    <div className={`absolute inset-0 bg-gradient-to-b ${isDark ? 'from-black/80 via-black/40 to-black/90' : 'from-white/90 via-white/60 to-white/90'}`} />
+                )}
                 <div className="absolute inset-0 p-12 md:p-20 flex flex-col z-10">
                     <div className="space-y-6 mb-8">
                         <div className="flex items-center gap-4">
-                            <span className="text-purple-500 text-[10px] font-black tracking-[6px] uppercase px-4 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full">Página {index + 1}</span>
+                            <span className="text-[10px] font-black tracking-[6px] uppercase px-4 py-1 rounded-full border" style={{ color: selectedPalette, backgroundColor: `${selectedPalette}1A`, borderColor: `${selectedPalette}33` }}>Página {index + 1}</span>
                         </div>
                         {page.title && (
                             <h2 className={`w-full bg-transparent text-3xl md:text-4xl font-black tracking-tighter italic leading-tight outline-none border-none ${isDark ? 'text-white' : 'text-black'}`}>
@@ -385,11 +387,10 @@ export default function Home() {
                                     {/* Sidebar de Design */}
                                     <div className="w-96 bg-white/[0.02] border-l border-white/5 p-12 space-y-12 overflow-y-auto">
                                         <div className="space-y-4">
-                                            <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20">Paleta de Cores</label>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                {['Luxury', 'Cyber', 'Minimal', 'Nature'].map(p => (
-                                                    <button key={p} onClick={() => setSelectedPalette(p)} className={`py-4 rounded-2xl text-[10px] font-bold tracking-widest uppercase transition-all ${selectedPalette === p ? 'bg-white text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>{p}</button>
-                                                ))}
+                                            <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20">Cor de Destaque</label>
+                                            <div className="flex items-center gap-4 bg-white/5 p-4 rounded-3xl border border-white/5">
+                                                <input type="color" value={selectedPalette} onChange={(e) => setSelectedPalette(e.target.value)} className="w-12 h-12 rounded-xl cursor-pointer bg-transparent border-0 p-0" />
+                                                <span className="text-white/80 text-sm font-bold tracking-widest uppercase">{selectedPalette}</span>
                                             </div>
                                         </div>
                                         <div className="space-y-4">
@@ -493,15 +494,17 @@ export default function Home() {
                                 <div key={idx} id={`pdf-page-${idx}`} className="w-[794px] h-[1123px] relative bg-black overflow-hidden border border-white/5" style={{ fontFamily: selectedFont }}>
                                     <div className={`w-full h-full ${isDark ? 'bg-[#050510] text-white' : 'bg-white text-black'}`}>
                                         {page.image ? (
-                                            <img src={page.image} crossOrigin="anonymous" className="absolute inset-0 w-full h-full object-cover opacity-10" />
+                                            <img src={page.image} crossOrigin="anonymous" className={`absolute inset-0 w-full h-full object-cover ${isDark ? 'opacity-10' : 'opacity-5'}`} />
                                         ) : (
-                                            <div className="absolute inset-0 bg-gradient-to-br from-[#0c0c15] to-black" />
+                                            <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-br from-[#0c0c15] to-black' : 'bg-white'}`} />
                                         )}
-                                        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-black/90" />
+                                        {page.image && (
+                                            <div className={`absolute inset-0 bg-gradient-to-b ${isDark ? 'from-black/80 via-black/40 to-black/90' : 'from-white/90 via-white/60 to-white/90'}`} />
+                                        )}
                                         <div className="absolute inset-0 p-[72px] flex flex-col z-10">
                                             <div className="space-y-6 mb-12">
                                                 <div className="flex items-center gap-6">
-                                                    <span className="text-purple-500 text-sm font-black tracking-[8px] uppercase px-8 py-3 bg-purple-500/10 border border-purple-500/20 rounded-full">Página {idx + 1}</span>
+                                                    <span className="text-sm font-black tracking-[8px] uppercase px-8 py-3 rounded-full border" style={{ color: selectedPalette, backgroundColor: `${selectedPalette}1A`, borderColor: `${selectedPalette}33` }}>Página {idx + 1}</span>
                                                 </div>
                                                 {page.title && (
                                                     <h2 className={`w-full bg-transparent text-[42px] font-black tracking-tighter italic leading-tight ${isDark ? 'text-white' : 'text-black'}`}>{page.title}</h2>
