@@ -87,7 +87,7 @@ function chunkByParagraphs(text: string) {
     }
 
     const itemSlots = isSubtitle(p) ? 2.5 : Math.ceil(p.length / 90) + 0.8;
-    const capacity = isFirstPage ? 22 : 28; // Decreased from 25/31 to leave bottom margin breathing room
+    const capacity = isFirstPage ? 25 : 29;
 
     if (currentSlots + itemSlots > capacity && currentItems.length > 0) {
       pages.push({ chapterTitle: currentChapterTitle, items: currentItems, isFirstPage });
@@ -219,7 +219,7 @@ JSON structure:
 
           let prefix = "";
           let mainTitle = pageChunk.chapterTitle;
-          const match = mainTitle.match(/^(Cap[ií]tulo \d+|M[oó]dulo \d+|Parte \d+|Se[çc][ãa]o \d+)\s*[-—:]\s*(.*)$/i);
+          const match = mainTitle.match(/^(Cap[ií]tulo \d+|M[oó]dulo \d+|Parte \d+|Se[çc][ãa]o \d+)\s*[-—:.]\s*(.*)$/i);
           if (match) {
             prefix = match[1];
             mainTitle = match[2];
@@ -258,7 +258,7 @@ JSON structure:
         ...pagesData.map((pageChunk, idx) => {
           let prefix = "";
           let mainTitle = pageChunk.chapterTitle;
-          const match = mainTitle.match(/^(Cap[ií]tulo \d+|M[oó]dulo \d+|Parte \d+|Se[çc][ãa]o \d+)\s*[-—:]\s*(.*)$/i);
+          const match = mainTitle.match(/^(Cap[ií]tulo \d+|M[oó]dulo \d+|Parte \d+|Se[çc][ãa]o \d+)\s*[-—:.]\s*(.*)$/i);
           if (match) {
             prefix = match[1];
             mainTitle = match[2];
