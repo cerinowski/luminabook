@@ -30,7 +30,7 @@ function cleanJsonText(text: string) {
     .trim();
 }
 
-function chunkByParagraphs(text: string, maxParagraphsPerPage = 4) {
+function chunkByParagraphs(text: string, maxParagraphsPerPage = 12) {
   // Preserve 100% of user words by splitting accurately by logical paragraphs
   const rawParagraphs = text.split(/\n+/).map(p => p.trim()).filter(p => p.length > 5);
   const pages: { chapterTitle: string; items: string[] }[] = [];
@@ -61,7 +61,7 @@ function chunkByParagraphs(text: string, maxParagraphsPerPage = 4) {
       continue; // Do not include title inside the normal text body items
     }
 
-    if (currentItems.length >= maxParagraphsPerPage || (currentLength + p.length > 1500 && currentItems.length > 0)) {
+    if (currentItems.length >= maxParagraphsPerPage || (currentLength + p.length > 2500 && currentItems.length > 0)) {
       pages.push({ chapterTitle: currentChapterTitle, items: currentItems });
       currentItems = [];
       currentLength = 0;

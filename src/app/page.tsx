@@ -283,6 +283,7 @@ export default function Home() {
             addLog("PDF exportado com sucesso.");
         } catch (e: any) {
             addLog(`Erro ao gerar PDF: ${e.message}`);
+            alert(`Erro ao exportar PDF: ${e.message}`);
         }
         setIsLoadingAntho(false);
     };
@@ -466,7 +467,7 @@ export default function Home() {
 
             {/* Hidden PDF Render Container guarantees 1:1 perfect WYSIWYG export */}
             {blueprint && (
-                <div style={{ position: 'absolute', top: '-20000px', left: '-20000px' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, opacity: 0.01, pointerEvents: 'none', zIndex: -50 }}>
                     <div id="pdf-render-container" className="w-[794px]">
                         {blueprint.pages.map((page, idx) => {
                             const isDark = selectedTheme === 'dark';
