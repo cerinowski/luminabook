@@ -188,11 +188,14 @@ export default function Home() {
                     <div className="flex-1 overflow-hidden space-y-4">
                         {page.items && (
                             <div className="flex flex-col gap-4 w-full text-justify">
-                                {page.items.map((item, i) => (
-                                    <p key={i} className={`text-sm md:text-base font-medium leading-normal tracking-wide ${isDark ? 'text-white/80' : 'text-black/80'}`}>
-                                        {item}
-                                    </p>
-                                ))}
+                                {page.items.map((item, i) => {
+                                    const isSubtitle = item.length < 120 && !/[.?!]$/.test(item.trim()) && item.split(' ').length <= 15;
+                                    return (
+                                        <p key={i} className={`text-sm md:text-base leading-normal tracking-wide ${isSubtitle ? 'font-black mt-4 mb-2' : 'font-medium'} ${isDark ? (isSubtitle ? 'text-white' : 'text-white/80') : (isSubtitle ? 'text-black' : 'text-black/80')}`}>
+                                            {item}
+                                        </p>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
@@ -579,11 +582,14 @@ export default function Home() {
                                             <div className="flex-1 space-y-8 text-justify">
                                                 {page.items && (
                                                     <div className="flex flex-col gap-5 w-full">
-                                                        {page.items.map((item, i) => (
-                                                            <p key={i} className={`text-[19px] font-medium tracking-wide leading-[1.6] ${isDark ? 'text-white/90' : 'text-black/90'}`}>
-                                                                {item}
-                                                            </p>
-                                                        ))}
+                                                        {page.items.map((item, i) => {
+                                                            const isSubtitle = item.length < 120 && !/[.?!]$/.test(item.trim()) && item.split(' ').length <= 15;
+                                                            return (
+                                                                <p key={i} className={`text-[19px] tracking-wide leading-[1.6] ${isSubtitle ? 'font-black text-[22px] mt-6 mb-2' : 'font-medium'} ${isDark ? (isSubtitle ? 'text-white' : 'text-white/90') : (isSubtitle ? 'text-black' : 'text-black/90')}`}>
+                                                                    {item}
+                                                                </p>
+                                                            );
+                                                        })}
                                                     </div>
                                                 )}
                                             </div>
