@@ -76,11 +76,11 @@ export default function Home() {
 
         try {
             const style = { global_mood: 'Luxury', primary_color: '#ffffff' };
-            const basePrompt = `Professional A4 Digital Illustration for an eBook cover: ${coverPrompt}. 
-            STRICT RULES: 
-            1. EMPTY BACKGROUND FOR TEXT. NO TEXT, NO LETTERS, NO WORDS, NO NUMBERS. 
-            2. GENERATE A FLAT WALLPAPER/ARTWORK ONLY. DO NOT GENERATE A 3D BOOK MOCKUP. DO NOT SHOW PHYSICAL BOOKS. 
-            3. CINEMATIC LIGHTING, 8K. MATCH THE USER VIBE PRECISELY (If they ask for photorealistic, make it a photo. If illustration, make it art).`;
+            const basePrompt = `${coverPrompt}
+            --
+            IMPORTANT RULES FOR THIS IMAGE: 
+            1. DO NOT include any text, letters, or words at all.
+            2. DO NOT make a mockup of a physical 3D book on a table. Provide ONLY the flat artwork directly.`;
 
             const updateCard = (id: number, patch: Partial<CoverCard>) => {
                 setCovers(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
