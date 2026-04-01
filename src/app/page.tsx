@@ -11,6 +11,7 @@ export default function Home() {
     const [title, setTitle] = useState('Título da Obra');
     const [subtitle, setSubtitle] = useState('');
     const [author, setAuthor] = useState('Autor');
+    const [authorLogo, setAuthorLogo] = useState<string | null>(null);
     const [coverPrompt, setCoverPrompt] = useState('');
     const [fullContent, setFullContent] = useState('');
     const [activeTab, setActiveTab] = useState('config');
@@ -331,6 +332,20 @@ export default function Home() {
                                                 <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20 ml-2">Autor</label>
                                                 <input value={author} onChange={e => setAuthor(e.target.value)} placeholder="Seu Nome" className="w-full bg-white/[0.03] border border-white/10 rounded-3xl p-8 text-2xl font-bold focus:border-purple-500/50 transition-all outline-none text-white" />
                                             </div>
+                                            <div className="space-y-4">
+                                                <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20 ml-2">Logo do Autor (Opcional - Apenas PNG)</label>
+                                                <label className="cursor-pointer flex items-center justify-between w-full bg-white/[0.03] border border-white/10 rounded-3xl p-8 hover:bg-white/[0.05] transition-all">
+                                                    <input type="file" accept="image/png" className="hidden" onChange={(e) => {
+                                                        if (e.target.files && e.target.files[0]) {
+                                                            const reader = new FileReader();
+                                                            reader.onload = (ev) => setAuthorLogo(ev.target?.result as string);
+                                                            reader.readAsDataURL(e.target.files[0]);
+                                                        }
+                                                    }} />
+                                                    <span className="text-white/50 text-xl font-bold uppercase tracking-widest">{authorLogo ? 'Trocar Logo' : 'Anexar Logo'}</span>
+                                                    {authorLogo ? <img src={authorLogo} className="h-8 w-auto object-contain" /> : <Upload className="w-6 h-6 text-white/30" />}
+                                                </label>
+                                            </div>
                                         </div>
                                         <div className="space-y-4">
                                             <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20 ml-2">Inspiração para a Capa</label>
@@ -372,6 +387,11 @@ export default function Home() {
                                                                         <p className="text-white/40 font-bold tracking-[8px] text-[8px] uppercase">{author}</p>
                                                                     </div>
                                                                 </div>
+                                                                {authorLogo && (
+                                                                    <div className="absolute bottom-6 right-6 z-10 w-16 md:w-20">
+                                                                        <img src={authorLogo} className="w-full h-auto object-contain opacity-90" />
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     )}
@@ -479,6 +499,11 @@ export default function Home() {
                                                             <p className="text-white/40 font-bold tracking-[8px] text-xs uppercase">{author}</p>
                                                         </div>
                                                     </div>
+                                                    {authorLogo && (
+                                                        <div className="absolute bottom-12 right-12 z-50 w-32">
+                                                            <img src={authorLogo} className="w-full h-auto object-contain opacity-90" />
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}
