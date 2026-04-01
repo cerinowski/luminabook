@@ -386,12 +386,12 @@ export default function Home() {
                                                                     <div className="pt-6">
                                                                         <p className="text-white/40 font-bold tracking-[8px] text-[8px] uppercase">{author}</p>
                                                                     </div>
+                                                                    {authorLogo && (
+                                                                        <div className="pt-2 w-full flex justify-center">
+                                                                            <img src={authorLogo} className="w-16 md:w-20 h-auto object-contain opacity-90" />
+                                                                        </div>
+                                                                    )}
                                                                 </div>
-                                                                {authorLogo && (
-                                                                    <div className="absolute bottom-6 right-6 z-10 w-16 md:w-20">
-                                                                        <img src={authorLogo} className="w-full h-auto object-contain opacity-90" />
-                                                                    </div>
-                                                                )}
                                                             </div>
                                                         </div>
                                                     )}
@@ -495,15 +495,15 @@ export default function Home() {
                                                     <div className="space-y-4">
                                                         <h2 className="text-white font-black leading-tight uppercase tracking-tighter" style={{ fontSize: '3.5rem' }}>{title}</h2>
                                                         {subtitle && <p className="text-white/80 font-medium tracking-widest text-lg uppercase">{subtitle}</p>}
-                                                        <div className="pt-10 pb-8">
+                                                        <div className="pt-10 pb-4">
                                                             <p className="text-white/40 font-bold tracking-[8px] text-xs uppercase">{author}</p>
                                                         </div>
+                                                        {authorLogo && (
+                                                            <div className="pt-2 w-full flex justify-center">
+                                                                <img src={authorLogo} className="w-32 h-auto object-contain opacity-90" />
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    {authorLogo && (
-                                                        <div className="absolute bottom-12 right-12 z-50 w-32">
-                                                            <img src={authorLogo} className="w-full h-auto object-contain opacity-90" />
-                                                        </div>
-                                                    )}
                                                 </div>
                                             </div>
                                         )}
