@@ -86,8 +86,8 @@ function chunkByParagraphs(text: string) {
       continue; // Do not include title inside the normal text body items
     }
 
-    const itemSlots = isSubtitle(p) ? 2.5 : Math.ceil(p.length / 90) + 0.8;
-    const capacity = isFirstPage ? 25 : 29;
+    const itemSlots = isSubtitle(p) ? 3.0 : Math.ceil(p.length / 68) + 1.1;
+    const capacity = isFirstPage ? 22 : 26;
 
     if (currentSlots + itemSlots > capacity && currentItems.length > 0) {
       pages.push({ chapterTitle: currentChapterTitle, items: currentItems, isFirstPage });
