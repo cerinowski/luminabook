@@ -36,9 +36,23 @@ export default function Home() {
     const [selectedFont, setSelectedFont] = useState('Montserrat');
     const [titleSize, setTitleSize] = useState(100);
     const [titleColor, setTitleColor] = useState('#ffffff');
+    const [titleOpacity, setTitleOpacity] = useState(100);
+    const [titleShadow, setTitleShadow] = useState(false);
+
     const [subtitleSize, setSubtitleSize] = useState(100);
     const [subtitleColor, setSubtitleColor] = useState('#e2e8f0');
+    const [subtitleOpacity, setSubtitleOpacity] = useState(100);
+    const [subtitleShadow, setSubtitleShadow] = useState(false);
+
     const [coverOverlayColor, setCoverOverlayColor] = useState('#000000');
+    const [coverOverlayOpacity, setCoverOverlayOpacity] = useState(80);
+
+    const hexToRgba = (hex: string, alpha: number) => {
+        const r = parseInt(hex.slice(1, 3), 16) || 0;
+        const g = parseInt(hex.slice(3, 5), 16) || 0;
+        const b = parseInt(hex.slice(5, 7), 16) || 0;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
 
     // --- ANTHOLOGY G27.1 ---
     type AnthologyPage = {
@@ -387,10 +401,10 @@ export default function Home() {
                                                         <div className="relative w-full h-full">
                                                             <img src={c.image} className="w-full h-full object-cover" />
                                                             {/* G32 Typography Overlay - Bottom Aligned */}
-                                                            <div className="absolute inset-0 flex flex-col items-center justify-end py-16 px-6 text-center pointer-events-none" style={{ background: `linear-gradient(to top, ${coverOverlayColor} 0%, ${coverOverlayColor}80 50%, transparent 100%)` }}>
+                                                            <div className="absolute inset-0 flex flex-col items-center justify-end py-16 px-6 text-center pointer-events-none" style={{ background: `linear-gradient(to top, ${hexToRgba(coverOverlayColor, coverOverlayOpacity / 100)} 0%, ${hexToRgba(coverOverlayColor, (coverOverlayOpacity / 100) * 0.5)} 50%, transparent 100%)` }}>
                                                                 <div className="space-y-3">
-                                                                    <h2 className="font-black leading-tight uppercase tracking-tighter" style={{ fontSize: `calc(clamp(1rem, 5vw, 2.5rem) * ${titleSize / 100})`, fontFamily: selectedFont, color: titleColor }}>{title}</h2>
-                                                                    {subtitle && <p className="font-medium tracking-widest uppercase" style={{ fontSize: `calc(10px * ${subtitleSize / 100})`, color: subtitleColor }}>{subtitle}</p>}
+                                                                    <h2 className="font-black leading-tight uppercase tracking-tighter" style={{ fontSize: `calc(clamp(1rem, 5vw, 2.5rem) * ${titleSize / 100})`, fontFamily: selectedFont, color: titleColor, opacity: titleOpacity / 100, textShadow: titleShadow ? '0px 4px 30px rgba(0,0,0,0.8)' : 'none' }}>{title}</h2>
+                                                                    {subtitle && <p className="font-medium tracking-widest uppercase" style={{ fontSize: `calc(10px * ${subtitleSize / 100})`, color: subtitleColor, opacity: subtitleOpacity / 100, textShadow: subtitleShadow ? '0px 4px 20px rgba(0,0,0,0.8)' : 'none' }}>{subtitle}</p>}
                                                                     <div className="pt-6">
                                                                         <p className="text-white/40 font-bold tracking-[8px] text-[8px] uppercase">{author}</p>
                                                                     </div>
@@ -441,12 +455,20 @@ export default function Home() {
                                                     <input type="range" min="50" max="150" value={titleSize} onChange={e => setTitleSize(Number(e.target.value))} className="w-full accent-purple-500" />
                                                 </div>
                                                 <div className="flex flex-col gap-3">
-                                                    <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Cor</span>
+                                                    <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Cor principal</span>
                                                     <div className="flex items-center gap-3">
                                                         <input type="color" value={titleColor} onChange={e => setTitleColor(e.target.value)} className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 p-0" />
                                                         <span className="text-white/80 text-[10px] font-bold uppercase tracking-widest">{titleColor}</span>
                                                     </div>
                                                 </div>
+                                                <div className="flex flex-col gap-3">
+                                                    <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Opacidade ({titleOpacity}%)</span></div>
+                                                    <input type="range" min="0" max="100" value={titleOpacity} onChange={e => setTitleOpacity(Number(e.target.value))} className="w-full accent-purple-500" />
+                                                </div>
+                                                <label className="flex items-center gap-3 cursor-pointer">
+                                                    <input type="checkbox" checked={titleShadow} onChange={e => setTitleShadow(e.target.checked)} className="w-5 h-5 accent-purple-500 rounded bg-black/50 border-white/20" />
+                                                    <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest">Ativar Sombra (Drop Shadow)</span>
+                                                </label>
                                             </div>
                                         </div>
                                         <div className="space-y-4">
@@ -457,19 +479,30 @@ export default function Home() {
                                                     <input type="range" min="50" max="150" value={subtitleSize} onChange={e => setSubtitleSize(Number(e.target.value))} className="w-full accent-purple-500" />
                                                 </div>
                                                 <div className="flex flex-col gap-3">
-                                                    <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Cor</span>
+                                                    <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Cor principal</span>
                                                     <div className="flex items-center gap-3">
                                                         <input type="color" value={subtitleColor} onChange={e => setSubtitleColor(e.target.value)} className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 p-0" />
                                                         <span className="text-white/80 text-[10px] font-bold uppercase tracking-widest">{subtitleColor}</span>
                                                     </div>
                                                 </div>
+                                                <div className="flex flex-col gap-3">
+                                                    <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Opacidade ({subtitleOpacity}%)</span></div>
+                                                    <input type="range" min="0" max="100" value={subtitleOpacity} onChange={e => setSubtitleOpacity(Number(e.target.value))} className="w-full accent-purple-500" />
+                                                </div>
+                                                <label className="flex items-center gap-3 cursor-pointer">
+                                                    <input type="checkbox" checked={subtitleShadow} onChange={e => setSubtitleShadow(e.target.checked)} className="w-5 h-5 accent-purple-500 rounded bg-black/50 border-white/20" />
+                                                    <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest">Ativar Sombra (Drop Shadow)</span>
+                                                </label>
                                             </div>
                                         </div>
                                         <div className="space-y-4">
                                             <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20">Degradê da Capa</label>
-                                            <div className="flex items-center gap-4 bg-white/5 p-4 rounded-3xl border border-white/5">
-                                                <input type="color" value={coverOverlayColor} onChange={e => setCoverOverlayColor(e.target.value)} className="w-12 h-12 rounded-xl cursor-pointer bg-transparent border-0 p-0" />
-                                                <span className="text-white/80 text-sm font-bold tracking-widest uppercase">{coverOverlayColor}</span>
+                                            <div className="flex items-center gap-5 bg-white/5 p-4 rounded-3xl border border-white/5">
+                                                <input type="color" value={coverOverlayColor} onChange={e => setCoverOverlayColor(e.target.value)} className="w-12 h-12 shrink-0 rounded-xl cursor-pointer bg-transparent border-0 p-0" />
+                                                <div className="flex-1 flex flex-col gap-2">
+                                                    <div className="flex justify-between items-center"><span className="text-white/80 text-[10px] font-bold tracking-widest uppercase">COR E OPACIDADE ({coverOverlayOpacity}%)</span></div>
+                                                    <input type="range" min="0" max="100" value={coverOverlayOpacity} onChange={e => setCoverOverlayOpacity(Number(e.target.value))} className="w-full accent-purple-500" />
+                                                </div>
                                             </div>
                                         </div>
                                         <button onClick={() => setActiveTab('editorial')} className="w-full py-8 bg-purple-600 text-white font-black uppercase tracking-[4px] rounded-3xl hover:bg-purple-500 transition-all shadow-xl shadow-purple-900/20 text-[10px]">Ir para Escrita <ChevronLeft className="inline w-4 h-4 rotate-180" /></button>
@@ -538,10 +571,10 @@ export default function Home() {
                                         {page.image && (
                                             <div className="relative w-full h-full">
                                                 <img src={page.image} crossOrigin="anonymous" className="w-full h-full object-cover" />
-                                                <div className="absolute inset-0 flex flex-col items-center justify-end py-16 px-6 text-center" style={{ background: `linear-gradient(to top, ${coverOverlayColor} 0%, ${coverOverlayColor}80 50%, transparent 100%)` }}>
+                                                <div className="absolute inset-0 flex flex-col items-center justify-end py-16 px-6 text-center" style={{ background: `linear-gradient(to top, ${hexToRgba(coverOverlayColor, coverOverlayOpacity / 100)} 0%, ${hexToRgba(coverOverlayColor, (coverOverlayOpacity / 100) * 0.5)} 50%, transparent 100%)` }}>
                                                     <div className="space-y-4">
-                                                        <h2 className="font-black leading-tight uppercase tracking-tighter" style={{ fontSize: `calc(3.5rem * ${titleSize / 100})`, color: titleColor }}>{title}</h2>
-                                                        {subtitle && <p className="font-medium tracking-widest uppercase" style={{ fontSize: `calc(1.125rem * ${subtitleSize / 100})`, color: subtitleColor }}>{subtitle}</p>}
+                                                        <h2 className="font-black leading-tight uppercase tracking-tighter" style={{ fontSize: `calc(3.5rem * ${titleSize / 100})`, color: titleColor, opacity: titleOpacity / 100, textShadow: titleShadow ? '0px 10px 50px rgba(0,0,0,0.8)' : 'none' }}>{title}</h2>
+                                                        {subtitle && <p className="font-medium tracking-widest uppercase" style={{ fontSize: `calc(1.125rem * ${subtitleSize / 100})`, color: subtitleColor, opacity: subtitleOpacity / 100, textShadow: subtitleShadow ? '0px 10px 30px rgba(0,0,0,0.8)' : 'none' }}>{subtitle}</p>}
                                                         <div className="pt-10 pb-4">
                                                             <p className="text-white/40 font-bold tracking-[8px] text-xs uppercase">{author}</p>
                                                         </div>
