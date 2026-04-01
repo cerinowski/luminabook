@@ -196,9 +196,12 @@ export default function Home() {
                     <div className="space-y-6 mb-8">
                         <div className="flex items-center gap-4">
                             <span className="text-[10px] font-black tracking-[6px] uppercase px-4 py-1 rounded-full border" style={{ color: selectedPalette, backgroundColor: `${selectedPalette}1A`, borderColor: `${selectedPalette}33` }}>Página {index + 1}</span>
+                            {page.prefix && (
+                                <span className="text-[10px] font-normal tracking-[4px] uppercase" style={{ color: selectedPalette }}>{page.prefix}</span>
+                            )}
                         </div>
                         {page.title && (
-                            <h2 className={`w-full bg-transparent text-3xl md:text-4xl font-black tracking-tighter italic leading-tight outline-none border-none ${isDark ? 'text-white' : 'text-black'}`}>
+                            <h2 className="w-full bg-transparent text-3xl md:text-4xl font-black tracking-tighter italic leading-tight outline-none border-none" style={{ color: chapterTitleColor || (isDark ? '#ffffff' : '#000000') }}>
                                 {page.title}
                             </h2>
                         )}
@@ -209,7 +212,7 @@ export default function Home() {
                                 {page.items.map((item, i) => {
                                     const isSubtitle = item.length < 120 && !/[.?!]$/.test(item.trim()) && item.split(' ').length <= 15;
                                     return (
-                                        <p key={i} className={`text-sm md:text-base leading-normal tracking-wide ${isSubtitle ? 'font-black mt-4 mb-2' : 'font-medium'} ${isDark ? (isSubtitle ? 'text-white' : 'text-white/80') : (isSubtitle ? 'text-black' : 'text-black/80')}`}>
+                                        <p key={i} className={`text-sm md:text-base leading-normal tracking-wide ${isSubtitle ? 'font-bold mt-4 mb-2' : 'font-medium'}`} style={{ color: bodyTextColor || (isDark ? (isSubtitle ? '#ffffff' : 'rgba(255,255,255,0.8)') : (isSubtitle ? '#000000' : 'rgba(0,0,0,0.8)')) }}>
                                             {item}
                                         </p>
                                     );
