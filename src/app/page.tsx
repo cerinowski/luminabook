@@ -50,6 +50,9 @@ export default function Home() {
     const [chapterTitleColor, setChapterTitleColor] = useState('');
     const [bodyTextColor, setBodyTextColor] = useState('');
 
+    const [manualCoverImage, setManualCoverImage] = useState<string | null>(null);
+    const [isFullImageCover, setIsFullImageCover] = useState(false);
+
     const hexToRgba = (hex: string, alpha: number) => {
         const r = parseInt(hex.slice(1, 3), 16) || 0;
         const g = parseInt(hex.slice(3, 5), 16) || 0;
@@ -319,8 +322,39 @@ export default function Home() {
                                             <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20 ml-2">Inspiração para a Capa</label>
                                             <textarea value={coverPrompt} onChange={e => setCoverPrompt(e.target.value)} placeholder="Ex: Uma cidade futurista flutuante com luzes neon azul e roxo, estilo digital painting..." rows={3} className="w-full bg-white/[0.03] border border-white/10 rounded-3xl p-8 text-xl font-medium focus:border-purple-500/50 transition-all outline-none resize-none text-white" />
                                         </div>
+
+                                        <div className="space-y-4">
+                                            <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20 ml-2">Ou Enviar Capa Manual (Própria)</label>
+                                            <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 space-y-8">
+                                                <label className="cursor-pointer flex items-center justify-between w-full bg-white/[0.03] border border-white/10 rounded-3xl p-8 hover:bg-white/[0.05] transition-all">
+                                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                                        if (e.target.files && e.target.files[0]) {
+                                                            const reader = new FileReader();
+                                                            reader.onload = (ev) => setManualCoverImage(ev.target?.result as string);
+                                                            reader.readAsDataURL(e.target.files[0]);
+                                                        }
+                                                    }} />
+                                                    <div className="flex flex-col">
+                                                        <span className="text-white text-xl font-bold uppercase tracking-widest leading-none">{manualCoverImage ? 'Substituir Imagem' : 'Selecionar Arquivo'}</span>
+                                                        <span className="text-white/20 text-[10px] font-bold uppercase tracking-[2px] mt-2 italic leading-none">{manualCoverImage ? 'Sua imagem foi carregada.' : 'JPG ou PNG recomendados.'}</span>
+                                                    </div>
+                                                    <Upload className="w-6 h-6 text-white/30" />
+                                                </label>
+
+                                                {manualCoverImage && (
+                                                    <label className="flex items-center gap-5 cursor-pointer bg-purple-500/10 p-6 rounded-3xl border border-purple-500/20 hover:bg-purple-500/20 transition-all">
+                                                        <input type="checkbox" checked={isFullImageCover} onChange={e => setIsFullImageCover(e.target.checked)} className="w-6 h-6 accent-purple-500 rounded border-white/20" />
+                                                        <div className="flex flex-col">
+                                                            <span className="text-white text-[10px] font-black uppercase tracking-widest">Esta imagem já é a capa completa?</span>
+                                                            <span className="text-white/40 text-[9px] uppercase font-bold mt-1 leading-tight tracking-wider">MARQUE PARA OCULTAR O TÍTULO E AUTOR AUTOMÁTICOS DA CAPA.</span>
+                                                        </div>
+                                                    </label>
+                                                )}
+                                            </div>
+                                        </div>
+
                                         <button onClick={handleGenerateCover} disabled={covers[0]?.status === 'loading'} className="group relative w-full py-10 bg-white text-black font-black uppercase tracking-[6px] rounded-[50px] hover:bg-white/90 transition-all flex items-center justify-center gap-6 shadow-2xl">
-                                            {covers[0]?.status === 'loading' ? <Loader2 className="animate-spin w-10 h-10" /> : <Zap className="w-10 h-10 fill-current" />} GERAR ARTE DA CAPA
+                                            {covers[0]?.status === 'loading' ? <Loader2 className="animate-spin w-10 h-10" /> : <Zap className="w-10 h-10 fill-current" />} {manualCoverImage ? 'GERAR NOVA ALTERNATIVA IA' : 'GERAR ARTE DA CAPA'}
                                         </button>
                                     </div>
                                 </motion.div>
@@ -343,24 +377,26 @@ export default function Home() {
                                                             <span className="text-[10px] font-black uppercase tracking-[4px] text-white/20 italic">Criando Arte...</span>
                                                         </div>
                                                     )}
-                                                    {c.status === 'success' && c.image && (
+                                                    {c.status === 'success' && (c.image || manualCoverImage) && (
                                                         <div className="relative w-full h-full">
-                                                            <img src={c.image} className="w-full h-full object-cover" />
+                                                            <img src={manualCoverImage || c.image!} className="w-full h-full object-cover" />
                                                             {/* G32 Typography Overlay - Bottom Aligned */}
-                                                            <div className="absolute inset-0 flex flex-col items-center justify-end py-16 px-6 text-center pointer-events-none" style={{ background: `linear-gradient(to top, ${hexToRgba(coverOverlayColor, coverOverlayOpacity / 100)} 0%, ${hexToRgba(coverOverlayColor, (coverOverlayOpacity / 100) * 0.5)} 50%, transparent 100%)` }}>
-                                                                <div className="space-y-3">
-                                                                    <h2 className="font-black leading-tight uppercase tracking-tighter" style={{ fontSize: `calc(clamp(1rem, 5vw, 2.5rem) * ${titleSize / 100})`, fontFamily: selectedFont, color: titleColor, opacity: titleOpacity / 100, textShadow: titleShadow ? '0px 4px 30px rgba(0,0,0,0.8)' : 'none' }}>{title}</h2>
-                                                                    {subtitle && <p className="font-medium tracking-widest uppercase" style={{ fontSize: `calc(10px * ${subtitleSize / 100})`, color: subtitleColor, opacity: subtitleOpacity / 100, textShadow: subtitleShadow ? '0px 4px 20px rgba(0,0,0,0.8)' : 'none' }}>{subtitle}</p>}
-                                                                    <div className="pt-6">
-                                                                        <p className="text-white/40 font-bold tracking-[8px] text-[8px] uppercase">{author}</p>
-                                                                    </div>
-                                                                    {authorLogo && (
-                                                                        <div className="pt-2 w-full flex justify-center">
-                                                                            <img src={authorLogo} className="w-16 md:w-20 h-auto object-contain opacity-90" />
+                                                            {(!manualCoverImage || !isFullImageCover) && (
+                                                                <div className="absolute inset-0 flex flex-col items-center justify-end py-16 px-6 text-center pointer-events-none" style={{ background: `linear-gradient(to top, ${hexToRgba(coverOverlayColor, coverOverlayOpacity / 100)} 0%, ${hexToRgba(coverOverlayColor, (coverOverlayOpacity / 100) * 0.5)} 50%, transparent 100%)` }}>
+                                                                    <div className="space-y-3">
+                                                                        <h2 className="font-black leading-tight uppercase tracking-tighter" style={{ fontSize: `calc(clamp(1rem, 5vw, 2.5rem) * ${titleSize / 100})`, fontFamily: selectedFont, color: titleColor, opacity: titleOpacity / 100, textShadow: titleShadow ? '0px 4px 30px rgba(0,0,0,0.8)' : 'none' }}>{title}</h2>
+                                                                        {subtitle && <p className="font-medium tracking-widest uppercase" style={{ fontSize: `calc(10px * ${subtitleSize / 100})`, color: subtitleColor, opacity: subtitleOpacity / 100, textShadow: subtitleShadow ? '0px 4px 20px rgba(0,0,0,0.8)' : 'none' }}>{subtitle}</p>}
+                                                                        <div className="pt-6">
+                                                                            <p className="text-white/40 font-bold tracking-[8px] text-[8px] uppercase">{author}</p>
                                                                         </div>
-                                                                    )}
+                                                                        {authorLogo && (
+                                                                            <div className="pt-2 w-full flex justify-center">
+                                                                                <img src={authorLogo} className="w-16 md:w-20 h-auto object-contain opacity-90" />
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </motion.div>
@@ -504,6 +540,22 @@ export default function Home() {
                                                     bodyTextColor={bodyTextColor}
                                                     covers={covers}
                                                     selectedCoverIndex={selectedCoverIndex}
+                                                    manualCoverImage={manualCoverImage}
+                                                    isFullImageCover={isFullImageCover}
+                                                    title={title}
+                                                    titleSize={titleSize}
+                                                    titleColor={titleColor}
+                                                    titleOpacity={titleOpacity}
+                                                    titleShadow={titleShadow}
+                                                    subtitle={subtitle}
+                                                    subtitleSize={subtitleSize}
+                                                    subtitleColor={subtitleColor}
+                                                    subtitleOpacity={subtitleOpacity}
+                                                    subtitleShadow={subtitleShadow}
+                                                    coverOverlayColor={coverOverlayColor}
+                                                    coverOverlayOpacity={coverOverlayOpacity}
+                                                    author={author}
+                                                    authorLogo={authorLogo}
                                                 />
                                             ))}
                                         </div>
@@ -539,23 +591,25 @@ export default function Home() {
                                 const liveCoverImage = selectedCoverIndex !== null && covers[selectedCoverIndex] ? covers[selectedCoverIndex].image : page.image;
                                 return (
                                     <div key={idx} id={`pdf-page-${idx}`} className="w-[794px] h-[1123px] relative bg-black overflow-hidden" style={{ fontFamily: selectedFont }}>
-                                        {liveCoverImage && (
+                                        {(manualCoverImage || liveCoverImage) && (
                                             <div className="relative w-full h-full">
-                                                <img src={liveCoverImage} crossOrigin="anonymous" className="w-full h-full object-cover" />
-                                                <div className="absolute inset-0 flex flex-col items-center justify-end py-16 px-6 text-center" style={{ background: `linear-gradient(to top, ${hexToRgba(coverOverlayColor, coverOverlayOpacity / 100)} 0%, ${hexToRgba(coverOverlayColor, (coverOverlayOpacity / 100) * 0.5)} 50%, transparent 100%)` }}>
-                                                    <div className="space-y-4">
-                                                        <h2 className="font-black leading-tight uppercase tracking-tighter" style={{ fontSize: `calc(3.5rem * ${titleSize / 100})`, color: titleColor, opacity: titleOpacity / 100, textShadow: titleShadow ? '0px 10px 50px rgba(0,0,0,0.8)' : 'none' }}>{title}</h2>
-                                                        {subtitle && <p className="font-medium tracking-widest uppercase" style={{ fontSize: `calc(1.125rem * ${subtitleSize / 100})`, color: subtitleColor, opacity: subtitleOpacity / 100, textShadow: subtitleShadow ? '0px 10px 30px rgba(0,0,0,0.8)' : 'none' }}>{subtitle}</p>}
-                                                        <div className="pt-10 pb-4">
-                                                            <p className="text-white/40 font-bold tracking-[8px] text-xs uppercase">{author}</p>
-                                                        </div>
-                                                        {authorLogo && (
-                                                            <div className="pt-2 w-full flex justify-center">
-                                                                <img src={authorLogo} className="w-32 h-auto object-contain opacity-90" />
+                                                <img src={manualCoverImage || liveCoverImage!} crossOrigin="anonymous" className="w-full h-full object-cover" />
+                                                {(!manualCoverImage || !isFullImageCover) && (
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-end py-16 px-6 text-center" style={{ background: `linear-gradient(to top, ${hexToRgba(coverOverlayColor, coverOverlayOpacity / 100)} 0%, ${hexToRgba(coverOverlayColor, (coverOverlayOpacity / 100) * 0.5)} 50%, transparent 100%)` }}>
+                                                        <div className="space-y-4">
+                                                            <h2 className="font-black leading-tight uppercase tracking-tighter" style={{ fontSize: `calc(3.5rem * ${titleSize / 100})`, color: titleColor, opacity: titleOpacity / 100, textShadow: titleShadow ? '0px 10px 50px rgba(0,0,0,0.8)' : 'none' }}>{title}</h2>
+                                                            {subtitle && <p className="font-medium tracking-widest uppercase" style={{ fontSize: `calc(1.125rem * ${subtitleSize / 100})`, color: subtitleColor, opacity: subtitleOpacity / 100, textShadow: subtitleShadow ? '0px 10px 30px rgba(0,0,0,0.8)' : 'none' }}>{subtitle}</p>}
+                                                            <div className="pt-10 pb-4">
+                                                                <p className="text-white/40 font-bold tracking-[8px] text-xs uppercase">{author}</p>
                                                             </div>
-                                                        )}
+                                                            {authorLogo && (
+                                                                <div className="pt-2 w-full flex justify-center">
+                                                                    <img src={authorLogo} className="w-32 h-auto object-contain opacity-90" />
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -614,7 +668,10 @@ export default function Home() {
     );
 }
 
-function A4Page({ page, index, selectedTheme, selectedFont, selectedPalette, chapterTitleColor, bodyTextColor, covers, selectedCoverIndex }: {
+function A4Page({
+    page, index, selectedTheme, selectedFont, selectedPalette, chapterTitleColor, bodyTextColor, covers, selectedCoverIndex, manualCoverImage, isFullImageCover,
+    title, titleSize, titleColor, titleOpacity, titleShadow, subtitle, subtitleSize, subtitleColor, subtitleOpacity, subtitleShadow, coverOverlayColor, coverOverlayOpacity, author, authorLogo
+}: {
     page: any;
     index: number;
     selectedTheme: string;
@@ -624,13 +681,37 @@ function A4Page({ page, index, selectedTheme, selectedFont, selectedPalette, cha
     bodyTextColor: string;
     covers: any[];
     selectedCoverIndex: number | null;
+    manualCoverImage: string | null;
+    isFullImageCover: boolean;
+    title: string;
+    titleSize: number;
+    titleColor: string;
+    titleOpacity: number;
+    titleShadow: boolean;
+    subtitle: string;
+    subtitleSize: number;
+    subtitleColor: string;
+    subtitleOpacity: number;
+    subtitleShadow: boolean;
+    coverOverlayColor: string;
+    coverOverlayOpacity: number;
+    author: string;
+    authorLogo: string | null;
 }) {
     const isDark = selectedTheme === 'dark';
 
+    const hexToRgba = (hex: string, alpha: number) => {
+        const r = parseInt(hex.slice(1, 3), 16) || 0;
+        const g = parseInt(hex.slice(3, 5), 16) || 0;
+        const b = parseInt(hex.slice(5, 7), 16) || 0;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
     // Live Cover Logic - Always prioritize the active selection if it's the cover page
-    const liveCoverImage = index === 0 && selectedCoverIndex !== null && covers[selectedCoverIndex]
-        ? covers[selectedCoverIndex].image
-        : page.image;
+    const liveCoverImage = index === 0 && manualCoverImage
+        ? manualCoverImage
+        : (index === 0 && selectedCoverIndex !== null && covers[selectedCoverIndex] ? covers[selectedCoverIndex].image : page.image);
+    const isCover = index === 0;
 
     return (
         <div
@@ -638,45 +719,68 @@ function A4Page({ page, index, selectedTheme, selectedFont, selectedPalette, cha
             style={{ fontFamily: selectedFont }}
         >
             {liveCoverImage ? (
-                <img src={liveCoverImage} className={`absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000 ${isDark ? 'opacity-10' : 'opacity-5'}`} />
+                <img src={liveCoverImage} className={`absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000 ${isCover ? 'opacity-100' : (isDark ? 'opacity-10' : 'opacity-5')}`} />
             ) : (
                 <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-br from-[#0c0c15] to-black' : 'bg-white'}`} />
             )}
-            {liveCoverImage && (
+            {(liveCoverImage && !isCover) && (
                 <div className={`absolute inset-0 bg-gradient-to-b ${isDark ? 'from-black/80 via-black/40 to-black/90' : 'from-white/90 via-white/60 to-white/90'}`} />
             )}
-            <div className="absolute inset-0 p-12 md:p-20 pb-20 md:pb-28 flex flex-col z-10">
-                <div className="space-y-6 mb-8">
-                    <div className="flex items-center gap-4">
-                        <span className="text-[10px] font-black tracking-[6px] uppercase px-4 py-1 rounded-full border" style={{ color: selectedPalette, backgroundColor: `${selectedPalette}1A`, borderColor: `${selectedPalette}33` }}>Página {index + 1}</span>
-                        {/* Fallback to parse prefix if state is stale */}
-                        {(page.prefix || (page.title && page.title.startsWith('Capítulo'))) && (
-                            <span className="text-[10px] font-normal tracking-[4px] uppercase" style={{ color: selectedPalette }}>
-                                {page.prefix || page.title.split(' - ')[0]}
-                            </span>
-                        )}
-                    </div>
-                    {page.title && (
-                        <h2 className="w-full bg-transparent text-3xl md:text-4xl font-black tracking-tighter italic leading-tight outline-none border-none" style={{ color: chapterTitleColor || (isDark ? '#ffffff' : '#000000') }}>
-                            {page.title}
-                        </h2>
-                    )}
-                </div>
-                <div className="flex-1 overflow-hidden space-y-4">
-                    {page.items && (
-                        <div className="flex flex-col gap-4 w-full text-justify">
-                            {page.items.map((item: string, i: number) => {
-                                const isSubtitle = item.length < 120 && !/[.?!]$/.test(item.trim()) && item.split(' ').length <= 15;
-                                return (
-                                    <p key={i} className={`text-sm md:text-base leading-normal tracking-wide ${isSubtitle ? 'font-bold mt-4 mb-2' : 'font-medium'}`} style={{ color: bodyTextColor || (isDark ? (isSubtitle ? '#ffffff' : 'rgba(255,255,255,0.8)') : (isSubtitle ? '#000000' : 'rgba(0,0,0,0.8)')) }}>
-                                        {item}
-                                    </p>
-                                );
-                            })}
+
+            {isCover ? (
+                // COVER LAYOUT FOR PAGE 0
+                <div className="absolute inset-0 flex flex-col">
+                    {(!manualCoverImage || !isFullImageCover) && liveCoverImage && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-end py-16 px-6 text-center" style={{ background: `linear-gradient(to top, ${hexToRgba(coverOverlayColor, coverOverlayOpacity / 100)} 0%, ${hexToRgba(coverOverlayColor, (coverOverlayOpacity / 100) * 0.5)} 50%, transparent 100%)` }}>
+                            <div className="space-y-3">
+                                <h2 className="font-black leading-tight uppercase tracking-tighter" style={{ fontSize: `calc(clamp(1rem, 5vw, 2.5rem) * ${titleSize / 100})`, fontFamily: selectedFont, color: titleColor, opacity: titleOpacity / 100, textShadow: titleShadow ? '0px 4px 30px rgba(0,0,0,0.8)' : 'none' }}>{title}</h2>
+                                {subtitle && <p className="font-medium tracking-widest uppercase" style={{ fontSize: `calc(10px * ${subtitleSize / 100})`, color: subtitleColor, opacity: subtitleOpacity / 100, textShadow: subtitleShadow ? '0px 4px 20px rgba(0,0,0,0.8)' : 'none' }}>{subtitle}</p>}
+                                <div className="pt-6">
+                                    <p className="text-white/40 font-bold tracking-[8px] text-[8px] uppercase">{author}</p>
+                                </div>
+                                {authorLogo && (
+                                    <div className="pt-2 w-full flex justify-center">
+                                        <img src={authorLogo} className="w-16 md:w-20 h-auto object-contain opacity-90" />
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
-            </div>
+            ) : (
+                // CONTENT LAYOUT FOR PAGES 1+
+                <div className="absolute inset-0 p-12 md:p-20 pb-20 md:pb-28 flex flex-col z-10">
+                    <div className="space-y-6 mb-8">
+                        <div className="flex items-center gap-4">
+                            <span className="text-[10px] font-black tracking-[6px] uppercase px-4 py-1 rounded-full border" style={{ color: selectedPalette, backgroundColor: `${selectedPalette}1A`, borderColor: `${selectedPalette}33` }}>Página {index + 1}</span>
+                            {(page.prefix || (page.title && page.title.startsWith('Capítulo'))) && (
+                                <span className="text-[10px] font-normal tracking-[4px] uppercase" style={{ color: selectedPalette }}>
+                                    {page.prefix || page.title.split(' - ')[0]}
+                                </span>
+                            )}
+                        </div>
+                        {page.title && (
+                            <h2 className="w-full bg-transparent text-3xl md:text-4xl font-black tracking-tighter italic leading-tight outline-none border-none" style={{ color: chapterTitleColor || (isDark ? '#ffffff' : '#000000') }}>
+                                {page.title}
+                            </h2>
+                        )}
+                    </div>
+                    <div className="flex-1 overflow-hidden space-y-4">
+                        {page.items && (
+                            <div className="flex flex-col gap-4 w-full text-justify">
+                                {page.items.map((item: string, i: number) => {
+                                    const isSubtitle = item.length < 120 && !/[.?!]$/.test(item.trim()) && item.split(' ').length <= 15;
+                                    return (
+                                        <p key={i} className={`text-sm md:text-base leading-normal tracking-wide ${isSubtitle ? 'font-bold mt-4 mb-2' : 'font-medium'}`} style={{ color: bodyTextColor || (isDark ? (isSubtitle ? '#ffffff' : 'rgba(255,255,255,0.8)') : (isSubtitle ? '#000000' : 'rgba(0,0,0,0.8)')) }}>
+                                            {item}
+                                        </p>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
             {page.status === 'loading' && (
                 <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center z-20">
                     <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
