@@ -288,14 +288,14 @@ export default function Home() {
         <main className="min-h-screen bg-[#020205] text-[#eef2f7]">
             <style jsx global>{` @import url('${GOOGLE_FONTS_URL}'); body { background: #020205; font-family: 'Montserrat', sans-serif; overflow: hidden; } .text-gradient { background: linear-gradient(135deg, #fff 0%, #a855f7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; } `}</style>
 
-            <div className="flex h-screen">
-                <aside className="w-20 md:w-80 bg-[#050510] border-r border-white/5 flex flex-col py-12 z-50">
-                    <div className="px-10 mb-20 flex items-center gap-4">
-                        <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-purple-500/30"><Sparkles className="w-7 h-7 text-white" /></div>
-                        <span className="hidden md:inline font-black text-3xl italic tracking-tighter text-white">LUMINA</span>
+            <div className="flex flex-col md:flex-row h-screen">
+                <aside className="w-full md:w-80 bg-[#050510] border-b md:border-b-0 md:border-r border-white/5 flex flex-row md:flex-col py-0 md:py-12 z-50 shrink-0 overflow-x-auto md:overflow-x-visible items-center md:items-stretch">
+                    <div className="px-6 md:px-10 my-6 md:my-0 mb-6 md:mb-20 flex items-center justify-center md:justify-start gap-4 shrink-0">
+                        <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-[14px] md:rounded-3xl flex items-center justify-center shadow-xl shrink-0"><Sparkles className="w-5 h-5 md:w-7 md:h-7 text-white" /></div>
+                        <span className="font-black text-xl md:text-3xl italic tracking-tighter text-white">LUMINA</span>
                     </div>
 
-                    <nav className="flex-1 px-8 space-y-4">
+                    <nav className="flex-1 flex flex-row md:flex-col px-4 md:px-8 space-x-2 md:space-x-0 md:space-y-4 shrink-0 md:shrink items-center md:items-stretch">
                         <TabButton icon={<Sparkles />} label="Capa" active={activeTab === 'config'} onClick={() => setActiveTab('config')} />
                         <TabButton icon={<Palette />} label="Design" active={activeTab === 'gallery'} onClick={() => setActiveTab('gallery')} />
                         <TabButton icon={<Type />} label="Escrita" active={activeTab === 'editorial'} onClick={() => setActiveTab('editorial')} />
@@ -314,11 +314,11 @@ export default function Home() {
                         )}
                     </header>
 
-                    <div className="flex-1 overflow-y-auto p-12 md:p-24 h-full custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-6 md:p-12 lg:p-24 h-full custom-scrollbar">
                         <AnimatePresence mode="wait">
                             {activeTab === 'config' && (
                                 <motion.div key="config" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="max-w-3xl pb-20">
-                                    <h1 className="text-8xl font-black tracking-tighter mb-8 text-gradient italic leading-none text-white">Sua Obra.</h1>
+                                    <h1 className="text-5xl md:text-8xl font-black tracking-tighter mb-4 md:mb-8 text-gradient italic leading-none text-white">Sua Obra.</h1>
                                     <p className="text-white/30 mb-20 text-lg max-w-sm font-medium leading-relaxed uppercase tracking-widest">Defina a identidade visual e o propósito do seu eBook.</p>
                                     <div className="space-y-12">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -347,8 +347,8 @@ export default function Home() {
                             )}
 
                             {activeTab === 'gallery' && (
-                                <motion.div key="gallery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex h-full gap-10">
-                                    <div className="flex-1 flex flex-col items-center justify-center py-20 pb-40 overflow-y-auto">
+                                <motion.div key="gallery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col xl:flex-row h-full gap-6 xl:gap-10">
+                                    <div className="flex-1 flex flex-col items-center justify-center py-10 xl:py-20 pb-20 xl:pb-40 overflow-y-auto">
                                         <div className="w-full max-w-md">
                                             {covers.map((c, i) => (
                                                 <motion.div
@@ -385,7 +385,7 @@ export default function Home() {
                                     </div>
 
                                     {/* Sidebar de Design */}
-                                    <div className="w-96 bg-white/[0.02] border-l border-white/5 p-12 space-y-12 overflow-y-auto">
+                                    <div className="w-full xl:w-96 bg-white/[0.02] border-t xl:border-t-0 xl:border-l border-white/5 p-6 xl:p-12 space-y-8 xl:space-y-12 overflow-y-auto shrink-0">
                                         <div className="space-y-4">
                                             <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20">Cor de Destaque</label>
                                             <div className="flex items-center gap-4 bg-white/5 p-4 rounded-3xl border border-white/5">
@@ -414,10 +414,10 @@ export default function Home() {
                             )}
 
                             {activeTab === 'editorial' && (
-                                <motion.div key="editorial" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-12 pb-40">
-                                    <div className="max-w-4xl w-full mb-10">
-                                        <h1 className="text-7xl font-black tracking-tighter text-gradient italic leading-none mb-4">Escrita.</h1>
-                                        <p className="text-white/30 text-lg font-medium tracking-wide leading-relaxed">Cole o conteúdo real do seu eBook abaixo. A IA irá diagramar as páginas automaticamente usando o design que você escolheu.</p>
+                                <motion.div key="editorial" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-8 md:gap-12 pb-20 md:pb-40">
+                                    <div className="max-w-4xl w-full mb-8 md:mb-10">
+                                        <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-gradient italic leading-none mb-4">Escrita.</h1>
+                                        <p className="text-white/30 text-base md:text-lg font-medium tracking-wide leading-relaxed">Cole o conteúdo real do seu eBook abaixo. A IA irá diagramar as páginas automaticamente usando o design que você escolheu.</p>
                                     </div>
 
                                     {!blueprint ? (
@@ -445,11 +445,11 @@ export default function Home() {
                             )}
 
                             {activeTab === 'export' && (
-                                <motion.div key="export" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-60 text-center space-y-24">
-                                    <div className="w-60 h-60 bg-green-500/5 rounded-full flex items-center justify-center shadow-[0_0_150px_rgba(34,197,94,0.4)] border border-green-500/10"><CheckCircle2 className="w-32 h-32 text-green-500" /></div>
-                                    <div className="space-y-6">
-                                        <h1 className="text-9xl font-black tracking-tighter italic text-gradient leading-none">Pronto.</h1>
-                                        <p className="text-white/20 text-3xl font-medium tracking-[15px] uppercase mt-10 text-white">LuminaBook Professional PDF</p>
+                                <motion.div key="export" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-20 md:py-60 text-center space-y-12 md:space-y-24">
+                                    <div className="w-40 h-40 md:w-60 md:h-60 bg-green-500/5 rounded-full flex items-center justify-center shadow-[0_0_150px_rgba(34,197,94,0.4)] border border-green-500/10"><CheckCircle2 className="w-20 h-20 md:w-32 md:h-32 text-green-500" /></div>
+                                    <div className="space-y-4 md:space-y-6">
+                                        <h1 className="text-6xl md:text-9xl font-black tracking-tighter italic text-gradient leading-none">Pronto.</h1>
+                                        <p className="text-white/20 text-xl md:text-3xl font-medium tracking-[8px] md:tracking-[15px] uppercase mt-10 text-white">LuminaBook PDF</p>
                                     </div>
                                     <button onClick={downloadPDF} className="bg-white text-black px-24 py-10 rounded-[50px] font-black uppercase text-xl flex items-center gap-8 hover:scale-110 active:scale-95 transition-all shadow-2xl shadow-white/5"><FileDown className="w-10 h-10" /> BAIXAR EBOOK PDF</button>
                                 </motion.div>
@@ -535,8 +535,8 @@ export default function Home() {
 
 function TabButton({ icon, label, active, onClick, disabled }: any) {
     return (
-        <button disabled={disabled} onClick={onClick} className={`flex items-center gap-10 py-10 px-14 rounded-[50px] transition-all w-full text-left group ${active ? 'bg-white/10 text-white shadow-[0_20px_40px_rgba(0,0,0,0.5)] translate-x-8 scale-105' : 'text-gray-800 hover:text-white hover:bg-white/[0.08]'} ${disabled ? 'opacity-10' : ''}`}>
-            <span className={`w-10 h-10 transition-all duration-700 ${active ? 'text-blue-500 rotate-0 scale-110' : 'group-hover:text-blue-500/70 -rotate-12 group-hover:rotate-0'}`}>{icon}</span>
+        <button disabled={disabled} onClick={onClick} className={`flex items-center gap-4 md:gap-10 py-4 px-6 md:py-10 md:px-14 rounded-2xl md:rounded-[50px] transition-all w-full text-left group overflow-hidden md:overflow-visible shrink-0 ${active ? 'bg-white/10 text-white shadow-xl md:shadow-[0_20px_40px_rgba(0,0,0,0.5)] md:translate-x-8 scale-100 md:scale-105' : 'text-white/40 md:text-gray-800 hover:text-white hover:bg-white/[0.08]'} ${disabled ? 'opacity-10' : ''}`}>
+            <span className={`w-6 h-6 md:w-10 md:h-10 transition-all duration-700 flex items-center justify-center shrink-0 ${active ? 'text-blue-500 scale-110' : 'group-hover:text-blue-500/70 -rotate-12 group-hover:rotate-0'}`}>{icon}</span>
             <span className="hidden md:inline text-[14px] uppercase font-black tracking-[8px] leading-none">{label}</span>
         </button>
     );
