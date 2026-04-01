@@ -64,8 +64,8 @@ function chunkByParagraphs(text: string) {
       continue; // Do not include title inside the normal text body items
     }
 
-    const itemSlots = isSubtitle(p) ? 3 : Math.ceil(p.length / 85) + 1.5;
-    const capacity = isFirstPage ? 18 : 28; // Title takes massive space on first page, continuation gets full volume
+    const itemSlots = isSubtitle(p) ? 2.5 : Math.ceil(p.length / 90) + 0.8;
+    const capacity = isFirstPage ? 25 : 31; // 25 slots available visually on pages with Cover Titles, 31 exclusively for text.
 
     if (currentSlots + itemSlots > capacity && currentItems.length > 0) {
       pages.push({ chapterTitle: currentChapterTitle, items: currentItems, isFirstPage });
