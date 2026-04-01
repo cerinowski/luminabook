@@ -289,13 +289,12 @@ export default function Home() {
             <style jsx global>{` @import url('${GOOGLE_FONTS_URL}'); body { background: #020205; font-family: 'Montserrat', sans-serif; overflow: hidden; } .text-gradient { background: linear-gradient(135deg, #fff 0%, #a855f7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; } `}</style>
 
             <div className="flex flex-col md:flex-row h-screen">
-                <aside className="w-full md:w-80 bg-[#050510] border-b md:border-b-0 md:border-r border-white/5 flex flex-row md:flex-col py-0 md:py-12 z-50 shrink-0 overflow-x-auto md:overflow-x-visible items-center md:items-stretch">
-                    <div className="px-6 md:px-10 my-6 md:my-0 mb-6 md:mb-20 flex items-center justify-center md:justify-start gap-4 shrink-0">
-                        <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-[14px] md:rounded-3xl flex items-center justify-center shadow-xl shrink-0"><Sparkles className="w-5 h-5 md:w-7 md:h-7 text-white" /></div>
-                        <span className="font-black text-xl md:text-3xl italic tracking-tighter text-white">LUMINA</span>
+                <aside className="w-full md:w-80 lg:w-96 bg-[#050510] border-b md:border-b-0 md:border-r border-white/5 flex flex-row md:flex-col py-0 md:py-12 z-50 shrink-0 overflow-x-auto md:overflow-x-visible items-center md:items-stretch">
+                    <div className="px-6 md:px-10 lg:px-12 my-6 md:my-0 mb-6 md:mb-20 flex items-center justify-center md:justify-start gap-4 shrink-0">
+                        <img src="/logo.png" alt="LumiaBook" className="h-10 md:h-14 object-contain" />
                     </div>
 
-                    <nav className="flex-1 flex flex-row md:flex-col px-4 md:px-8 space-x-2 md:space-x-0 md:space-y-4 shrink-0 md:shrink items-center md:items-stretch">
+                    <nav className="flex-1 flex flex-row md:flex-col px-4 md:px-10 lg:pl-12 lg:pr-16 space-x-2 md:space-x-0 md:space-y-4 shrink-0 md:shrink items-center md:items-stretch">
                         <TabButton icon={<Sparkles />} label="Capa" active={activeTab === 'config'} onClick={() => setActiveTab('config')} />
                         <TabButton icon={<Palette />} label="Design" active={activeTab === 'gallery'} onClick={() => setActiveTab('gallery')} />
                         <TabButton icon={<Type />} label="Escrita" active={activeTab === 'editorial'} onClick={() => setActiveTab('editorial')} />
@@ -306,8 +305,6 @@ export default function Home() {
                 <section className="flex-1 flex flex-col relative h-screen overflow-hidden">
                     <header className="h-24 border-b border-white/5 flex items-center justify-between px-16 bg-[#020205]/95 backdrop-blur-3xl sticky top-0 z-40">
                         <div className="flex items-center gap-3">
-                            <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse shadow-[0_0_15px_rgba(59,130,246,0.6)]"></div>
-                            <span className="text-[10px] font-black uppercase tracking-[8px] text-white/30 italic">LuminaBook Engine v2.0 // Active</span>
                         </div>
                         {blueprint && activeTab === 'editorial' && (
                             <button onClick={handleCreateEbook} className="bg-white text-black px-12 py-3 rounded-full text-[11px] font-black uppercase tracking-widest hover:scale-105 transition-all font-bold shadow-2xl">Visualizar Exportação</button>
@@ -318,7 +315,7 @@ export default function Home() {
                         <AnimatePresence mode="wait">
                             {activeTab === 'config' && (
                                 <motion.div key="config" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="max-w-3xl pb-20">
-                                    <h1 className="text-5xl md:text-8xl font-black tracking-tighter mb-4 md:mb-8 text-gradient italic leading-none text-white">Sua Obra.</h1>
+                                    <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-4 md:mb-8 text-gradient italic leading-none text-white">Seu ebook pronto em poucos minutos</h1>
                                     <p className="text-white/30 mb-20 text-lg max-w-sm font-medium leading-relaxed uppercase tracking-widest">Defina a identidade visual e o propósito do seu eBook.</p>
                                     <div className="space-y-12">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -385,7 +382,7 @@ export default function Home() {
                                     </div>
 
                                     {/* Sidebar de Design */}
-                                    <div className="w-full xl:w-96 bg-white/[0.02] border-t xl:border-t-0 xl:border-l border-white/5 p-6 xl:p-12 space-y-8 xl:space-y-12 overflow-y-auto shrink-0">
+                                    <div className="w-full xl:w-96 bg-white/[0.02] border-t xl:border-t-0 xl:border-l border-white/5 p-6 xl:p-12 space-y-8 xl:space-y-12 overflow-y-auto shrink-0" style={{ scrollbarWidth: 'none' }}>
                                         <div className="space-y-4">
                                             <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20">Cor de Destaque</label>
                                             <div className="flex items-center gap-4 bg-white/5 p-4 rounded-3xl border border-white/5">
@@ -445,13 +442,13 @@ export default function Home() {
                             )}
 
                             {activeTab === 'export' && (
-                                <motion.div key="export" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-20 md:py-60 text-center space-y-12 md:space-y-24">
-                                    <div className="w-40 h-40 md:w-60 md:h-60 bg-green-500/5 rounded-full flex items-center justify-center shadow-[0_0_150px_rgba(34,197,94,0.4)] border border-green-500/10"><CheckCircle2 className="w-20 h-20 md:w-32 md:h-32 text-green-500" /></div>
-                                    <div className="space-y-4 md:space-y-6">
-                                        <h1 className="text-6xl md:text-9xl font-black tracking-tighter italic text-gradient leading-none">Pronto.</h1>
-                                        <p className="text-white/20 text-xl md:text-3xl font-medium tracking-[8px] md:tracking-[15px] uppercase mt-10 text-white">LuminaBook PDF</p>
+                                <motion.div key="export" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-20 md:py-60 text-center space-y-12 md:space-y-16">
+                                    <div className="w-24 h-24 md:w-40 md:h-40 bg-green-500/5 rounded-full flex items-center justify-center shadow-[0_0_100px_rgba(34,197,94,0.4)] border border-green-500/10"><CheckCircle2 className="w-12 h-12 md:w-20 md:h-20 text-green-500" /></div>
+                                    <div className="space-y-4">
+                                        <h1 className="text-5xl md:text-7xl font-black tracking-tighter italic text-gradient leading-none">Pronto.</h1>
+                                        <p className="text-white/20 text-lg md:text-xl font-medium tracking-[8px] md:tracking-[10px] uppercase mt-6 text-white">LumiaBook PDF</p>
                                     </div>
-                                    <button onClick={downloadPDF} className="bg-white text-black px-24 py-10 rounded-[50px] font-black uppercase text-xl flex items-center gap-8 hover:scale-110 active:scale-95 transition-all shadow-2xl shadow-white/5"><FileDown className="w-10 h-10" /> BAIXAR EBOOK PDF</button>
+                                    <button onClick={downloadPDF} className="bg-white text-black px-12 md:px-16 py-6 md:py-8 rounded-[40px] font-black uppercase text-sm md:text-base flex items-center gap-6 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-white/5"><FileDown className="w-6 h-6 md:w-8 md:h-8" /> BAIXAR EBOOK</button>
                                 </motion.div>
                             )}
                         </AnimatePresence>
