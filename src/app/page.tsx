@@ -267,7 +267,7 @@ export default function Home() {
         setIsLoadingAntho(true);
         addLog("Capturando layouts WYSIWYG...");
         try {
-            const { default: html2canvas } = await import('html2canvas');
+            const { default: html2canvas } = await import('html2canvas-pro');
             const doc = new jsPDF({ format: 'a4', unit: 'mm' });
 
             for (let i = 0; i < blueprint.pages.length; i++) {
