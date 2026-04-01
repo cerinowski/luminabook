@@ -38,6 +38,7 @@ export default function Home() {
     const [titleColor, setTitleColor] = useState('#ffffff');
     const [subtitleSize, setSubtitleSize] = useState(100);
     const [subtitleColor, setSubtitleColor] = useState('#e2e8f0');
+    const [coverOverlayColor, setCoverOverlayColor] = useState('#000000');
 
     // --- ANTHOLOGY G27.1 ---
     type AnthologyPage = {
@@ -383,7 +384,7 @@ export default function Home() {
                                                         <div className="relative w-full h-full">
                                                             <img src={c.image} className="w-full h-full object-cover" />
                                                             {/* G32 Typography Overlay - Bottom Aligned */}
-                                                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col items-center justify-end py-16 px-6 text-center pointer-events-none">
+                                                            <div className="absolute inset-0 flex flex-col items-center justify-end py-16 px-6 text-center pointer-events-none" style={{ background: `linear-gradient(to top, ${coverOverlayColor} 0%, ${coverOverlayColor}80 50%, transparent 100%)` }}>
                                                                 <div className="space-y-3">
                                                                     <h2 className="font-black leading-tight uppercase tracking-tighter" style={{ fontSize: `calc(clamp(1rem, 5vw, 2.5rem) * ${titleSize / 100})`, fontFamily: selectedFont, color: titleColor }}>{title}</h2>
                                                                     {subtitle && <p className="font-medium tracking-widest uppercase" style={{ fontSize: `calc(10px * ${subtitleSize / 100})`, color: subtitleColor }}>{subtitle}</p>}
@@ -461,6 +462,13 @@ export default function Home() {
                                                 </div>
                                             </div>
                                         </div>
+                                        <div className="space-y-4">
+                                            <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20">Degradê da Capa</label>
+                                            <div className="flex items-center gap-4 bg-white/5 p-4 rounded-3xl border border-white/5">
+                                                <input type="color" value={coverOverlayColor} onChange={e => setCoverOverlayColor(e.target.value)} className="w-12 h-12 rounded-xl cursor-pointer bg-transparent border-0 p-0" />
+                                                <span className="text-white/80 text-sm font-bold tracking-widest uppercase">{coverOverlayColor}</span>
+                                            </div>
+                                        </div>
                                         <button onClick={() => setActiveTab('editorial')} className="w-full py-8 bg-purple-600 text-white font-black uppercase tracking-[4px] rounded-3xl hover:bg-purple-500 transition-all shadow-xl shadow-purple-900/20 text-[10px]">Ir para Escrita <ChevronLeft className="inline w-4 h-4 rotate-180" /></button>
                                     </div>
                                 </motion.div>
@@ -527,7 +535,7 @@ export default function Home() {
                                         {page.image && (
                                             <div className="relative w-full h-full">
                                                 <img src={page.image} crossOrigin="anonymous" className="w-full h-full object-cover" />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col items-center justify-end py-16 px-6 text-center">
+                                                <div className="absolute inset-0 flex flex-col items-center justify-end py-16 px-6 text-center" style={{ background: `linear-gradient(to top, ${coverOverlayColor} 0%, ${coverOverlayColor}80 50%, transparent 100%)` }}>
                                                     <div className="space-y-4">
                                                         <h2 className="font-black leading-tight uppercase tracking-tighter" style={{ fontSize: `calc(3.5rem * ${titleSize / 100})`, color: titleColor }}>{title}</h2>
                                                         {subtitle && <p className="font-medium tracking-widest uppercase" style={{ fontSize: `calc(1.125rem * ${subtitleSize / 100})`, color: subtitleColor }}>{subtitle}</p>}
