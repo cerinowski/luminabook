@@ -173,7 +173,7 @@ export default function Home() {
                 {page.image && (
                     <div className={`absolute inset-0 bg-gradient-to-b ${isDark ? 'from-black/80 via-black/40 to-black/90' : 'from-white/90 via-white/60 to-white/90'}`} />
                 )}
-                <div className="absolute inset-0 p-12 md:p-20 flex flex-col z-10">
+                <div className="absolute inset-0 p-12 md:p-20 pb-20 md:pb-28 flex flex-col z-10">
                     <div className="space-y-6 mb-8">
                         <div className="flex items-center gap-4">
                             <span className="text-[10px] font-black tracking-[6px] uppercase px-4 py-1 rounded-full border" style={{ color: selectedPalette, backgroundColor: `${selectedPalette}1A`, borderColor: `${selectedPalette}33` }}>Página {index + 1}</span>
@@ -559,7 +559,7 @@ export default function Home() {
                                         {page.image && (
                                             <div className={`absolute inset-0 bg-gradient-to-b ${isDark ? 'from-black/80 via-black/40 to-black/90' : 'from-white/90 via-white/60 to-white/90'}`} />
                                         )}
-                                        <div className="absolute inset-0 p-[72px] flex flex-col z-10">
+                                        <div className="absolute inset-0 px-[72px] pt-[72px] pb-[140px] flex flex-col z-10">
                                             <div className="space-y-6 mb-12">
                                                 <div className="flex items-center gap-6">
                                                     <span className="text-sm font-black tracking-[8px] uppercase px-8 py-3 rounded-full border" style={{ color: selectedPalette, backgroundColor: `${selectedPalette}1A`, borderColor: `${selectedPalette}33` }}>Página {idx + 1}</span>
