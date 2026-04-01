@@ -618,7 +618,7 @@ export default function Home() {
                                                         {page.items.map((item, i) => {
                                                             const isSubtitle = item.length < 120 && !/[.?!]$/.test(item.trim()) && item.split(' ').length <= 15;
                                                             return (
-                                                                <p key={i} className={`text-[19px] tracking-wide leading-[1.6] ${isSubtitle ? 'font-black text-[22px] mt-6 mb-2' : 'font-medium'} ${isDark ? (isSubtitle ? 'text-white' : 'text-white/90') : (isSubtitle ? 'text-black' : 'text-black/90')}`}>
+                                                                <p key={i} className={`text-[19px] tracking-wide leading-[1.6] ${isSubtitle ? 'font-bold mt-6 mb-2' : 'font-medium'} ${isDark ? (isSubtitle ? 'text-white' : 'text-white/90') : (isSubtitle ? 'text-black' : 'text-black/90')}`}>
                                                                     {item}
                                                                 </p>
                                                             );

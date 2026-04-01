@@ -87,7 +87,7 @@ function chunkByParagraphs(text: string) {
     }
 
     const itemSlots = isSubtitle(p) ? 2.5 : Math.ceil(p.length / 90) + 0.8;
-    const capacity = isFirstPage ? 25 : 31; // 25 slots available visually on pages with Cover Titles, 31 exclusively for text.
+    const capacity = isFirstPage ? 22 : 28; // Decreased from 25/31 to leave bottom margin breathing room
 
     if (currentSlots + itemSlots > capacity && currentItems.length > 0) {
       pages.push({ chapterTitle: currentChapterTitle, items: currentItems, isFirstPage });
