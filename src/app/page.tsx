@@ -47,6 +47,9 @@ export default function Home() {
     const [coverOverlayColor, setCoverOverlayColor] = useState('#000000');
     const [coverOverlayOpacity, setCoverOverlayOpacity] = useState(80);
 
+    const [chapterTitleColor, setChapterTitleColor] = useState('');
+    const [bodyTextColor, setBodyTextColor] = useState('');
+
     const hexToRgba = (hex: string, alpha: number) => {
         const r = parseInt(hex.slice(1, 3), 16) || 0;
         const g = parseInt(hex.slice(3, 5), 16) || 0;
@@ -506,6 +509,19 @@ export default function Home() {
                                                 </div>
                                             </div>
                                         </div>
+                                        <div className="space-y-4">
+                                            <label className="text-[10px] font-black uppercase tracking-[4px] text-white/20">Cores Internas (Conteúdo)</label>
+                                            <div className="flex flex-col gap-5 bg-white/5 p-6 rounded-3xl border border-white/5">
+                                                <div className="flex justify-between items-center gap-4">
+                                                    <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest leading-tight">Título do Capítulo</span>
+                                                    <input type="color" value={chapterTitleColor || (selectedTheme === 'dark' ? '#ffffff' : '#000000')} onChange={e => setChapterTitleColor(e.target.value)} className="w-10 h-10 shrink-0 rounded-xl cursor-pointer bg-transparent border-0 p-0" />
+                                                </div>
+                                                <div className="flex justify-between items-center gap-4 border-t border-white/10 pt-5">
+                                                    <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest leading-tight">Texto Geral</span>
+                                                    <input type="color" value={bodyTextColor || (selectedTheme === 'dark' ? '#e2e8f0' : '#1e293b')} onChange={e => setBodyTextColor(e.target.value)} className="w-10 h-10 shrink-0 rounded-xl cursor-pointer bg-transparent border-0 p-0" />
+                                                </div>
+                                            </div>
+                                        </div>
                                         <button onClick={() => setActiveTab('editorial')} className="w-full py-8 bg-purple-600 text-white font-black uppercase tracking-[4px] rounded-3xl hover:bg-purple-500 transition-all shadow-xl shadow-purple-900/20 text-[10px]">Ir para Escrita <ChevronLeft className="inline w-4 h-4 rotate-180" /></button>
                                     </div>
                                 </motion.div>
@@ -613,7 +629,7 @@ export default function Home() {
                                                     )}
                                                 </div>
                                                 {page.title && (
-                                                    <h2 className={`w-full bg-transparent text-[42px] font-black tracking-tighter italic leading-tight ${isDark ? 'text-white' : 'text-black'}`}>{page.title}</h2>
+                                                    <h2 className="w-full bg-transparent text-[42px] font-black tracking-tighter italic leading-tight" style={{ color: chapterTitleColor || (isDark ? '#ffffff' : '#000000') }}>{page.title}</h2>
                                                 )}
                                             </div>
                                             <div className="flex-1 space-y-8 text-justify">
@@ -622,7 +638,7 @@ export default function Home() {
                                                         {page.items.map((item, i) => {
                                                             const isSubtitle = item.length < 120 && !/[.?!]$/.test(item.trim()) && item.split(' ').length <= 15;
                                                             return (
-                                                                <p key={i} className={`text-[19px] tracking-wide leading-[1.6] ${isSubtitle ? 'font-bold mt-6 mb-2' : 'font-medium'} ${isDark ? (isSubtitle ? 'text-white' : 'text-white/90') : (isSubtitle ? 'text-black' : 'text-black/90')}`}>
+                                                                <p key={i} className={`text-[19px] tracking-wide leading-[1.6] ${isSubtitle ? 'font-bold mt-6 mb-2' : 'font-medium'}`} style={{ color: bodyTextColor || (isDark ? (isSubtitle ? '#ffffff' : 'rgba(255,255,255,0.9)') : (isSubtitle ? '#000000' : 'rgba(0,0,0,0.9)')) }}>
                                                                     {item}
                                                                 </p>
                                                             );
