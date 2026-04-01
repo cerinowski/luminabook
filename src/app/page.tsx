@@ -167,27 +167,21 @@ export default function Home() {
                 )}
                 <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-black/90" />
                 <div className="absolute inset-0 p-12 md:p-20 flex flex-col z-10">
-                    <div className="space-y-6 mb-10">
+                    <div className="space-y-6 mb-8">
                         <div className="flex items-center gap-4">
                             <span className="text-purple-500 text-[10px] font-black tracking-[6px] uppercase px-4 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full">Página {index + 1}</span>
-                            <span className="text-white/20 text-[9px] font-bold uppercase tracking-[4px]">{page.type}</span>
                         </div>
                         {page.title && (
-                            <h2 className={`w-full bg-transparent text-5xl md:text-6xl font-black tracking-tighter italic leading-tight outline-none border-none ${isDark ? 'text-white' : 'text-black'}`}>
+                            <h2 className={`w-full bg-transparent text-3xl md:text-4xl font-black tracking-tighter italic leading-tight outline-none border-none ${isDark ? 'text-white' : 'text-black'}`}>
                                 {page.title}
                             </h2>
                         )}
-                        {page.subtitle && (
-                            <p className={`w-full bg-transparent text-lg font-medium tracking-wide leading-relaxed outline-none border-l-2 border-purple-500/50 pl-4 ${isDark ? 'text-white/70' : 'text-black/80'}`}>
-                                {page.subtitle}
-                            </p>
-                        )}
                     </div>
-                    <div className="flex-1 overflow-hidden space-y-6">
+                    <div className="flex-1 overflow-hidden space-y-4">
                         {page.items && (
-                            <div className="flex flex-col gap-6 w-full text-justify">
+                            <div className="flex flex-col gap-4 w-full text-justify">
                                 {page.items.map((item, i) => (
-                                    <p key={i} className={`text-base md:text-lg font-medium leading-relaxed tracking-wide ${isDark ? 'text-white/80' : 'text-black/80'}`}>
+                                    <p key={i} className={`text-sm md:text-base font-medium leading-normal tracking-wide ${isDark ? 'text-white/80' : 'text-black/80'}`}>
                                         {item}
                                     </p>
                                 ))}
@@ -505,23 +499,19 @@ export default function Home() {
                                         )}
                                         <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-black/90" />
                                         <div className="absolute inset-0 p-[72px] flex flex-col z-10">
-                                            <div className="space-y-8 mb-16">
+                                            <div className="space-y-6 mb-12">
                                                 <div className="flex items-center gap-6">
                                                     <span className="text-purple-500 text-sm font-black tracking-[8px] uppercase px-8 py-3 bg-purple-500/10 border border-purple-500/20 rounded-full">Página {idx + 1}</span>
-                                                    <span className="text-white/20 text-sm font-bold uppercase tracking-[6px]">{page.type}</span>
                                                 </div>
                                                 {page.title && (
-                                                    <h2 className={`w-full bg-transparent text-[60px] font-black tracking-tighter italic leading-tight ${isDark ? 'text-white' : 'text-black'}`}>{page.title}</h2>
-                                                )}
-                                                {page.subtitle && (
-                                                    <div className={`w-full bg-transparent text-2xl font-medium tracking-wide leading-relaxed border-l-4 border-purple-500/50 pl-8 ${isDark ? 'text-white/70' : 'text-black/80'}`}>{page.subtitle}</div>
+                                                    <h2 className={`w-full bg-transparent text-[42px] font-black tracking-tighter italic leading-tight ${isDark ? 'text-white' : 'text-black'}`}>{page.title}</h2>
                                                 )}
                                             </div>
-                                            <div className="flex-1 space-y-10 text-justify">
+                                            <div className="flex-1 space-y-8 text-justify">
                                                 {page.items && (
-                                                    <div className="flex flex-col gap-8 w-full">
+                                                    <div className="flex flex-col gap-5 w-full">
                                                         {page.items.map((item, i) => (
-                                                            <p key={i} className={`text-2xl font-medium tracking-wide leading-[1.8] ${isDark ? 'text-white/90' : 'text-black/90'}`}>
+                                                            <p key={i} className={`text-[19px] font-medium tracking-wide leading-[1.6] ${isDark ? 'text-white/90' : 'text-black/90'}`}>
                                                                 {item}
                                                             </p>
                                                         ))}
